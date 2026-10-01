@@ -3,6 +3,7 @@
 import { Shell } from "@/components/shell";
 import { Badge, Button, Card, cx } from "@/components/ui";
 import { useWorkspace } from "@/components/workspace-context";
+import { collabBundleFromSheets } from "@/lib/collab/parse";
 import { buildImportStory } from "@/lib/import/story";
 import { findDataIssues, type DataIssue } from "@/lib/import/dataIssues";
 import { inferOrg } from "@/lib/import/inferTree";
@@ -10,7 +11,7 @@ import { choosePeopleSheet, headerFor, matchColumns } from "@/lib/import/matchCo
 import { parsePastedTable, parseWorkbook } from "@/lib/import/parseWorkbook";
 import { tableToPeople } from "@/lib/import/rows";
 import { orgMetrics, peopleInDepartment } from "@/lib/org/metrics";
-import { FIELD_LABEL, REQUIRED_FIELDS, type ColumnField, type ColumnMatch, type RawPerson, type SheetTable } from "@/lib/model/types";
+import { FIELD_LABEL, REQUIRED_FIELDS, type CollabBundle, type ColumnField, type ColumnMatch, type RawPerson, type SheetTable } from "@/lib/model/types";
 import { createWorkspace } from "@/lib/workspace/create";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -18,28 +19,29 @@ import { useMemo, useState } from "react";
 const SAMPLES = [
   {
     id: "xinglan",
-    file: "/sample-data/01-星澜科技-花名册.xlsx",
-    download: "/sample-data/01-星澜科技-花名册.xlsx",
-    csv: "/sample-data/01-星澜科技-花名册.csv",
-    label: "星澜科技",
+    file: "/sample-data/01-星澜科技-花名册-示例数据.xlsx",
+    download: "/sample-data/01-星澜科技-花名册-示例数据.xlsx",
+    csv: "/sample-data/01-星澜科技-花名册-示例数据.csv",
+    collab: "/sample-data/04-星澜科技-协作与目标-示例数据.xlsx",
+    label: "星澜科技（示例数据）",
     title: "星澜科技 · 完整花名册",
     meta: "示例数据 · 约 120 人",
     detail: "多级部门、职级和年度人力成本。故意留了幅度 12、幅度 2、一人部门和 7 层汇报。",
   },
   {
     id: "messy",
-    file: "/sample-data/02-凌川贸易-混乱花名册.csv",
-    download: "/sample-data/02-凌川贸易-混乱花名册.csv",
-    label: "凌川贸易 · 混乱表",
+    file: "/sample-data/02-凌川贸易-混乱花名册-示例数据.csv",
+    download: "/sample-data/02-凌川贸易-混乱花名册-示例数据.csv",
+    label: "凌川贸易 · 混乱表（示例数据）",
     title: "凌川贸易 · 混乱花名册",
     meta: "示例数据 · 列名不规范",
     detail: "列名是「汇报人」「组织单元」「担任岗位」。含缺上级、互相汇报、两个张伟。",
   },
   {
     id: "feishu",
-    file: "/sample-data/03-凌川贸易-飞书通讯录导出.xlsx",
-    download: "/sample-data/03-凌川贸易-飞书通讯录导出.xlsx",
-    label: "凌川贸易 · 飞书导出",
+    file: "/sample-data/03-凌川贸易-飞书通讯录导出-示例数据.xlsx",
+    download: "/sample-data/03-凌川贸易-飞书通讯录导出-示例数据.xlsx",
+    label: "凌川贸易 · 飞书导出（示例数据）",
     title: "凌川贸易 · 飞书通讯录",
     meta: "示例数据 · 同一批人",
     detail: "飞书导出样式。上级列叫「直线经理」，文件里还有一张部门表。",
@@ -54,6 +56,7 @@ type Loaded = {
   sheetName: string;
   sampleId: string | null;
   sampleLabel: string | null;
+  collab: CollabBundle | null;
 };
 
 export function ImportPage() {
@@ -103,7 +106,7 @@ export function ImportPage() {
       return;
     }
     const chosen = choosePeopleSheet(sheets);
-    setLoaded({ filename, sheets, sheetName: chosen.name, sampleId: sample?.id ?? null, sampleLabel: sample?.label ?? null });
+    setLoaded({ filename, sheets, sheetName: chosen.name, sampleId: sample?.id ?? null, sampleLabel: sample?.label ?? null, collab: null });
     setMapping(matchColumns(chosen.headers));
     setPeople(null);
     setSkippedIssueIds([]);
@@ -133,6 +136,14 @@ export function ImportPage() {
         id: sample.id,
         label: sample.label,
       });
+      const collabFile = "collab" in sample ? sample.collab : undefined;
+      if (collabFile) {
+        const extra = await fetch(collabFile);
+        if (extra.ok) {
+          const bundle = collabBundleFromSheets(parseWorkbook(await extra.arrayBuffer()), { sample: true, updatedAt: "2026-09-30" });
+          setLoaded((current) => (current ? { ...current, collab: bundle } : current));
+        }
+      }
     } catch {
       setError("示例文件没有载入。请确认已执行 npm run dev（它会把 sample-data 复制到站点里）。");
     } finally {
@@ -197,6 +208,7 @@ export function ImportPage() {
         aiMode: ai.mode,
       },
       settings,
+      loaded.collab,
     );
     replaceWorkspace(next);
     router.push("/sandbox");
@@ -217,7 +229,7 @@ export function ImportPage() {
                   不用先改列名。至少要有姓名、部门、岗位、直属上级。部门可以写成「研发中心/平台部/数据组」，也可以只写末级名称。
                 </p>
               </div>
-              <a className="text-sm font-medium text-primary" href="/sample-data/00-导入模板.csv" download>
+              <a className="text-sm font-medium text-primary" href="/sample-data/00-导入模板-示例数据.csv" download>
                 下载空白模板
               </a>
             </div>
@@ -261,7 +273,7 @@ export function ImportPage() {
                     setError("没有解析出表格。请连同表头一起粘贴。");
                     return;
                   }
-                  setLoaded({ filename: "粘贴的表格", sheets, sheetName: sheets[0].name, sampleId: null, sampleLabel: null });
+                  setLoaded({ filename: "粘贴的表格", sheets, sheetName: sheets[0].name, sampleId: null, sampleLabel: null, collab: null });
                   setMapping(matchColumns(sheets[0].headers));
                   setPeople(null);
                   setPhase("map");

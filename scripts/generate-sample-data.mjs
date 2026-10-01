@@ -177,6 +177,30 @@ for (const person of people) {
   if (person.manager && !used.has(person.manager)) throw new Error(`上级不存在 ${person.manager}`);
 }
 
+const retired = [
+  "00-导入模板.csv",
+  "01-星澜科技-花名册.csv",
+  "01-星澜科技-花名册.xlsx",
+  "02-凌川贸易-混乱花名册.csv",
+  "03-凌川贸易-飞书通讯录导出.xlsx",
+];
+for (const name of retired) {
+  const file = path.join(outDir, name);
+  if (fs.existsSync(file)) fs.unlinkSync(file);
+}
+
+function marked(headers, rows) {
+  return { headers: [...headers, "数据标记"], rows: rows.map((row) => [...row, "示例数据"]) };
+}
+
+const noteSheet = {
+  name: "说明-示例数据",
+  headers: ["说明"],
+  rows: [[
+    "示例数据。公司、姓名和金额都是虚构的，只用于走查。协作统计只包含消息次数、共同会议次数和 OKR 对齐次数，不包含消息正文或会议内容。不提供个人排名。",
+  ]],
+};
+
 const cleanHeaders = ["姓名", "部门", "岗位", "直属上级", "工号", "职级", "年度人力成本", "入职时间", "工作地点"];
 const cleanRows = people.map((person) => [
   person.name,
@@ -208,8 +232,12 @@ function writeXlsx(filename, sheets) {
   XLSX.writeFile(book, path.join(outDir, filename));
 }
 
-writeCsv("01-星澜科技-花名册.csv", cleanHeaders, cleanRows);
-writeXlsx("01-星澜科技-花名册.xlsx", [{ name: "花名册", headers: cleanHeaders, rows: cleanRows }]);
+const clean = marked(cleanHeaders, cleanRows);
+writeCsv("01-星澜科技-花名册-示例数据.csv", clean.headers, clean.rows);
+writeXlsx("01-星澜科技-花名册-示例数据.xlsx", [
+  { name: "花名册-示例数据", ...clean },
+  noteSheet,
+]);
 
 const messy = [
   ["陈建国", "凌川贸易", "总经理", "", "LC001", "总经办"],
@@ -237,7 +265,8 @@ const messy = [
 ];
 
 const messyHeaders = ["员工姓名", "组织单元", "担任岗位", "汇报人", "工号", "备注"];
-writeCsv("02-凌川贸易-混乱花名册.csv", messyHeaders, messy);
+const messyMarked = marked(messyHeaders, messy);
+writeCsv("02-凌川贸易-混乱花名册-示例数据.csv", messyMarked.headers, messyMarked.rows);
 
 const feishuRows = messy.map((row, index) => [
   row[0],
@@ -263,24 +292,78 @@ const deptSheet = [
   ["人力资源部", "凌川贸易", "D06"],
   ["采购部", "凌川贸易", "D07"],
 ];
-writeXlsx("03-凌川贸易-飞书通讯录导出.xlsx", [
-  {
-    name: "部门列表",
-    headers: ["部门名称", "上级部门", "部门ID"],
-    rows: deptSheet,
-  },
-  {
-    name: "成员列表",
-    headers: ["姓名", "用户 ID", "部门", "职务", "直线经理", "工号", "企业邮箱", "手机号", "城市", "入职日期", "员工类型", "帐号状态"],
-    rows: feishuRows,
-  },
+const feishuMarked = marked(
+  ["姓名", "用户 ID", "部门", "职务", "直线经理", "工号", "企业邮箱", "手机号", "城市", "入职日期", "员工类型", "帐号状态"],
+  feishuRows,
+);
+const deptMarked = marked(["部门名称", "上级部门", "部门ID"], deptSheet);
+writeXlsx("03-凌川贸易-飞书通讯录导出-示例数据.xlsx", [
+  { name: "部门列表-示例数据", ...deptMarked },
+  { name: "成员列表-示例数据", ...feishuMarked },
+  noteSheet,
 ]);
 
-writeCsv(
-  "00-导入模板.csv",
+const template = marked(
   ["姓名", "部门", "岗位", "直属上级", "工号", "职级", "年度人力成本", "入职时间", "工作地点", "绩效"],
   [["示例员工（导入前请删除）", "示例公司/研发中心/平台部", "后端工程师", "示例负责人", "E0001", "P6", "360000", "2024-03-01", "上海", ""]],
 );
+writeCsv("00-导入模板-示例数据.csv", template.headers, template.rows);
+
+const collabRows = [
+  ["林知夏", "顾清和", 180, 24, 4],
+  ["林知夏", "梁秋白", 120, 16, 6],
+  ["林知夏", "周衡", 90, 14, 8],
+  ["林知夏", "马修远", 40, 6, 1],
+  ["林知夏", "韩砺", 160, 22, 5],
+  ["林知夏", "赵启年", 140, 18, 2],
+  ["林知夏", "许南舟", "", 10, 3],
+  ["宋知远", "马修远", 110, 14, 2],
+  ["梁秋白", "宋知远", 28, 4, 1],
+  ["顾清和", "周衡", 70, 9, 4],
+  ["何清", "江晚吟", 50, 8, 2],
+  ["梁秋白", "谢予白", 80, 10, 3],
+  ["宋知远", "姜疏影", 36, 5, ""],
+];
+const collab = marked(["人A", "人B", "消息次数", "共同会议次数", "OKR对齐次数"], collabRows);
+const okr = marked(
+  ["姓名", "目标", "对齐的上级目标", "KR1", "KR1进度", "KR2", "KR2进度", "KR3", "KR3进度", "未对齐部门"],
+  [
+    ["林知夏", "提升研发基础设施稳定性与交付效率", "周衡 · 研发效率提升 30%", "核心链路可用性达到 99.9%", 70, "发布前置时间缩短 20%", 55, "平台组件被三个业务部采纳", 30, "数据智能部"],
+    ["顾清和", "把数据智能能力嵌进业务闭环", "周衡 · 研发效率提升 30%", "两个业务场景上线辅助决策", 45, "特征平台周活覆盖平台部", 60, "模型迭代周期缩短到两周", 35, "平台部"],
+    ["何清", "提升续约客户的成功体验", "江晚吟 · 商业化收入稳步增长", "续约沟通覆盖全部重点客户", 50, "健康分低于阈值的客户一周内跟进", 40, "成功手册沉淀 12 篇", 25, ""],
+    ["周衡", "研发效率提升 30%", "陈启明 · 把组织带宽用在产品上", "管理幅度回到建议区间", 40, "跨部门协作有固定节奏", 55, "七层以内能到达一线小组", 20, ""],
+  ],
+);
+const goals = marked(
+  ["姓名", "目标名称", "权重"],
+  [
+    ["林知夏", "稳定性", 40],
+    ["林知夏", "交付效率", 35],
+    ["林知夏", "平台采纳", 25],
+    ["顾清和", "场景落地", 50],
+    ["顾清和", "平台协同", 30],
+    ["顾清和", "迭代速度", 20],
+    ["何清", "续约体验", 45],
+    ["何清", "响应时效", 35],
+    ["何清", "方法沉淀", 20],
+    ["周衡", "交付效率", 40],
+    ["周衡", "组织带宽", 35],
+    ["周衡", "质量", 25],
+  ],
+);
+writeXlsx("04-星澜科技-协作与目标-示例数据.xlsx", [
+  noteSheet,
+  { name: "协作次数-示例数据", ...collab },
+  { name: "目标OKR-示例数据", ...okr },
+  { name: "绩效目标权重-示例数据", ...goals },
+]);
+writeCsv("00-协作统计模板-示例数据.csv", collab.headers, [["示例员工甲", "示例员工乙", 12, 3, 1, "示例数据"]]);
+writeCsv(
+  "00-目标OKR模板-示例数据.csv",
+  okr.headers,
+  [["示例负责人", "示例目标", "上级 · 示例目标", "示例关键结果", 40, "", "", "", "", "示例部门", "示例数据"]],
+);
+writeCsv("00-绩效目标权重模板-示例数据.csv", goals.headers, [["示例负责人", "示例目标", 40, "示例数据"]]);
 
 console.log(
   `星澜科技 ${people.length} 人，最深 ${maxDepth} 层，何清幅度 ${spanOf("何清")}，马修远幅度 ${spanOf("马修远")}，一人部门 ${singles[0]}`,

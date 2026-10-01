@@ -6,6 +6,8 @@ import { inferOrg } from "@/lib/import/inferTree";
 import { choosePeopleSheet, headerFor, matchColumns } from "@/lib/import/matchColumns";
 import { parseWorkbook } from "@/lib/import/parseWorkbook";
 import { tableToPeople } from "@/lib/import/rows";
+import { collabBundleFromSheets } from "@/lib/collab/parse";
+import { canvasLinks, scoredCollaboration } from "@/lib/collab/view";
 import { evaluateRules } from "@/lib/rules/engine";
 
 const dir = path.resolve(process.cwd(), "sample-data");
@@ -17,12 +19,18 @@ function load(filename: string) {
 
 describe("示例数据", () => {
   it("星澜科技大约 120 人，并正好埋了四类结构问题", () => {
-    const sheets = load("01-星澜科技-花名册.xlsx");
-    expect(sheets).toHaveLength(1);
-    const mapping = matchColumns(sheets[0].headers);
+    const filename = "01-星澜科技-花名册-示例数据.xlsx";
+    expect(filename).toContain("示例数据");
+    const sheets = load(filename);
+    const sheet = sheets.find((item) => item.name.includes("花名册"));
+    expect(sheet).toBeTruthy();
+    expect(sheet?.name).toContain("示例数据");
+    expect(sheet?.headers).toContain("数据标记");
+    expect(sheet?.rows[0]).toContain("示例数据");
+    const mapping = matchColumns(sheet!.headers);
     expect(headerFor(mapping, "manager")).toBe("直属上级");
     expect(headerFor(mapping, "annualCost")).toBe("年度人力成本");
-    const { people } = tableToPeople(sheets[0], mapping);
+    const { people } = tableToPeople(sheet!, mapping);
     expect(people.length).toBeGreaterThanOrEqual(110);
     expect(people.length).toBeLessThanOrEqual(140);
     expect(findDataIssues(people)).toHaveLength(0);
@@ -50,7 +58,11 @@ describe("示例数据", () => {
   });
 
   it("混乱花名册能对上奇异列名，飞书导出是同一批人", () => {
-    const messySheets = load("02-凌川贸易-混乱花名册.csv");
+    const messyName = "02-凌川贸易-混乱花名册-示例数据.csv";
+    expect(messyName).toContain("示例数据");
+    const messySheets = load(messyName);
+    expect(messySheets[0].headers).toContain("数据标记");
+    expect(messySheets[0].rows[0]).toContain("示例数据");
     const messyMap = matchColumns(messySheets[0].headers);
     expect(headerFor(messyMap, "name")).toBe("员工姓名");
     expect(headerFor(messyMap, "department")).toBe("组织单元");
@@ -62,9 +74,9 @@ describe("示例数据", () => {
       expect.arrayContaining(["missing_manager", "reporting_cycle", "duplicate_name", "ambiguous_manager"]),
     );
 
-    const feishuSheets = load("03-凌川贸易-飞书通讯录导出.xlsx");
+    const feishuSheets = load("03-凌川贸易-飞书通讯录导出-示例数据.xlsx");
     const peopleSheet = choosePeopleSheet(feishuSheets);
-    expect(peopleSheet.name).toBe("成员列表");
+    expect(peopleSheet.name).toBe("成员列表-示例数据");
     const feishuMap = matchColumns(peopleSheet.headers);
     expect(headerFor(feishuMap, "manager")).toBe("直线经理");
     expect(headerFor(feishuMap, "title")).toBe("职务");
@@ -80,5 +92,32 @@ describe("示例数据", () => {
     expect(findDataIssues(current)).toHaveLength(0);
     const org = inferOrg(current);
     expect(evaluateRules(org).some((issue) => issue.code === "reporting_cycle" || issue.code === "missing_manager")).toBe(false);
+  });
+
+  it("星澜科技协作示例只有次数，画布连线是部门对部门", () => {
+    const filename = "04-星澜科技-协作与目标-示例数据.xlsx";
+    expect(filename).toContain("示例数据");
+    const sheets = load(filename);
+    expect(sheets.every((sheet) => sheet.name.includes("示例数据"))).toBe(true);
+    const bundle = collabBundleFromSheets(sheets, { sample: true, updatedAt: "2026-09-30" });
+    expect(bundle.pairs.length).toBeGreaterThan(0);
+    expect(bundle.ignoredContentHeaders).toEqual([]);
+    expect(JSON.stringify(bundle.pairs)).not.toMatch(/内容|纪要/);
+    expect(bundle.okrs.find((item) => item.personName === "林知夏")?.unalignedDepartments).toContain("数据智能部");
+    expect(bundle.goals.filter((item) => item.personName === "林知夏").reduce((sum, item) => sum + item.weight, 0)).toBe(100);
+
+    const roster = load("01-星澜科技-花名册-示例数据.xlsx").find((sheet) => sheet.name.includes("花名册"));
+    const org = inferOrg(tableToPeople(roster!, matchColumns(roster!.headers)).people);
+    const pairs = scoredCollaboration(bundle, org);
+    const visible = new Set(org.departments.map((department) => department.id));
+    const links = canvasLinks(org, pairs, visible);
+    const platform = org.departments.find((department) => department.name === "平台部");
+    const ai = org.departments.find((department) => department.name === "数据智能部");
+    expect(platform && ai).toBeTruthy();
+    expect(links.some((link) => [link.aId, link.bId].sort().join() === [platform!.id, ai!.id].sort().join())).toBe(true);
+    expect(links.every((link) => link.aId !== link.bId)).toBe(true);
+    const missingMessages = pairs.find((pair) => pair.messages == null);
+    expect(missingMessages?.missing).toContain("messages");
+    expect(missingMessages?.score).not.toBeNull();
   });
 });

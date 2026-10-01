@@ -2,22 +2,41 @@
 
 import { AiPanel } from "@/components/ai-panel";
 import { ScenarioSwitcher, Shell } from "@/components/shell";
-import { DeptNode, type DeptNodeData } from "@/components/sandbox/dept-node";
+import { CollabEdge, type CollabEdgeData } from "@/components/sandbox/collab-edge";
+import { DeptNode, type DeptBubble, type DeptNodeData } from "@/components/sandbox/dept-node";
+import { LeaderCard } from "@/components/sandbox/leader-card";
 import { Button, cx } from "@/components/ui";
 import { useWorkspace } from "@/components/workspace-context";
+import { collabBundleFromSheets } from "@/lib/collab/parse";
+import { canvasLinks, goalsFor, leaderCollaborators, okrFor, scoredCollaboration } from "@/lib/collab/view";
 import { formatCny, formatDeltaMoney, formatDeltaNumber, round1 } from "@/lib/format";
-import { canSeeIndividualPay, type OrgIssue } from "@/lib/model/types";
+import { canSeeIndividualPay, canSeeLeaderCard, type CollabBundle, type OrgIssue, type OrgSnapshot } from "@/lib/model/types";
 import { departmentAccent, scaleAccent, type ColorMode } from "@/lib/org/color";
 import { childIds, layoutDepartments, NODE_H, NODE_W } from "@/lib/org/layout";
-import { diffMetrics, directReports, orgMetrics, peopleInDepartment, scenarioRollup } from "@/lib/org/metrics";
+import { mergeDepartments, movePeople, proposeSpanRelief, reparentDepartment, type StructurePlan } from "@/lib/org/mutate";
+import { diffMetrics, directReports, orgMetrics, peopleInDepartment, scenarioRollup, type OrgMetrics } from "@/lib/org/metrics";
+import { parseWorkbook } from "@/lib/import/parseWorkbook";
 import { evaluateRules } from "@/lib/rules/engine";
-import { activeScenario, baselineScenario, updateScenario } from "@/lib/workspace/create";
-import { Background, ReactFlow, type Edge, type Node, type ReactFlowInstance, useReactFlow } from "@xyflow/react";
+import { activeScenario, baselineScenario, ensureDraft, updateScenario } from "@/lib/workspace/create";
+import {
+  Background,
+  ReactFlow,
+  type Edge,
+  type Node,
+  type NodeChange,
+  type ReactFlowInstance,
+  useReactFlow,
+} from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 const nodeTypes = { dept: DeptNode };
+const edgeTypes = { collab: CollabEdge };
+
+type Impact = { before: OrgMetrics; after: OrgMetrics; label: string };
+type DeptPending = { sourceId: string; targetId: string };
+type PeoplePending = { personIds: string[]; targetDeptId: string; snapshot: OrgSnapshot };
 
 export function SandboxPage() {
   const { ready, workspace, commit } = useWorkspace();
@@ -28,51 +47,87 @@ export function SandboxPage() {
   const [focusId, setFocusId] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(true);
   const [instance, setInstance] = useState<ReactFlowInstance<Node<DeptNodeData>, Edge> | null>(null);
+  const [collabOn, setCollabOn] = useState(true);
+  const [dragPositions, setDragPositions] = useState<Record<string, { x: number; y: number }>>({});
+  const [hoverId, setHoverId] = useState<string | null>(null);
+  const [deptPending, setDeptPending] = useState<DeptPending | null>(null);
+  const [peoplePending, setPeoplePending] = useState<PeoplePending | null>(null);
+  const [preview, setPreview] = useState<{ snapshot: OrgSnapshot; label: string } | null>(null);
+  const [plans, setPlans] = useState<StructurePlan[]>([]);
+  const [planManagerId, setPlanManagerId] = useState<string | null>(null);
+  const [noticeIds, setNoticeIds] = useState<string[]>([]);
+  const [dismissedBubbles, setDismissedBubbles] = useState<string[]>([]);
+  const [impact, setImpact] = useState<Impact | null>(null);
+  const [banner, setBanner] = useState("");
+  const [picked, setPicked] = useState<string[]>([]);
+  const [chatSeed, setChatSeed] = useState<{ id: number; text: string } | null>(null);
 
   const scenario = workspace ? activeScenario(workspace) : null;
   const baseline = workspace ? baselineScenario(workspace) : null;
+  const displaySnapshot = preview?.snapshot ?? scenario?.snapshot ?? null;
 
   const importedAt = workspace?.importMeta.importedAt ?? "";
   useEffect(() => {
     setCollapsed(null);
     setSelectedId(null);
     setFocusId(null);
+    setPreview(null);
+    setPlans([]);
+    setNoticeIds([]);
+    setImpact(null);
+    setPicked([]);
   }, [importedAt]);
 
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setDeptPending(null);
+      setPeoplePending(null);
+      setPreview(null);
+      setDragPositions({});
+      setHoverId(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   const defaultCollapsed = useMemo(
-    () => new Set((scenario?.snapshot.departments ?? []).filter((department) => department.path.length >= 3).map((department) => department.id)),
-    [scenario],
+    () => new Set((displaySnapshot?.departments ?? []).filter((department) => department.path.length >= 3).map((department) => department.id)),
+    [displaySnapshot],
   );
   const collapsedIds = collapsed ?? defaultCollapsed;
 
   const issues = useMemo(() => {
-    if (!scenario || !workspace) return [];
-    return evaluateRules(scenario.snapshot, workspace.settings.thresholds, scenario.ignoredCodes);
-  }, [scenario, workspace]);
+    if (!displaySnapshot || !workspace || !scenario) return [];
+    return evaluateRules(displaySnapshot, workspace.settings.thresholds, scenario.ignoredCodes);
+  }, [displaySnapshot, workspace, scenario]);
 
   const metrics = scenario ? orgMetrics(scenario.snapshot) : null;
   const baseMetrics = baseline ? orgMetrics(baseline.snapshot) : null;
   const delta = metrics && baseMetrics ? diffMetrics(metrics, baseMetrics) : null;
   const rollup = scenario && workspace ? scenarioRollup(scenario, workspace.settings) : null;
   const baseRollup = baseline && workspace ? scenarioRollup(baseline, workspace.settings) : null;
+  const collabPairs = useMemo(
+    () => (workspace && displaySnapshot ? scoredCollaboration(workspace.collab, displaySnapshot) : []),
+    [workspace, displaySnapshot],
+  );
 
   const graph = useMemo(() => {
-    if (!scenario || !workspace) return { nodes: [] as Node<DeptNodeData>[], edges: [] as Edge[] };
-    const { snapshot } = scenario;
-    const boxes = layoutDepartments(snapshot.departments, collapsedIds);
+    if (!scenario || !workspace || !displaySnapshot) return { nodes: [] as Node<DeptNodeData>[], edges: [] as Edge[] };
+    const boxes = layoutDepartments(displaySnapshot.departments, collapsedIds);
     const visible = new Set(boxes.map((box) => box.id));
-    const headcounts = snapshot.departments.map((department) => peopleInDepartment(snapshot.people, department.path).length);
-    const costs = snapshot.departments.map((department) =>
-      peopleInDepartment(snapshot.people, department.path).reduce((sum, person) => sum + (person.annualCost ?? 0), 0),
+    const headcounts = displaySnapshot.departments.map((department) => peopleInDepartment(displaySnapshot.people, department.path).length);
+    const costs = displaySnapshot.departments.map((department) =>
+      peopleInDepartment(displaySnapshot.people, department.path).reduce((sum, person) => sum + (person.annualCost ?? 0), 0),
     );
     const maxHeadcount = Math.max(1, ...headcounts);
     const maxCost = Math.max(1, ...costs);
     const needle = query.trim();
     const nodes: Node<DeptNodeData>[] = boxes.map((box) => {
-      const department = snapshot.departments.find((item) => item.id === box.id)!;
-      const members = peopleInDepartment(snapshot.people, department.path);
-      const head = snapshot.people.find((person) => person.id === department.headId);
-      const span = head ? directReports(snapshot, head.id).length : null;
+      const department = displaySnapshot.departments.find((item) => item.id === box.id)!;
+      const members = peopleInDepartment(displaySnapshot.people, department.path);
+      const head = displaySnapshot.people.find((person) => person.id === department.headId);
+      const span = head ? directReports(displaySnapshot, head.id).length : null;
       const labor = members.reduce((sum, person) => sum + (person.annualCost ?? 0), 0);
       const hasCost = members.some((person) => person.annualCost != null);
       const matched =
@@ -91,12 +146,28 @@ export function SandboxPage() {
         colorMode === "dept"
           ? departmentAccent(department.path)
           : scaleAccent(colorMode, colorMode === "headcount" ? members.length : labor, colorMode === "headcount" ? maxHeadcount : maxCost);
+      const issueHere = issues.find((issue) => issue.departmentIds.includes(department.id) && !dismissedBubbles.includes(issue.id));
+      const showBubble = noticeIds.includes(department.id) && issueHere;
+      const bubble: DeptBubble | null = showBubble
+        ? {
+            tone: issueHere.severity,
+            kicker: issueHere.severity === "red" ? "必须处理" : issueHere.severity === "yellow" ? "建议关注" : "提示信息",
+            message: issueHere.message,
+            canSplit: issueHere.code === "span_wide",
+            onSplit: () => openSplit(issueHere),
+            onIgnore: () => ignore(issueHere),
+            onChat: () => talkAbout(issueHere),
+          }
+        : null;
+      const dragged = dragPositions[department.id];
       return {
         id: department.id,
         type: "dept",
-        position: { x: box.x, y: box.y },
+        position: dragged ?? { x: box.x, y: box.y },
         width: NODE_W,
         height: NODE_H,
+        zIndex: bubble ? 20 : hoverId === department.id ? 5 : 1,
+        style: { overflow: "visible" },
         data: {
           name: department.name,
           head: head ? `负责人 ${head.name} · ${head.title}` : "暂无负责人",
@@ -107,8 +178,10 @@ export function SandboxPage() {
           active: selectedId === department.id || focusId === department.id,
           dimmed: Boolean(needle) && !matched,
           collapsed: collapsedIds.has(department.id),
-          childCount: childIds(snapshot.departments, department.id).length,
+          childCount: childIds(displaySnapshot.departments, department.id).length,
+          dropHover: hoverId === department.id,
           badges,
+          bubble,
           onToggle: () =>
             setCollapsed((current) => {
               const next = new Set(current ?? collapsedIds);
@@ -116,10 +189,11 @@ export function SandboxPage() {
               else next.add(department.id);
               return next;
             }),
+          onDropPeople: (personIds) => stagePeople(personIds, department.id),
         },
       };
     });
-    const edges: Edge[] = snapshot.departments
+    const edges: Edge[] = displaySnapshot.departments
       .filter((department) => department.parentId && visible.has(department.id) && visible.has(department.parentId))
       .map((department) => ({
         id: `${department.parentId}-${department.id}`,
@@ -128,25 +202,40 @@ export function SandboxPage() {
         type: "smoothstep",
         style: { stroke: "#C7D2FE", strokeWidth: 1.5 },
       }));
+    if (collabOn && workspace.collab) {
+      for (const link of canvasLinks(displaySnapshot, collabPairs, visible)) {
+        if (!visible.has(link.aId) || !visible.has(link.bId) || link.aId === link.bId) continue;
+        edges.push({
+          id: `collab-${link.aId}-${link.bId}`,
+          source: link.aId,
+          target: link.bId,
+          type: "collab",
+          data: { score: link.score } satisfies CollabEdgeData,
+        });
+      }
+    }
     return { nodes, edges };
-  }, [scenario, workspace, collapsedIds, colorMode, query, selectedId, focusId, issues]);
+    // openSplit / ignore / talkAbout / stagePeople 都读最新的 workspace，跟着这次渲染走。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scenario, workspace, displaySnapshot, collapsedIds, colorMode, query, selectedId, focusId, issues, collabOn, collabPairs, dragPositions, hoverId, noticeIds, dismissedBubbles]);
 
   function locate(issue: OrgIssue) {
     const departmentId = issue.departmentIds[0];
-    if (!departmentId || !scenario) return;
+    if (!departmentId || !displaySnapshot) return;
     setCollapsed((current) => {
       const next = new Set(current ?? collapsedIds);
-      let cursor = scenario.snapshot.departments.find((department) => department.id === departmentId);
+      let cursor = displaySnapshot.departments.find((department) => department.id === departmentId);
       const guard = new Set<string>();
       while (cursor?.parentId && !guard.has(cursor.id)) {
         guard.add(cursor.id);
         next.delete(cursor.parentId);
-        cursor = scenario.snapshot.departments.find((department) => department.id === cursor?.parentId);
+        cursor = displaySnapshot.departments.find((department) => department.id === cursor?.parentId);
       }
       return next;
     });
     setSelectedId(departmentId);
     setFocusId(departmentId);
+    setNoticeIds((current) => (current.includes(departmentId) ? current : [...current, departmentId]));
   }
 
   function ignore(issue: OrgIssue) {
@@ -158,6 +247,135 @@ export function SandboxPage() {
       })),
       `忽略了「${issue.title}」这类提醒`,
     );
+    setDismissedBubbles((current) => [...current, issue.id]);
+  }
+
+  function talkAbout(issue: OrgIssue) {
+    setPanelOpen(true);
+    setChatSeed({ id: Date.now(), text: `请用口语解释这条结构提醒，并说明我可以怎么改、改完如何撤销：${issue.message}` });
+    locate(issue);
+  }
+
+  function openSplit(issue: OrgIssue) {
+    if (!displaySnapshot) return;
+    const managerId = issue.personIds[0];
+    if (!managerId) return;
+    const next = proposeSpanRelief(displaySnapshot, managerId);
+    setPlanManagerId(managerId);
+    setPlans(next);
+    setPanelOpen(true);
+    if (next.length === 0) setBanner("直接下级太少，没有可以预览的拆分。");
+    locate(issue);
+  }
+
+  function writeSnapshot(label: string, snapshot: OrgSnapshot, affected: string[]) {
+    if (!workspace || !scenario) return;
+    const drafted = ensureDraft(workspace);
+    const current = drafted.workspace.scenarios.find((item) => item.id === drafted.scenarioId) ?? scenario;
+    const before = orgMetrics(current.snapshot);
+    const after = orgMetrics(snapshot);
+    const next = updateScenario(drafted.workspace, drafted.scenarioId, (item) => ({ ...item, snapshot }));
+    commit(next, drafted.redirected ? `${label}（基线只读，已写入方案 A）` : label);
+    setImpact({ before, after, label });
+    setNoticeIds(affected);
+    setPreview(null);
+    setPlans([]);
+    setDeptPending(null);
+    setPeoplePending(null);
+    setDragPositions({});
+    setHoverId(null);
+    setBanner("");
+  }
+
+  function applyDept(mode: "reparent" | "merge") {
+    if (!deptPending || !displaySnapshot) return;
+    const result =
+      mode === "reparent"
+        ? reparentDepartment(displaySnapshot, deptPending.sourceId, deptPending.targetId)
+        : mergeDepartments(displaySnapshot, deptPending.sourceId, deptPending.targetId);
+    if (!result.ok) {
+      setBanner(result.message);
+      setDeptPending(null);
+      setDragPositions({});
+      return;
+    }
+    const source = displaySnapshot.departments.find((item) => item.id === deptPending.sourceId);
+    const target = displaySnapshot.departments.find((item) => item.id === deptPending.targetId);
+    const verb = mode === "reparent" ? "挂到" : "并入";
+    writeSnapshot(`把${source?.name ?? "部门"}${verb}${target?.name ?? "部门"}`, result.snapshot, [deptPending.sourceId, deptPending.targetId]);
+  }
+
+  function stagePeople(personIds: string[], targetDeptId: string) {
+    if (!displaySnapshot || preview) {
+      setBanner("先确认或取消当前预览，再调整人员。");
+      return;
+    }
+    const result = movePeople(displaySnapshot, personIds, targetDeptId);
+    if (!result.ok) {
+      setBanner(result.message);
+      return;
+    }
+    setPeoplePending({ personIds, targetDeptId, snapshot: result.snapshot });
+    setBanner("");
+  }
+
+  function onNodesChange(changes: NodeChange<Node<DeptNodeData>>[]) {
+    setDragPositions((current) => {
+      let changed = false;
+      const next = { ...current };
+      for (const change of changes) {
+        if (change.type !== "position" || !change.position || !change.dragging) continue;
+        const prev = next[change.id];
+        if (prev && prev.x === change.position.x && prev.y === change.position.y) continue;
+        next[change.id] = change.position;
+        changed = true;
+      }
+      return changed ? next : current;
+    });
+  }
+
+  function onNodeDrag(_event: unknown, node: Node) {
+    const cx = node.position.x + NODE_W / 2;
+    const cy = node.position.y + NODE_H / 2;
+    const hit = graph.nodes.find((other) => {
+      if (other.id === node.id) return false;
+      return cx >= other.position.x && cx <= other.position.x + NODE_W && cy >= other.position.y && cy <= other.position.y + NODE_H;
+    });
+    setHoverId(hit?.id ?? null);
+  }
+
+  function onNodeDragStop(_event: unknown, node: Node) {
+    const cx = node.position.x + NODE_W / 2;
+    const cy = node.position.y + NODE_H / 2;
+    const hit = graph.nodes.find((other) => {
+      if (other.id === node.id) return false;
+      const origin = dragPositions[other.id] ? other.position : other.position;
+      return cx >= origin.x && cx <= origin.x + NODE_W && cy >= origin.y && cy <= origin.y + NODE_H;
+    });
+    setDragPositions({});
+    setHoverId(null);
+    if (hit) setDeptPending({ sourceId: node.id, targetId: hit.id });
+  }
+
+  async function onCollabFile(file: File) {
+    if (!workspace) return;
+    try {
+      const sheets = parseWorkbook(await file.arrayBuffer());
+      const bundle: CollabBundle = collabBundleFromSheets(sheets, {
+        sample: file.name.includes("示例数据"),
+        updatedAt: new Date().toISOString().slice(0, 10),
+      });
+      if (bundle.pairs.length === 0 && bundle.okrs.length === 0 && bundle.goals.length === 0) {
+        setBanner("没有读到协作次数或目标。请使用人A、人B、消息次数、共同会议次数、OKR对齐次数。");
+        return;
+      }
+      const ignored = [...bundle.ignoredContentHeaders, ...bundle.ignoredRankHeaders];
+      commit({ ...workspace, collab: bundle }, `导入协作统计${ignored.length ? `，已忽略 ${ignored.join("、")}` : ""}`);
+      setCollabOn(true);
+      setBanner(ignored.length ? `已忽略内容或评级列：${ignored.join("、")}。这些内容没有保存。` : "");
+    } catch {
+      setBanner("协作文件解析失败。");
+    }
   }
 
   if (!ready) {
@@ -168,7 +386,7 @@ export function SandboxPage() {
     );
   }
 
-  if (!workspace || !scenario || !metrics || !delta || !rollup || !baseRollup) {
+  if (!workspace || !scenario || !displaySnapshot || !metrics || !delta || !rollup || !baseRollup) {
     return (
       <Shell crumb="沙盘">
         <div className="mx-auto max-w-lg p-10 text-center">
@@ -182,10 +400,16 @@ export function SandboxPage() {
     );
   }
 
-  const selected = scenario.snapshot.departments.find((department) => department.id === selectedId);
-  const selectedPeople = selected ? peopleInDepartment(scenario.snapshot.people, selected.path) : [];
+  const selected = displaySnapshot.departments.find((department) => department.id === selectedId) ?? null;
+  const selectedPeople = selected ? displaySnapshot.people.filter((person) => person.departmentPath.join("/") === selected.path.join("/")) : [];
   const seePay = canSeeIndividualPay(workspace.settings.viewerRole);
-  const topIssue = issues[0];
+  const seeCard = canSeeLeaderCard(workspace.settings.viewerRole);
+  const head = selected ? displaySnapshot.people.find((person) => person.id === selected.headId) : undefined;
+  const collaborators = head ? leaderCollaborators(displaySnapshot, head.id, collabPairs) : [];
+  const sourceDept = deptPending ? displaySnapshot.departments.find((item) => item.id === deptPending.sourceId) : null;
+  const targetDept = deptPending ? displaySnapshot.departments.find((item) => item.id === deptPending.targetId) : null;
+  const peopleTarget = peoplePending ? displaySnapshot.departments.find((item) => item.id === peoplePending.targetDeptId) : null;
+  const previewMetrics = preview ? orgMetrics(preview.snapshot) : null;
 
   return (
     <Shell crumb="沙盘主页">
@@ -201,11 +425,7 @@ export function SandboxPage() {
               value={metrics.laborCost == null ? "未提供" : formatCny(metrics.laborCost)}
               delta={formatDeltaMoney(delta.laborCost)}
             />
-            <Metric
-              label="算力成本"
-              value={formatCny(rollup.compute)}
-              delta={formatDeltaMoney(rollup.compute - baseRollup.compute)}
-            />
+            <Metric label="算力成本" value={formatCny(rollup.compute)} delta={formatDeltaMoney(rollup.compute - baseRollup.compute)} />
           </div>
           {scenario.kind === "draft" && (
             <Button
@@ -221,6 +441,9 @@ export function SandboxPage() {
                   })),
                   `把${scenario.name}重置为基线`,
                 );
+                setPreview(null);
+                setNoticeIds([]);
+                setImpact(null);
               }}
             >
               重置此方案
@@ -228,7 +451,7 @@ export function SandboxPage() {
           )}
         </div>
         <div className="flex min-h-0 flex-1">
-          <div className="flex w-[220px] shrink-0 flex-col gap-3 border-r border-line bg-white p-3">
+          <div className="flex w-[220px] shrink-0 flex-col gap-3 overflow-auto border-r border-line bg-white p-3">
             <label className="text-xs font-medium text-muted">
               搜索部门、姓名或岗位
               <input
@@ -258,6 +481,13 @@ export function SandboxPage() {
                 ))}
               </div>
             </div>
+            <button
+              className={cx("rounded-xl border px-3 py-2 text-left text-xs", collabOn ? "border-[#DDD6FE] bg-[#F5F3FF] text-[#6D28D9]" : "border-line text-muted")}
+              onClick={() => setCollabOn((value) => !value)}
+            >
+              协作视图 {collabOn ? "开" : "关"}
+              <span className="mt-1 block leading-5">只画部门对部门。线越粗协作越强。</span>
+            </button>
             <Button variant="secondary" onClick={() => instance?.fitView({ padding: 0.2, duration: 400 })}>
               适应画布
             </Button>
@@ -267,27 +497,63 @@ export function SandboxPage() {
             <Button
               variant="secondary"
               onClick={() =>
-                setCollapsed(new Set(scenario.snapshot.departments.filter((department) => department.path.length >= 3).map((department) => department.id)))
+                setCollapsed(new Set(displaySnapshot.departments.filter((department) => department.path.length >= 3).map((department) => department.id)))
               }
             >
               收起到中心
             </Button>
-            <p className="mt-auto text-xs leading-5 text-muted">拖拽改架构、合并和虚线汇报会在下一版接上。现在可以定位问题、切换方案，再去拆岗位。</p>
+            <label className="text-xs text-muted">
+              导入协作统计
+              <input
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                className="mt-1 block w-full text-[11px]"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) void onCollabFile(file);
+                  event.target.value = "";
+                }}
+              />
+            </label>
+            <div className="space-y-1 text-[11px] leading-5">
+              <a className="block text-primary" href="/sample-data/04-星澜科技-协作与目标-示例数据.xlsx" download>
+                下载星澜科技协作示例
+              </a>
+              <a className="block text-primary" href="/sample-data/00-协作统计模板-示例数据.csv" download>
+                协作次数模板
+              </a>
+              <a className="block text-primary" href="/sample-data/00-目标OKR模板-示例数据.csv" download>
+                OKR 模板
+              </a>
+              <a className="block text-primary" href="/sample-data/00-绩效目标权重模板-示例数据.csv" download>
+                绩效权重模板
+              </a>
+            </div>
+            <p className="mt-auto text-xs leading-5 text-muted">拖部门到另一个部门上，可以选择挂到下面或合并。把人拖到部门上，会先预览再确认。Esc 取消。</p>
           </div>
           <div className="relative min-w-0 flex-1 bg-[#F8F9FD]">
+            {workspace.importMeta.sampleLabel && (
+              <div className="pointer-events-none absolute left-3 top-3 z-10 rounded-full bg-primarySoft px-2.5 py-1 text-[11px] font-medium text-primary">
+                示例数据 · {workspace.importMeta.sampleLabel}
+              </div>
+            )}
             <ReactFlow
               nodes={graph.nodes}
               edges={graph.edges}
               nodeTypes={nodeTypes}
+              edgeTypes={edgeTypes}
               onInit={(flow) => {
                 setInstance(flow);
                 flow.fitView({ padding: 0.18 });
               }}
               minZoom={0.12}
               maxZoom={1.4}
-              nodesDraggable={false}
+              nodesDraggable={!preview && !deptPending && !peoplePending}
               nodesConnectable={false}
               elementsSelectable
+              onNodesChange={onNodesChange}
+              onNodeDrag={onNodeDrag}
+              onNodeDragStop={onNodeDragStop}
               onNodeClick={(_, node) => {
                 setSelectedId(node.id);
                 setFocusId(node.id);
@@ -298,56 +564,159 @@ export function SandboxPage() {
               <FocusOnNode focusId={focusId} />
             </ReactFlow>
             {selected && (
-              <div className="absolute left-3 top-3 z-10 w-[280px] rounded-2xl border border-line bg-white p-3 shadow-card">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <div className="text-sm font-semibold">{selected.name}</div>
-                    <div className="text-xs text-muted">{selected.path.join(" / ")}</div>
+              <div className="absolute bottom-3 left-3 top-12 z-10 flex w-[320px] flex-col gap-2 overflow-auto pr-1">
+                <LeaderCard
+                  sample={Boolean(workspace.collab?.sample || workspace.importMeta.sampleLabel)}
+                  locked={!seeCard}
+                  title={head?.title ?? "暂无负责人"}
+                  name={head?.name ?? "未指定"}
+                  department={selected.name}
+                  okr={head && seeCard ? okrFor(workspace.collab, head.name) : null}
+                  goals={head && seeCard ? goalsFor(workspace.collab, head.name) : []}
+                  collaborators={seeCard ? collaborators : []}
+                  updatedAt={workspace.collab?.updatedAt ?? ""}
+                  windowDays={workspace.collab?.windowDays ?? 90}
+                />
+                <div className="rounded-2xl border border-line bg-white p-3 shadow-card">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="text-sm font-semibold">{selected.name}</div>
+                      <div className="text-xs text-muted">{selected.path.join(" / ")}</div>
+                    </div>
+                    <button className="text-xs text-muted" onClick={() => setSelectedId(null)}>
+                      关闭
+                    </button>
                   </div>
-                  <button className="text-xs text-muted" onClick={() => setSelectedId(null)}>
-                    关闭
-                  </button>
+                  <p className="mt-1 text-[11px] leading-5 text-muted">按住卡片拖到别的部门。下面的人也可以拖过去，Shift 点选多人。子树共 {peopleInDepartment(displaySnapshot.people, selected.path).length} 人。</p>
+                  <ul className="mt-2 max-h-40 space-y-1 overflow-auto text-xs">
+                    {selectedPeople.map((person) => (
+                      <li
+                        key={person.id}
+                        draggable
+                        onDragStart={(event) => {
+                          const ids = picked.includes(person.id) ? picked : [person.id];
+                          event.dataTransfer.setData("application/x-people", JSON.stringify(ids));
+                          event.dataTransfer.setData("text/plain", ids.join(","));
+                          event.dataTransfer.effectAllowed = "move";
+                        }}
+                        onClick={(event) => {
+                          if (!event.shiftKey) return;
+                          setPicked((current) => (current.includes(person.id) ? current.filter((id) => id !== person.id) : [...current, person.id]));
+                        }}
+                        className={cx(
+                          "flex cursor-grab items-center justify-between gap-2 rounded-lg px-2 py-1",
+                          picked.includes(person.id) ? "bg-primarySoft" : "bg-[#F8F9FD]",
+                        )}
+                      >
+                        <span>
+                          {person.name}
+                          <span className="text-muted"> · {person.title}</span>
+                        </span>
+                        {seePay && person.annualCost != null && <span className="text-muted">{formatCny(person.annualCost)}</span>}
+                      </li>
+                    ))}
+                  </ul>
+                  <Link
+                    href={`/roles?title=${encodeURIComponent(head?.title || selectedPeople[0]?.title || "")}`}
+                    className="mt-2 inline-flex text-xs font-medium text-primary"
+                  >
+                    拆解这个部门的岗位
+                  </Link>
                 </div>
-                <div className="mt-2 text-xs text-muted">
-                  子树 {selectedPeople.length} 人 · 人力 {selectedPeople.some((person) => person.annualCost != null) ? formatCny(selectedPeople.reduce((sum, person) => sum + (person.annualCost ?? 0), 0)) : "未提供"}
-                </div>
-                <ul className="mt-2 max-h-48 space-y-1 overflow-auto text-xs">
-                  {selectedPeople.slice(0, 12).map((person) => (
-                    <li key={person.id} className="flex items-center justify-between gap-2 rounded-lg bg-[#F8F9FD] px-2 py-1">
-                      <span>
-                        {person.name}
-                        <span className="text-muted"> · {person.title}</span>
-                      </span>
-                      {seePay && person.annualCost != null && <span className="text-muted">{formatCny(person.annualCost)}</span>}
-                    </li>
-                  ))}
-                </ul>
-                {selectedPeople.length > 12 && <p className="mt-1 text-[11px] text-muted">还有 {selectedPeople.length - 12} 人，搜索可以定位。</p>}
-                <Link
-                  href={`/roles?title=${encodeURIComponent(scenario.snapshot.people.find((person) => person.id === selected.headId)?.title || selectedPeople[0]?.title || "")}`}
-                  className="mt-2 inline-flex text-xs font-medium text-primary"
-                >
-                  拆解这个部门的岗位
-                </Link>
               </div>
             )}
-            {topIssue && (
-              <button
-                className="absolute bottom-4 left-4 z-10 max-w-sm rounded-2xl border border-line bg-white px-4 py-3 text-left shadow-card"
-                onClick={() => locate(topIssue)}
-              >
-                <div className="text-xs font-medium text-primary">主动提醒 · 点击定位</div>
-                <p className="mt-1 text-sm leading-6 text-[#344054]">{topIssue.message}</p>
-              </button>
+            {collabOn && (
+              <div className="pointer-events-none absolute bottom-3 right-3 z-10 rounded-xl bg-white/95 px-3 py-2 text-[11px] leading-5 text-[#6D28D9] shadow-card">
+                线越粗协作越强 · 仅部门间 · 近 {workspace.collab?.windowDays ?? 90} 天
+                {workspace.importMeta.sampleLabel ? " · 示例数据" : ""}
+              </div>
+            )}
+            {(preview || impact) && (
+              <div className="absolute left-1/2 top-12 z-10 w-[min(520px,calc(100%-2rem))] -translate-x-1/2 rounded-2xl border border-line bg-white px-4 py-3 shadow-card">
+                <div className="text-xs font-medium text-primary">{preview ? `正在预览：${preview.label}` : impact?.label}</div>
+                <div className="mt-2 grid grid-cols-4 gap-2 text-center text-[11px]">
+                  <ImpactCell label="人数" before={impact?.before.headcount ?? metrics.headcount} after={(previewMetrics ?? impact?.after)?.headcount ?? metrics.headcount} />
+                  <ImpactCell label="层级" before={impact?.before.layers ?? metrics.layers} after={(previewMetrics ?? impact?.after)?.layers ?? metrics.layers} />
+                  <ImpactCell
+                    label="平均幅度"
+                    before={round1(impact?.before.avgSpan ?? metrics.avgSpan)}
+                    after={round1((previewMetrics ?? impact?.after)?.avgSpan ?? metrics.avgSpan)}
+                  />
+                  <ImpactCell
+                    label="人力成本"
+                    before={formatCny((impact?.before.laborCost ?? metrics.laborCost) ?? null)}
+                    after={formatCny(((previewMetrics ?? impact?.after)?.laborCost ?? metrics.laborCost) ?? null)}
+                  />
+                </div>
+                {preview && (
+                  <div className="mt-2 flex justify-end gap-2">
+                    <Button variant="ghost" className="px-2 py-1 text-xs" onClick={() => setPreview(null)}>
+                      取消预览
+                    </Button>
+                    <Button
+                      className="px-2 py-1 text-xs"
+                      onClick={() => {
+                        const managerDept = displaySnapshot.people.find((person) => person.id === planManagerId);
+                        const deptId = displaySnapshot.departments.find((item) => item.path.join("/") === managerDept?.departmentPath.join("/"))?.id;
+                        writeSnapshot(preview.label, preview.snapshot, deptId ? [deptId] : []);
+                      }}
+                    >
+                      应用到方案
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+            {banner && <div className="absolute bottom-16 left-4 z-10 max-w-sm rounded-xl bg-[#111827] px-3 py-2 text-xs text-white">{banner}</div>}
+            {deptPending && sourceDept && targetDept && (
+              <div className="absolute left-1/2 top-1/2 z-30 w-[320px] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-line bg-white p-4 shadow-card">
+                <div className="text-sm font-semibold">调整「{sourceDept.name}」</div>
+                <p className="mt-1 text-xs leading-5 text-muted">放到「{targetDept.name}」。可以挂成下级，也可以把人和子部门并进去。取消不会改架构。</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button className="px-2.5 py-1.5 text-xs" onClick={() => applyDept("reparent")}>
+                    挂到下面
+                  </Button>
+                  <Button variant="secondary" className="px-2.5 py-1.5 text-xs" onClick={() => applyDept("merge")}>
+                    合并进来
+                  </Button>
+                  <Button variant="ghost" className="px-2.5 py-1.5 text-xs" onClick={() => setDeptPending(null)}>
+                    取消
+                  </Button>
+                </div>
+              </div>
+            )}
+            {peoplePending && peopleTarget && (
+              <div className="absolute left-1/2 top-1/2 z-30 w-[320px] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-line bg-white p-4 shadow-card">
+                <div className="text-sm font-semibold">调整 {peoplePending.personIds.length} 人的归属</div>
+                <p className="mt-1 text-xs leading-5 text-muted">将进入「{peopleTarget.name}」，直属上级改为该部门负责人。确认后写入当前方案，可以撤销。</p>
+                <div className="mt-3 flex gap-2">
+                  <Button className="px-2.5 py-1.5 text-xs" onClick={() => writeSnapshot(`把 ${peoplePending.personIds.length} 人调整到${peopleTarget.name}`, peoplePending.snapshot, [peoplePending.targetDeptId])}>
+                    确认
+                  </Button>
+                  <Button variant="ghost" className="px-2.5 py-1.5 text-xs" onClick={() => setPeoplePending(null)}>
+                    取消
+                  </Button>
+                </div>
+              </div>
             )}
           </div>
           <AiPanel
             issues={issues}
-            metrics={metrics}
+            metrics={previewMetrics ?? metrics}
             collapsed={!panelOpen}
             onToggle={() => setPanelOpen((value) => !value)}
             onLocate={locate}
             onIgnore={ignore}
+            onSplit={openSplit}
+            plans={plans}
+            chatSeed={chatSeed}
+            onPreviewPlan={(plan) => {
+              setPreview({ snapshot: plan.snapshot, label: plan.title });
+              setImpact({ before: orgMetrics(scenario.snapshot), after: orgMetrics(plan.snapshot), label: plan.title });
+              const fresh = evaluateRules(plan.snapshot, workspace.settings.thresholds, scenario.ignoredCodes);
+              setNoticeIds([...new Set(fresh.map((issue) => issue.departmentIds[0]).filter((id): id is string => Boolean(id)))].slice(0, 4));
+            }}
+            onApplyPlan={(plan) => writeSnapshot(plan.title, plan.snapshot, noticeIds)}
           />
         </div>
       </div>
@@ -361,6 +730,17 @@ function Metric({ label, value, delta }: { label: string; value: string; delta: 
       <div className="text-[11px] text-muted">{label}</div>
       <div className="text-sm font-semibold">{value}</div>
       <div className="text-[11px] text-muted">{delta}</div>
+    </div>
+  );
+}
+
+function ImpactCell({ label, before, after }: { label: string; before: string | number; after: string | number }) {
+  return (
+    <div className="rounded-xl bg-[#F8F9FD] px-2 py-1.5">
+      <div className="text-muted">{label}</div>
+      <div className="text-ink">
+        {before} → {after}
+      </div>
     </div>
   );
 }

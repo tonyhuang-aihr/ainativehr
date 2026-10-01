@@ -18,7 +18,7 @@ export function createLocalRepository(storage: Storage | null): WorkspaceReposit
       try {
         const parsed = JSON.parse(raw) as Workspace;
         if (parsed?.version !== 1 || !Array.isArray(parsed.scenarios)) return null;
-        return parsed;
+        return { ...parsed, collab: parsed.collab ?? null };
       } catch {
         return null;
       }

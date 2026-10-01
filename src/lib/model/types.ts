@@ -172,6 +172,48 @@ export type ImportMeta = {
   aiMode: "offline" | "llm";
 };
 
+/** 两人之间的协作只保留次数。不存消息正文、会议纪要或任何内容字段。 */
+export type CollabPair = {
+  personA: string;
+  personB: string;
+  messages: number | null;
+  meetings: number | null;
+  okrAlignments: number | null;
+};
+
+export type KeyResult = {
+  title: string;
+  progress: number | null;
+};
+
+export type PersonOkr = {
+  personName: string;
+  objective: string;
+  alignedTo: string;
+  keyResults: KeyResult[];
+  unalignedDepartments: string[];
+};
+
+/** 绩效目标只保留权重，不保留评级、分数或排名。 */
+export type PersonGoal = {
+  personName: string;
+  name: string;
+  weight: number;
+};
+
+export type CollabBundle = {
+  sample: boolean;
+  windowDays: number;
+  updatedAt: string;
+  pairs: CollabPair[];
+  okrs: PersonOkr[];
+  goals: PersonGoal[];
+  /** 读到但未保存的内容类列名，用来提示用户这些列被丢掉了。 */
+  ignoredContentHeaders: string[];
+  /** 读到但未保存的评级、排名类列名。 */
+  ignoredRankHeaders: string[];
+};
+
 export type Workspace = {
   version: 1;
   scenarios: Scenario[];
@@ -180,6 +222,7 @@ export type Workspace = {
   templates: Record<string, RoleDecomposition>;
   importMeta: ImportMeta;
   audit: AuditEntry[];
+  collab: CollabBundle | null;
 };
 
 export const DEFAULT_THRESHOLDS: RuleThresholds = {
@@ -219,5 +262,10 @@ export const REQUIRED_FIELDS: ColumnField[] = [
 ];
 
 export function canSeeIndividualPay(role: ViewerRole): boolean {
+  return role === "od" || role === "admin";
+}
+
+/** 负责人卡片含个人协作次数，只给 OD / 管理员。业务负责人只看部门间连线。 */
+export function canSeeLeaderCard(role: ViewerRole): boolean {
   return role === "od" || role === "admin";
 }

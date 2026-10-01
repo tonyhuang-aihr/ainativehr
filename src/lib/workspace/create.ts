@@ -1,5 +1,5 @@
 import { uid } from "@/lib/format";
-import type { AppSettings, ImportMeta, OrgSnapshot, Scenario, Workspace } from "@/lib/model/types";
+import type { AppSettings, CollabBundle, ImportMeta, OrgSnapshot, Scenario, Workspace } from "@/lib/model/types";
 import { DEFAULT_SETTINGS } from "@/lib/model/types";
 
 function copySnapshot(snapshot: OrgSnapshot): OrgSnapshot {
@@ -13,6 +13,7 @@ export function createWorkspace(
   snapshot: OrgSnapshot,
   meta: ImportMeta,
   settings: AppSettings = DEFAULT_SETTINGS,
+  collab: CollabBundle | null = null,
 ): Workspace {
   const baseline: Scenario = {
     id: "baseline",
@@ -40,6 +41,7 @@ export function createWorkspace(
     },
     templates: {},
     importMeta: meta,
+    collab,
     audit: [
       {
         id: uid("audit"),
@@ -57,6 +59,17 @@ export function activeScenario(workspace: Workspace): Scenario {
 
 export function baselineScenario(workspace: Workspace): Scenario {
   return workspace.scenarios.find((scenario) => scenario.kind === "baseline") ?? workspace.scenarios[0];
+}
+
+/** 基线只读。结构修改和任务修改都写到当前草稿；若停在基线，则切到方案 A。 */
+export function ensureDraft(workspace: Workspace): { workspace: Workspace; scenarioId: string; redirected: boolean } {
+  const current = activeScenario(workspace);
+  if (current.kind === "draft") return { workspace, scenarioId: current.id, redirected: false };
+  return {
+    workspace: { ...workspace, activeScenarioId: "scenario-a" },
+    scenarioId: "scenario-a",
+    redirected: true,
+  };
 }
 
 export function updateScenario(workspace: Workspace, scenarioId: string, recipe: (scenario: Scenario) => Scenario): Workspace {

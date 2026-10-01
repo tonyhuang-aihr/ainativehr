@@ -6,8 +6,9 @@ import { Badge, Button, cx } from "@/components/ui";
 import { useWorkspace } from "@/components/workspace-context";
 import { formatCny, round1 } from "@/lib/format";
 import type { OrgIssue } from "@/lib/model/types";
+import type { StructurePlan } from "@/lib/org/mutate";
 import type { OrgMetrics } from "@/lib/org/metrics";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const SUGGESTIONS = ["哪些管理幅度不合适？", "层级是不是太深？", "人机比怎么算？", "成本口径是什么？"];
 
@@ -16,6 +17,11 @@ export function AiPanel({
   metrics,
   onLocate,
   onIgnore,
+  onSplit,
+  plans,
+  onPreviewPlan,
+  onApplyPlan,
+  chatSeed,
   collapsed,
   onToggle,
 }: {
@@ -23,6 +29,11 @@ export function AiPanel({
   metrics: OrgMetrics;
   onLocate?: (issue: OrgIssue) => void;
   onIgnore?: (issue: OrgIssue) => void;
+  onSplit?: (issue: OrgIssue) => void;
+  plans?: StructurePlan[];
+  onPreviewPlan?: (plan: StructurePlan) => void;
+  onApplyPlan?: (plan: StructurePlan) => void;
+  chatSeed?: { id: number; text: string } | null;
   collapsed: boolean;
   onToggle: () => void;
 }) {
@@ -36,6 +47,15 @@ export function AiPanel({
   ]);
   const [input, setInput] = useState("");
   const [pending, setPending] = useState(false);
+  const seenSeed = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!chatSeed || seenSeed.current === chatSeed.id) return;
+    seenSeed.current = chatSeed.id;
+    void ask(chatSeed.text);
+    // 只在新的种子到来时发问。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatSeed]);
 
   async function ask(question: string) {
     const text = question.trim();
@@ -86,21 +106,49 @@ export function AiPanel({
                 <span className="text-xs font-medium">{issue.title}</span>
               </div>
               <p className="text-xs leading-5 text-[#344054]">{issue.message}</p>
-              <div className="mt-2 flex gap-2">
+              <div className="mt-2 flex flex-wrap gap-2">
                 {onLocate && (
                   <Button variant="secondary" className="px-2 py-1 text-xs" onClick={() => onLocate(issue)}>
                     定位
                   </Button>
                 )}
+                {onSplit && issue.code === "span_wide" && (
+                  <Button variant="secondary" className="px-2 py-1 text-xs" onClick={() => onSplit(issue)}>
+                    帮我拆分
+                  </Button>
+                )}
                 {onIgnore && (
                   <Button variant="ghost" className="px-2 py-1 text-xs" onClick={() => onIgnore(issue)}>
-                    忽略此类
+                    忽略
                   </Button>
                 )}
               </div>
             </div>
           ))}
         </div>
+        {plans && plans.length > 0 && (
+          <div className="mt-3 space-y-2">
+            <div className="text-xs font-medium text-muted">拆分预览 · 确认后才写入</div>
+            {plans.map((plan) => (
+              <div key={plan.id} className="rounded-xl border border-line p-2.5">
+                <div className="text-xs font-medium">{plan.title}</div>
+                <p className="mt-1 text-xs leading-5 text-muted">{plan.detail}</p>
+                <div className="mt-2 flex gap-2">
+                  {onPreviewPlan && (
+                    <Button variant="secondary" className="px-2 py-1 text-xs" onClick={() => onPreviewPlan(plan)}>
+                      预览到画布
+                    </Button>
+                  )}
+                  {onApplyPlan && (
+                    <Button className="px-2 py-1 text-xs" onClick={() => onApplyPlan(plan)}>
+                      应用
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
       <div className="flex-1 space-y-3 overflow-auto px-4 py-3">
         {messages.map((message, index) => (
