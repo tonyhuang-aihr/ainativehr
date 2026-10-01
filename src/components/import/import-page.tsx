@@ -99,14 +99,14 @@ export function ImportPage() {
     aiMode: ai.mode,
   });
 
-  async function openWorkbook(filename: string, buffer: ArrayBuffer, sample: { id: string; label: string } | null) {
+  async function openWorkbook(filename: string, buffer: ArrayBuffer, sample: { id: string; label: string } | null, collab: CollabBundle | null = null) {
     const sheets = parseWorkbook(buffer);
     if (sheets.length === 0) {
       setError("没有读到表格。请确认第一行是列名。");
       return;
     }
     const chosen = choosePeopleSheet(sheets);
-    setLoaded({ filename, sheets, sheetName: chosen.name, sampleId: sample?.id ?? null, sampleLabel: sample?.label ?? null, collab: null });
+    setLoaded({ filename, sheets, sheetName: chosen.name, sampleId: sample?.id ?? null, sampleLabel: sample?.label ?? null, collab });
     setMapping(matchColumns(chosen.headers));
     setPeople(null);
     setSkippedIssueIds([]);
@@ -132,18 +132,20 @@ export function ImportPage() {
     try {
       const response = await fetch(sample.file);
       if (!response.ok) throw new Error("missing");
-      await openWorkbook(sample.file.split("/").pop() ?? sample.file, await response.arrayBuffer(), {
-        id: sample.id,
-        label: sample.label,
-      });
+      let collab: CollabBundle | null = null;
       const collabFile = "collab" in sample ? sample.collab : undefined;
       if (collabFile) {
         const extra = await fetch(collabFile);
         if (extra.ok) {
-          const bundle = collabBundleFromSheets(parseWorkbook(await extra.arrayBuffer()), { sample: true, updatedAt: "2026-09-30" });
-          setLoaded((current) => (current ? { ...current, collab: bundle } : current));
+          collab = collabBundleFromSheets(parseWorkbook(await extra.arrayBuffer()), { sample: true, updatedAt: "2026-09-30" });
         }
       }
+      await openWorkbook(
+        sample.file.split("/").pop() ?? sample.file,
+        await response.arrayBuffer(),
+        { id: sample.id, label: sample.label },
+        collab,
+      );
     } catch {
       setError("示例文件没有载入。请确认已执行 npm run dev（它会把 sample-data 复制到站点里）。");
     } finally {

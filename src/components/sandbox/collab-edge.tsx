@@ -7,7 +7,7 @@ export type CollabEdgeData = { score: number };
 export function CollabEdge({ sourceX, sourceY, targetX, targetY, data }: EdgeProps<Edge<CollabEdgeData>>) {
   const [path, labelX, labelY] = getBezierPath({ sourceX, sourceY, targetX, targetY });
   const score = data?.score ?? 0;
-  const width = score >= 70 ? 6 : score >= 45 ? 3.5 : 1.5;
+  const width = score >= 70 ? 10 : score >= 45 ? 6 : 3.5;
   return (
     <>
       <BaseEdge path={path} style={{ stroke: "#8B5CF6", strokeWidth: width, strokeDasharray: "7 5" }} />

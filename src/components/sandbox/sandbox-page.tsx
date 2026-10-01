@@ -73,9 +73,14 @@ export function SandboxPage() {
     setFocusId(null);
     setPreview(null);
     setPlans([]);
-    setNoticeIds([]);
     setImpact(null);
     setPicked([]);
+    if (!workspace) return;
+    const current = activeScenario(workspace);
+    const wide = evaluateRules(current.snapshot, workspace.settings.thresholds, current.ignoredCodes).find((issue) => issue.code === "span_wide");
+    setNoticeIds(wide?.departmentIds[0] ? [wide.departmentIds[0]] : []);
+    // 只在换了一份花名册时重置视图。workspace 跟着 importedAt 一起变。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [importedAt]);
 
   useEffect(() => {
@@ -205,13 +210,14 @@ export function SandboxPage() {
     if (collabOn && workspace.collab) {
       for (const link of canvasLinks(displaySnapshot, collabPairs, visible)) {
         if (!visible.has(link.aId) || !visible.has(link.bId) || link.aId === link.bId) continue;
-        edges.push({
-          id: `collab-${link.aId}-${link.bId}`,
-          source: link.aId,
-          target: link.bId,
-          type: "collab",
-          data: { score: link.score } satisfies CollabEdgeData,
-        });
+            edges.push({
+              id: `collab-${link.aId}-${link.bId}`,
+              source: link.aId,
+              target: link.bId,
+              type: "collab",
+              zIndex: 5,
+              data: { score: link.score } satisfies CollabEdgeData,
+            });
       }
     }
     return { nodes, edges };
@@ -627,7 +633,7 @@ export function SandboxPage() {
             )}
             {collabOn && (
               <div className="pointer-events-none absolute bottom-3 right-3 z-10 rounded-xl bg-white/95 px-3 py-2 text-[11px] leading-5 text-[#6D28D9] shadow-card">
-                线越粗协作越强 · 仅部门间 · 近 {workspace.collab?.windowDays ?? 90} 天
+                部门协作线 {canvasLinks(displaySnapshot, collabPairs, new Set(graph.nodes.map((node) => node.id))).length} 条 · 线越粗越强 · 仅部门间 · 近 {workspace.collab?.windowDays ?? 90} 天
                 {workspace.importMeta.sampleLabel ? " · 示例数据" : ""}
               </div>
             )}

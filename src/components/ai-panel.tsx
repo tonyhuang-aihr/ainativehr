@@ -96,8 +96,11 @@ export function AiPanel({
       <div className="border-b border-line px-4 py-3">
         <div className="mb-2 text-xs font-medium text-muted">主动提醒</div>
         {issues.length === 0 && <p className="text-sm text-muted">目前没有要处理的结构问题。</p>}
-        <div className="max-h-64 space-y-2 overflow-auto">
-          {issues.slice(0, 6).map((issue) => (
+        <div className="max-h-72 space-y-2 overflow-auto">
+          {[...issues]
+            .sort((a, b) => Number(b.code === "span_wide") - Number(a.code === "span_wide"))
+            .slice(0, 6)
+            .map((issue) => (
             <div key={issue.id} className="rounded-xl border border-line p-2.5">
               <div className="mb-1 flex items-center gap-2">
                 <Badge tone={issue.severity === "red" ? "bad" : issue.severity === "yellow" ? "warn" : "info"}>
