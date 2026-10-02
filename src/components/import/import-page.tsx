@@ -218,8 +218,8 @@ export function ImportPage() {
 
   return (
     <Shell crumb="新建沙盘 · 导入数据">
-      <div className="grid items-start gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <div className="space-y-4">
+      <div className="grid min-w-0 items-start gap-4 overflow-x-clip p-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="min-w-0 space-y-4">
           {error && <div className="rounded-2xl border border-[#FECDCA] bg-[#FEF3F2] px-4 py-3 text-sm text-[#B42318]">{error}</div>}
           {busy && <div className="rounded-2xl bg-primarySoft px-4 py-3 text-sm text-primary">{busy}</div>}
 
@@ -231,7 +231,7 @@ export function ImportPage() {
                   不用先改列名。至少要有姓名、部门、岗位、直属上级。部门可以写成「研发中心/平台部/数据组」，也可以只写末级名称。
                 </p>
               </div>
-              <a className="text-sm font-medium text-primary" href="/sample-data/00-导入模板-示例数据.csv" download>
+              <a className="inline-flex min-h-10 items-center text-sm font-medium text-primary" href="/sample-data/00-导入模板-示例数据.csv" download>
                 下载空白模板
               </a>
             </div>
@@ -245,7 +245,7 @@ export function ImportPage() {
               }}
             >
               <p className="text-sm text-ink">把 xlsx、xls 或 csv 拖到这里</p>
-              <label className="mt-3 inline-flex cursor-pointer rounded-xl bg-primary px-3 py-2 text-sm font-medium text-white">
+              <label className="mt-3 inline-flex min-h-10 cursor-pointer items-center rounded-xl bg-primary px-4 text-sm font-medium text-white">
                 选择文件
                 <input
                   type="file"
@@ -292,21 +292,19 @@ export function ImportPage() {
               <h2 className="text-sm font-semibold">示例数据</h2>
               <Badge tone="info">虚构，可直接点开</Badge>
             </div>
-            <div className="grid gap-3 md:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {SAMPLES.map((sample) => (
                 <Card key={sample.id} className="flex flex-col p-4">
                   <div className="text-xs font-medium text-primary">{sample.meta}</div>
                   <h3 className="mt-1 text-sm font-semibold">{sample.title}</h3>
                   <p className="mt-2 flex-1 text-xs leading-5 text-muted">{sample.detail}</p>
                   <div className="mt-3 flex flex-wrap gap-2">
-                    <Button className="px-2.5 py-1.5 text-xs" onClick={() => loadSample(sample)}>
-                      载入
-                    </Button>
-                    <a className="rounded-xl border border-line px-2.5 py-1.5 text-xs" href={sample.download} download>
+                    <Button onClick={() => loadSample(sample)}>载入</Button>
+                    <a className="inline-flex min-h-10 items-center rounded-xl border border-line px-3 text-sm" href={sample.download} download>
                       下载
                     </a>
                     {sample.csv && (
-                      <a className="rounded-xl border border-line px-2.5 py-1.5 text-xs" href={sample.csv} download>
+                      <a className="inline-flex min-h-10 items-center rounded-xl border border-line px-3 text-sm" href={sample.csv} download>
                         CSV
                       </a>
                     )}
@@ -328,7 +326,7 @@ export function ImportPage() {
                 </div>
                 {loaded && loaded.sheets.length > 1 && (
                   <select
-                    className="rounded-xl border border-line px-3 py-2 text-sm"
+                    className="min-h-10 rounded-xl border border-line px-3 py-2 text-sm"
                     value={loaded.sheetName}
                     onChange={(event) => selectSheet(event.target.value)}
                   >
@@ -340,7 +338,7 @@ export function ImportPage() {
                   </select>
                 )}
               </div>
-              <div className="mt-4 overflow-auto">
+              <div className="mt-4 max-w-full overflow-x-auto">
                 <table className="w-full min-w-[640px] text-left text-sm">
                   <thead className="text-xs text-muted">
                     <tr>
@@ -359,7 +357,7 @@ export function ImportPage() {
                           <td className="py-2 pr-3 font-medium">{header}</td>
                           <td className="py-2 pr-3">
                             <select
-                              className="w-full rounded-lg border border-line px-2 py-1.5"
+                              className="min-h-10 w-full rounded-lg border border-line px-2 py-1.5"
                               value={match?.field ?? ""}
                               onChange={(event) => assign(header, event.target.value as ColumnField | "")}
                             >
@@ -498,10 +496,8 @@ function IssueCard({ issue, onFix, onSkip }: { issue: DataIssue; onFix: () => vo
       </div>
       <p className="mt-2 text-sm leading-6 text-[#344054]">{issue.message}</p>
       <div className="mt-3 flex flex-wrap gap-2">
-        <Button className="px-2.5 py-1.5 text-xs" onClick={onFix}>
-          {issue.fixLabel}
-        </Button>
-        <Button variant="ghost" className="px-2.5 py-1.5 text-xs" onClick={onSkip}>
+        <Button onClick={onFix}>{issue.fixLabel}</Button>
+        <Button variant="ghost" onClick={onSkip}>
           {issue.skipLabel}
         </Button>
       </div>
@@ -529,7 +525,7 @@ function TreeNode({
   const head = org.people.find((person) => person.id === department.headId);
   return (
     <div className="mt-1">
-      <button className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-white" onClick={() => setOpen((value) => !value)} style={{ paddingLeft: 8 + depth * 16 }}>
+      <button className="flex min-h-10 w-full items-center gap-2 rounded-lg px-2 text-left hover:bg-white" onClick={() => setOpen((value) => !value)} style={{ paddingLeft: 8 + depth * 16 }}>
         <span className="w-4 text-xs text-muted">{children.length > 0 ? (expanded ? "▾" : "▸") : "·"}</span>
         <span className="text-sm font-medium">{department.name}</span>
         <span className="text-xs text-muted">

@@ -5,11 +5,13 @@ import { ScenarioSwitcher, Shell } from "@/components/shell";
 import { CollabEdge, type CollabEdgeData } from "@/components/sandbox/collab-edge";
 import { DeptNode, type DeptBubble, type DeptNodeData } from "@/components/sandbox/dept-node";
 import { LeaderCard } from "@/components/sandbox/leader-card";
+import { useNarrow } from "@/components/use-narrow";
 import { Button, cx } from "@/components/ui";
 import { useWorkspace } from "@/components/workspace-context";
 import { collabBundleFromSheets } from "@/lib/collab/parse";
 import { canvasLinks, goalsFor, leaderCollaborators, okrFor, scoredCollaboration } from "@/lib/collab/view";
 import { readCollabView, writeCollabView } from "@/lib/collab/viewPreference";
+import { readMobileEditHintDismissed, writeMobileEditHintDismissed } from "@/lib/ui/mobileHint";
 import { formatCny, formatDeltaMoney, formatDeltaNumber, round1 } from "@/lib/format";
 import { canSeeIndividualPay, canSeeLeaderCard, type CollabBundle, type OrgIssue, type OrgSnapshot } from "@/lib/model/types";
 import { departmentAccent, scaleAccent, type ColorMode } from "@/lib/org/color";
@@ -62,6 +64,9 @@ export function SandboxPage() {
   const [banner, setBanner] = useState("");
   const [picked, setPicked] = useState<string[]>([]);
   const [chatSeed, setChatSeed] = useState<{ id: number; text: string } | null>(null);
+  const [mobileSheet, setMobileSheet] = useState<null | "tools" | "dept" | "alerts">(null);
+  const [showEditHint, setShowEditHint] = useState(false);
+  const narrow = useNarrow();
 
   const scenario = workspace ? activeScenario(workspace) : null;
   const baseline = workspace ? baselineScenario(workspace) : null;
@@ -70,6 +75,23 @@ export function SandboxPage() {
   useEffect(() => {
     setCollabOn(readCollabView(window.localStorage));
   }, []);
+
+  useEffect(() => {
+    if (!narrow) {
+      setShowEditHint(false);
+      return;
+    }
+    setShowEditHint(!readMobileEditHintDismissed(window.localStorage));
+  }, [narrow]);
+
+  function dismissEditHint() {
+    writeMobileEditHintDismissed(window.localStorage);
+    setShowEditHint(false);
+  }
+
+  function fitCanvas() {
+    instance?.fitView({ padding: 0.2, duration: 400 });
+  }
 
   function setCollabView(visible: boolean) {
     setCollabOn(visible);
@@ -408,7 +430,7 @@ export function SandboxPage() {
         <div className="mx-auto max-w-lg p-10 text-center">
           <h1 className="text-xl font-semibold">还没有基线</h1>
           <p className="mt-2 text-sm leading-6 text-muted">先导入花名册，或直接载入星澜科技示例。确认架构后就会回到这里。</p>
-          <Link href="/" className="mt-4 inline-flex rounded-xl bg-primary px-4 py-2 text-sm font-medium text-white">
+          <Link href="/" className="mt-4 inline-flex min-h-10 items-center rounded-xl bg-primary px-4 text-sm font-medium text-white">
             去导入
           </Link>
         </div>
@@ -429,15 +451,18 @@ export function SandboxPage() {
 
   return (
     <Shell crumb="沙盘主页">
-      <div className="flex h-[calc(100vh-7.5rem)] min-h-[680px] flex-col">
-        <div className="flex flex-wrap items-center gap-3 border-b border-line bg-white px-4 py-3">
-          <ScenarioSwitcher />
+      <div className="flex h-[calc(100dvh-var(--app-header,7.5rem))] min-h-0 flex-col lg:min-h-[680px]">
+        <div className="flex flex-col gap-2 border-b border-line bg-white px-3 py-2 lg:flex-row lg:flex-wrap lg:items-center lg:gap-3 lg:px-4 lg:py-3">
+          <div className="flex min-w-0 items-center gap-2">
+            <div className="min-w-0 flex-1 overflow-x-auto">
+              <ScenarioSwitcher />
+            </div>
           <button
             type="button"
             aria-pressed={collabOn}
             onClick={() => setCollabView(!collabOn)}
             className={cx(
-              "inline-flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium",
+              "inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl border px-3 text-sm font-medium",
               collabOn ? "border-[#DDD6FE] bg-[#F5F3FF] text-[#6D28D9]" : "border-line bg-white text-ink",
             )}
           >
@@ -446,7 +471,8 @@ export function SandboxPage() {
             </span>
             协作视图
           </button>
-          <div className="flex min-w-0 flex-1 flex-wrap gap-2">
+          </div>
+          <div className="flex gap-2 overflow-x-auto lg:min-w-0 lg:flex-1 lg:flex-wrap">
             <Metric label="总人数" value={String(metrics.headcount)} delta={formatDeltaNumber(delta.headcount)} />
             <Metric label="层级数" value={String(metrics.layers)} delta={formatDeltaNumber(delta.layers)} />
             <Metric label="平均管理幅度" value={round1(metrics.avgSpan).toString()} delta={formatDeltaNumber(delta.avgSpan, 1)} />
@@ -481,14 +507,27 @@ export function SandboxPage() {
           )}
         </div>
         <div className="flex min-h-0 flex-1">
-          <div className="flex w-[220px] shrink-0 flex-col gap-3 overflow-auto border-r border-line bg-white p-3">
+          <div
+            className={cx(
+              "flex-col gap-3 overflow-auto bg-white p-3 lg:flex lg:w-[220px] lg:shrink-0 lg:border-r lg:border-line",
+              mobileSheet === "tools"
+                ? "fixed inset-x-0 bottom-12 z-40 flex max-h-[52vh] rounded-t-2xl border border-line shadow-card lg:static lg:bottom-auto lg:z-auto lg:max-h-none lg:rounded-none lg:shadow-none"
+                : "hidden",
+            )}
+          >
+            <div className="flex items-center justify-between lg:hidden">
+              <div className="text-sm font-semibold">画布工具</div>
+              <button type="button" className="inline-flex min-h-10 items-center px-2 text-sm text-muted" onClick={() => setMobileSheet(null)}>
+                关闭
+              </button>
+            </div>
             <label className="text-xs font-medium text-muted">
               搜索部门、姓名或岗位
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="例如 客户成功"
-                className="mt-1 w-full rounded-xl border border-line px-3 py-2 text-sm text-ink outline-none focus:border-primary"
+                className="mt-1 min-h-10 w-full rounded-xl border border-line px-3 py-2 text-sm text-ink outline-none focus:border-primary"
               />
             </label>
             <div>
@@ -503,7 +542,7 @@ export function SandboxPage() {
                 ).map(([mode, label]) => (
                   <button
                     key={mode}
-                    className={cx("rounded-lg py-1.5", colorMode === mode ? "bg-white font-medium text-ink shadow-sm" : "text-muted")}
+                    className={cx("min-h-10 rounded-lg", colorMode === mode ? "bg-white font-medium text-ink shadow-sm" : "text-muted")}
                     onClick={() => setColorMode(mode)}
                   >
                     {label}
@@ -511,7 +550,7 @@ export function SandboxPage() {
                 ))}
               </div>
             </div>
-            <Button variant="secondary" onClick={() => instance?.fitView({ padding: 0.2, duration: 400 })}>
+            <Button variant="secondary" onClick={fitCanvas}>
               适应画布
             </Button>
             <Button variant="secondary" onClick={() => setCollapsed(new Set())}>
@@ -530,7 +569,7 @@ export function SandboxPage() {
               <input
                 type="file"
                 accept=".xlsx,.xls,.csv"
-                className="mt-1 block w-full text-[11px]"
+                className="mt-1 block w-full max-w-full text-[11px]"
                 onChange={(event) => {
                   const file = event.target.files?.[0];
                   if (file) void onCollabFile(file);
@@ -552,14 +591,25 @@ export function SandboxPage() {
                 绩效权重模板
               </a>
             </div>
-            <p className="mt-auto text-xs leading-5 text-muted">拖部门到另一个部门上，可以选择挂到下面或合并。把人拖到部门上，会先预览再确认。Esc 取消。</p>
+            <p className="mt-auto hidden text-xs leading-5 text-muted lg:block">拖部门到另一个部门上，可以选择挂到下面或合并。把人拖到部门上，会先预览再确认。Esc 取消。</p>
+            <p className="text-xs leading-5 text-muted lg:hidden">手机上可以查看、切换方案和处理提醒。拖拽改架构请用电脑。</p>
           </div>
-          <div className="relative min-w-0 flex-1 bg-[#F8F9FD]">
-            {workspace.importMeta.sampleLabel && (
-              <div className="pointer-events-none absolute left-3 top-3 z-10 rounded-full bg-primarySoft px-2.5 py-1 text-[11px] font-medium text-primary">
-                示例数据 · {workspace.importMeta.sampleLabel}
-              </div>
-            )}
+          <div className="relative min-h-0 min-w-0 flex-1 bg-[#F8F9FD]">
+            <div className="pointer-events-none absolute left-3 right-3 top-3 z-10 flex flex-col items-start gap-2">
+              {workspace.importMeta.sampleLabel && (
+                <div className="rounded-full bg-primarySoft px-2.5 py-1 text-[11px] font-medium text-primary">
+                  示例数据 · {workspace.importMeta.sampleLabel}
+                </div>
+              )}
+              {showEditHint && (
+                <div className="pointer-events-auto max-w-sm rounded-2xl border border-line bg-white px-3 py-2 text-xs leading-5 text-ink shadow-card lg:hidden">
+                  在手机上适合查看、切换方案和处理提醒。拖拽调整架构，用电脑更合适。
+                  <button type="button" className="ml-2 inline-flex min-h-10 items-center font-medium text-primary" onClick={dismissEditHint}>
+                    知道了
+                  </button>
+                </div>
+              )}
+            </div>
             <ReactFlow
               nodes={graph.nodes}
               edges={graph.edges}
@@ -571,7 +621,12 @@ export function SandboxPage() {
               }}
               minZoom={0.12}
               maxZoom={1.4}
-              nodesDraggable={!preview && !deptPending && !peoplePending}
+              panOnDrag
+              zoomOnPinch
+              zoomOnScroll
+              preventScrolling
+              selectionOnDrag={false}
+              nodesDraggable={!narrow && !preview && !deptPending && !peoplePending}
               nodesConnectable={false}
               elementsSelectable
               onNodesChange={onNodesChange}
@@ -580,6 +635,7 @@ export function SandboxPage() {
               onNodeClick={(_, node) => {
                 setSelectedId(node.id);
                 setFocusId(node.id);
+                if (narrow) setMobileSheet("dept");
               }}
               proOptions={{ hideAttribution: false }}
             >
@@ -587,7 +643,20 @@ export function SandboxPage() {
               <FocusOnNode focusId={focusId} />
             </ReactFlow>
             {selected && (
-              <div className="absolute bottom-3 left-3 top-12 z-10 flex w-[320px] flex-col gap-2 overflow-auto pr-1">
+              <div
+                className={cx(
+                  "flex-col gap-2 overflow-auto bg-white lg:absolute lg:bottom-3 lg:left-3 lg:top-12 lg:z-10 lg:flex lg:w-[320px] lg:bg-transparent lg:pr-1",
+                  mobileSheet === "dept"
+                    ? "fixed inset-x-0 bottom-12 z-40 flex max-h-[52vh] rounded-t-2xl border border-line p-3 shadow-card lg:bottom-3 lg:right-auto lg:top-12 lg:z-10 lg:max-h-none lg:w-[320px] lg:rounded-none lg:border-0 lg:p-0 lg:shadow-none"
+                    : "hidden",
+                )}
+              >
+                <div className="flex items-center justify-between lg:hidden">
+                  <div className="text-sm font-semibold">部门与负责人</div>
+                  <button type="button" className="inline-flex min-h-10 items-center px-2 text-sm text-muted" onClick={() => setMobileSheet(null)}>
+                    关闭
+                  </button>
+                </div>
                 <LeaderCard
                   sample={Boolean(workspace.collab?.sample || workspace.importMeta.sampleLabel)}
                   locked={!seeCard}
@@ -606,7 +675,7 @@ export function SandboxPage() {
                       <div className="text-sm font-semibold">{selected.name}</div>
                       <div className="text-xs text-muted">{selected.path.join(" / ")}</div>
                     </div>
-                    <button className="text-xs text-muted" onClick={() => setSelectedId(null)}>
+                    <button className="inline-flex min-h-10 items-center px-2 text-xs text-muted" onClick={() => setSelectedId(null)}>
                       关闭
                     </button>
                   </div>
@@ -627,7 +696,7 @@ export function SandboxPage() {
                           setPicked((current) => (current.includes(person.id) ? current.filter((id) => id !== person.id) : [...current, person.id]));
                         }}
                         className={cx(
-                          "flex cursor-grab items-center justify-between gap-2 rounded-lg px-2 py-1",
+                          "flex min-h-10 cursor-grab items-center justify-between gap-2 rounded-lg px-2",
                           picked.includes(person.id) ? "bg-primarySoft" : "bg-[#F8F9FD]",
                         )}
                       >
@@ -641,7 +710,7 @@ export function SandboxPage() {
                   </ul>
                   <Link
                     href={`/roles?title=${encodeURIComponent(head?.title || selectedPeople[0]?.title || "")}`}
-                    className="mt-2 inline-flex text-xs font-medium text-primary"
+                    className="mt-2 inline-flex min-h-10 items-center text-xs font-medium text-primary"
                   >
                     拆解这个部门的岗位
                   </Link>
@@ -649,7 +718,7 @@ export function SandboxPage() {
               </div>
             )}
             {collabOn && (
-              <div className="pointer-events-none absolute bottom-3 right-3 z-10 rounded-xl bg-white/95 px-3 py-2 text-[11px] leading-5 text-[#6D28D9] shadow-card">
+              <div className="pointer-events-none absolute bottom-3 right-3 z-10 max-w-[calc(100%-1.5rem)] rounded-xl bg-white/95 px-3 py-2 text-[11px] leading-5 text-[#6D28D9] shadow-card">
                 部门协作线 {canvasLinks(displaySnapshot, collabPairs, new Set(graph.nodes.map((node) => node.id))).length} 条 · 线越粗越强 · 仅部门间 · 近 {workspace.collab?.windowDays ?? 90} 天
                 {workspace.importMeta.sampleLabel ? " · 示例数据" : ""}
               </div>
@@ -657,7 +726,7 @@ export function SandboxPage() {
             {(preview || impact) && (
               <div className="absolute left-1/2 top-12 z-10 w-[min(520px,calc(100%-2rem))] -translate-x-1/2 rounded-2xl border border-line bg-white px-4 py-3 shadow-card">
                 <div className="text-xs font-medium text-primary">{preview ? `正在预览：${preview.label}` : impact?.label}</div>
-                <div className="mt-2 grid grid-cols-4 gap-2 text-center text-[11px]">
+                <div className="mt-2 grid grid-cols-2 gap-2 text-center text-[11px] sm:grid-cols-4">
                   <ImpactCell label="人数" before={impact?.before.headcount ?? metrics.headcount} after={(previewMetrics ?? impact?.after)?.headcount ?? metrics.headcount} />
                   <ImpactCell label="层级" before={impact?.before.layers ?? metrics.layers} after={(previewMetrics ?? impact?.after)?.layers ?? metrics.layers} />
                   <ImpactCell
@@ -692,31 +761,29 @@ export function SandboxPage() {
             )}
             {banner && <div className="absolute bottom-16 left-4 z-10 max-w-sm rounded-xl bg-[#111827] px-3 py-2 text-xs text-white">{banner}</div>}
             {deptPending && sourceDept && targetDept && (
-              <div className="absolute left-1/2 top-1/2 z-30 w-[320px] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-line bg-white p-4 shadow-card">
+              <div className="absolute left-1/2 top-1/2 z-30 w-[min(320px,calc(100%-1.5rem))] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-line bg-white p-4 shadow-card">
                 <div className="text-sm font-semibold">调整「{sourceDept.name}」</div>
                 <p className="mt-1 text-xs leading-5 text-muted">放到「{targetDept.name}」。可以挂成下级，也可以把人和子部门并进去。取消不会改架构。</p>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <Button className="px-2.5 py-1.5 text-xs" onClick={() => applyDept("reparent")}>
-                    挂到下面
-                  </Button>
-                  <Button variant="secondary" className="px-2.5 py-1.5 text-xs" onClick={() => applyDept("merge")}>
+                  <Button onClick={() => applyDept("reparent")}>挂到下面</Button>
+                  <Button variant="secondary" onClick={() => applyDept("merge")}>
                     合并进来
                   </Button>
-                  <Button variant="ghost" className="px-2.5 py-1.5 text-xs" onClick={() => setDeptPending(null)}>
+                  <Button variant="ghost" onClick={() => setDeptPending(null)}>
                     取消
                   </Button>
                 </div>
               </div>
             )}
             {peoplePending && peopleTarget && (
-              <div className="absolute left-1/2 top-1/2 z-30 w-[320px] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-line bg-white p-4 shadow-card">
+              <div className="absolute left-1/2 top-1/2 z-30 w-[min(320px,calc(100%-1.5rem))] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-line bg-white p-4 shadow-card">
                 <div className="text-sm font-semibold">调整 {peoplePending.personIds.length} 人的归属</div>
                 <p className="mt-1 text-xs leading-5 text-muted">将进入「{peopleTarget.name}」，直属上级改为该部门负责人。确认后写入当前方案，可以撤销。</p>
                 <div className="mt-3 flex gap-2">
-                  <Button className="px-2.5 py-1.5 text-xs" onClick={() => writeSnapshot(`把 ${peoplePending.personIds.length} 人调整到${peopleTarget.name}`, peoplePending.snapshot, [peoplePending.targetDeptId])}>
+                  <Button onClick={() => writeSnapshot(`把 ${peoplePending.personIds.length} 人调整到${peopleTarget.name}`, peoplePending.snapshot, [peoplePending.targetDeptId])}>
                     确认
                   </Button>
-                  <Button variant="ghost" className="px-2.5 py-1.5 text-xs" onClick={() => setPeoplePending(null)}>
+                  <Button variant="ghost" onClick={() => setPeoplePending(null)}>
                     取消
                   </Button>
                 </div>
@@ -726,8 +793,12 @@ export function SandboxPage() {
           <AiPanel
             issues={issues}
             metrics={previewMetrics ?? metrics}
-            collapsed={!panelOpen}
-            onToggle={() => setPanelOpen((value) => !value)}
+            collapsed={narrow ? mobileSheet !== "alerts" : !panelOpen}
+            mobileChrome="none"
+            onToggle={() => {
+              if (narrow) setMobileSheet((current) => (current === "alerts" ? null : "alerts"));
+              else setPanelOpen((value) => !value);
+            }}
             onLocate={locate}
             onIgnore={ignore}
             onSplit={openSplit}
@@ -742,6 +813,39 @@ export function SandboxPage() {
             onApplyPlan={(plan) => writeSnapshot(plan.title, plan.snapshot, noticeIds)}
           />
         </div>
+        {mobileSheet && mobileSheet !== "alerts" && (
+          <button type="button" className="fixed inset-0 z-30 bg-[#101828]/30 lg:hidden" aria-label="关闭面板" onClick={() => setMobileSheet(null)} />
+        )}
+        <nav className="relative z-50 grid h-12 shrink-0 grid-cols-4 border-t border-line bg-white lg:hidden" aria-label="沙盘操作">
+          <button type="button" className="min-h-12 text-sm font-medium text-ink" onClick={fitCanvas}>
+            适应画布
+          </button>
+          <button
+            type="button"
+            aria-pressed={mobileSheet === "tools"}
+            className={cx("min-h-12 text-sm font-medium", mobileSheet === "tools" ? "text-primary" : "text-ink")}
+            onClick={() => setMobileSheet((current) => (current === "tools" ? null : "tools"))}
+          >
+            工具
+          </button>
+          <button
+            type="button"
+            aria-pressed={mobileSheet === "dept"}
+            disabled={!selected}
+            className={cx("min-h-12 truncate px-1 text-sm font-medium disabled:text-[#D0D5DD]", mobileSheet === "dept" ? "text-primary" : "text-ink")}
+            onClick={() => setMobileSheet((current) => (current === "dept" ? null : "dept"))}
+          >
+            {selected ? selected.name : "部门"}
+          </button>
+          <button
+            type="button"
+            aria-pressed={mobileSheet === "alerts"}
+            className={cx("min-h-12 text-sm font-medium", mobileSheet === "alerts" ? "text-primary" : "text-ink")}
+            onClick={() => setMobileSheet((current) => (current === "alerts" ? null : "alerts"))}
+          >
+            提醒 {issues.length}
+          </button>
+        </nav>
       </div>
     </Shell>
   );
@@ -749,7 +853,7 @@ export function SandboxPage() {
 
 function Metric({ label, value, delta }: { label: string; value: string; delta: string }) {
   return (
-    <div className="min-w-[120px] rounded-xl border border-line px-3 py-1.5">
+    <div className="min-w-[120px] shrink-0 rounded-xl border border-line px-3 py-1.5">
       <div className="text-[11px] text-muted">{label}</div>
       <div className="text-sm font-semibold">{value}</div>
       <div className="text-[11px] text-muted">{delta}</div>

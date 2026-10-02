@@ -7,7 +7,7 @@ import type { ViewerRole } from "@/lib/model/types";
 import { DEFAULT_SETTINGS } from "@/lib/model/types";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 const LINKS = [
   { href: "/", label: "导入" },
@@ -27,23 +27,35 @@ export function Shell({ crumb, children }: { crumb: string; children: ReactNode 
   const [auditOpen, setAuditOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const role = workspace?.settings.viewerRole ?? "od";
+  const headerRef = useRef<HTMLElement>(null);
+  const sampleLabel = workspace?.importMeta.sampleLabel;
+
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const apply = () => document.documentElement.style.setProperty("--app-header", `${el.offsetHeight}px`);
+    apply();
+    const observer = new ResizeObserver(apply);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [sampleLabel, role]);
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-30 border-b border-line bg-white/95 backdrop-blur">
-        <div className="flex h-14 items-center gap-4 px-4">
-          <Link href="/" className="flex items-center gap-2">
-            <span className="grid h-8 w-8 place-items-center rounded-lg bg-primary text-sm font-bold text-white">织</span>
-            <span className="hidden text-sm font-semibold sm:block">组织设计沙盘</span>
+    <div className="flex min-h-dvh flex-col overflow-x-clip">
+      <header ref={headerRef} className="sticky top-0 z-30 border-b border-line bg-white/95 backdrop-blur">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-2 px-3 py-2 lg:gap-4 lg:px-4 xl:h-14 xl:flex-nowrap xl:py-0">
+          <Link href="/" className="order-1 inline-flex min-h-10 items-center gap-2">
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-primary text-sm font-bold text-white">织</span>
+            <span className="hidden text-sm font-semibold sm:inline">组织设计沙盘</span>
           </Link>
-          <span className="hidden text-sm text-muted md:block">{crumb}</span>
-          <nav className="ml-auto flex items-center gap-1">
+          <span className="order-2 hidden min-w-0 truncate text-sm text-muted md:block">{crumb}</span>
+          <nav className="order-3 flex flex-wrap items-center gap-1 lg:ml-auto">
             {LINKS.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
                 className={cx(
-                  "rounded-lg px-3 py-1.5 text-sm",
+                  "inline-flex min-h-10 items-center rounded-lg px-3 text-sm",
                   pathname === link.href ? "bg-primarySoft font-medium text-primary" : "text-muted hover:bg-[#F4F5F9]",
                 )}
               >
@@ -51,24 +63,25 @@ export function Shell({ crumb, children }: { crumb: string; children: ReactNode 
               </Link>
             ))}
           </nav>
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" className="px-2" disabled={!canUndo} onClick={undo} title="撤销">
+          <div className="order-5 flex flex-wrap items-center gap-1 xl:order-4">
+            <Button variant="ghost" className="px-2.5" disabled={!canUndo} onClick={undo} title="撤销">
               撤销
             </Button>
-            <Button variant="ghost" className="px-2" disabled={!canRedo} onClick={redo} title="重做">
+            <Button variant="ghost" className="px-2.5" disabled={!canRedo} onClick={redo} title="重做">
               重做
             </Button>
-            <Button variant="ghost" className="px-2" disabled={!workspace} onClick={() => setAuditOpen(true)}>
+            <Button variant="ghost" className="px-2.5" disabled={!workspace} onClick={() => setAuditOpen(true)}>
               记录
             </Button>
-            <Button variant="ghost" className="px-2" disabled={!workspace} onClick={() => setSettingsOpen(true)}>
+            <Button variant="ghost" className="px-2.5" disabled={!workspace} onClick={() => setSettingsOpen(true)}>
               口径
             </Button>
           </div>
-          <label className="hidden items-center gap-2 text-xs text-muted lg:flex">
-            查看身份
+          <label className="order-6 flex min-h-10 min-w-0 items-center gap-2 text-xs text-muted xl:order-5">
+            <span className="hidden sm:inline">查看身份</span>
             <select
-              className="rounded-lg border border-line bg-white px-2 py-1 text-sm text-ink"
+              aria-label="查看身份"
+              className="min-h-10 max-w-[9.5rem] rounded-lg border border-line bg-white px-2 text-sm text-ink"
               value={role}
               disabled={!workspace}
               onChange={(event) => setViewerRole(event.target.value as ViewerRole)}
@@ -80,7 +93,9 @@ export function Shell({ crumb, children }: { crumb: string; children: ReactNode 
               ))}
             </select>
           </label>
-          <Badge tone={ai.mode === "llm" ? "good" : "info"}>{ai.mode === "llm" ? `模型 · ${ai.model}` : "离线演示"}</Badge>
+          <span className="order-4 max-xl:ml-auto xl:order-6">
+            <Badge tone={ai.mode === "llm" ? "good" : "info"}>{ai.mode === "llm" ? `模型 · ${ai.model}` : "离线演示"}</Badge>
+          </span>
         </div>
         {workspace?.importMeta.sampleLabel && (
           <div className="border-t border-[#E0E7FF] bg-primarySoft px-4 py-1.5 text-xs text-[#3730A3]">
@@ -129,7 +144,7 @@ function Dialog({ title, onClose, children }: { title: string; onClose: () => vo
       <div className="max-h-[80vh] w-full max-w-lg overflow-auto rounded-2xl bg-white p-5 shadow-card" onClick={(event) => event.stopPropagation()}>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-base font-semibold">{title}</h2>
-          <button className="text-sm text-muted" onClick={onClose}>
+          <button className="inline-flex min-h-10 items-center px-2 text-sm text-muted" onClick={onClose}>
             关闭
           </button>
         </div>
@@ -161,7 +176,7 @@ function SettingsDialog({
       <p className="mb-3 text-sm text-muted">
         {admin ? "你现在是系统管理员，可以改阈值和算力单价。改完立即重算，也可以撤销。" : "只有系统管理员能改这些数。把右上角身份换成「系统管理员」即可。"}
       </p>
-      <div className="grid grid-cols-2 gap-3 text-sm">
+      <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
         <Field label="幅度过宽（直接下级多于）" value={spanWide} disabled={!admin} onChange={setSpanWide} />
         <Field label="幅度过窄（直接下级不多于）" value={spanNarrow} disabled={!admin} onChange={setSpanNarrow} />
         <Field label="层级上限" value={maxLayers} disabled={!admin} onChange={setMaxLayers} />
@@ -209,7 +224,7 @@ function Field({
         disabled={disabled}
         value={value}
         onChange={(event) => onChange(Number(event.target.value))}
-        className="mt-1 w-full rounded-xl border border-line px-3 py-2 disabled:bg-[#F8F9FD]"
+        className="mt-1 min-h-10 w-full rounded-xl border border-line px-3 py-2 disabled:bg-[#F8F9FD]"
       />
     </label>
   );
@@ -219,13 +234,13 @@ export function ScenarioSwitcher() {
   const { workspace, touch } = useWorkspace();
   if (!workspace) return null;
   return (
-    <div className="flex flex-wrap rounded-xl bg-[#EEF0F6] p-1">
+    <div className="flex flex-nowrap gap-0.5 overflow-x-auto rounded-xl bg-[#EEF0F6] p-1 lg:flex-wrap">
       {workspace.scenarios.map((scenario) => {
         const active = scenario.id === workspace.activeScenarioId;
         return (
           <button
             key={scenario.id}
-            className={cx("rounded-lg px-3 py-1.5 text-sm", active ? "bg-white font-medium text-ink shadow-sm" : "text-muted")}
+            className={cx("min-h-10 shrink-0 rounded-lg px-3 text-sm", active ? "bg-white font-medium text-ink shadow-sm" : "text-muted")}
             onClick={() => touch((current) => ({ ...current, activeScenarioId: scenario.id }))}
           >
             {scenario.name}

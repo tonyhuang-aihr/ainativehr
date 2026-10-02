@@ -96,7 +96,7 @@ export function DeptNode({ data }: NodeProps<Node<DeptNodeData, "dept">>) {
       </div>
       {data.bubble && (
         <div
-          className="nodrag nopan absolute left-[calc(100%+12px)] top-0 z-20 w-[240px] rounded-2xl border bg-white p-3 text-left shadow-card"
+          className="nodrag nopan absolute left-[calc(100%+12px)] top-0 z-20 hidden w-[240px] rounded-2xl border bg-white p-3 text-left shadow-card lg:block"
           style={{
             borderColor: data.bubble.tone === "red" ? "#FDA29B" : data.bubble.tone === "yellow" ? "#FCD34D" : "#C7D2FE",
           }}

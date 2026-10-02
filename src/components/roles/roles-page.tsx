@@ -2,6 +2,7 @@
 
 import { AiPanel } from "@/components/ai-panel";
 import { ScenarioSwitcher, Shell } from "@/components/shell";
+import { useNarrow } from "@/components/use-narrow";
 import { Badge, Button, cx } from "@/components/ui";
 import { useWorkspace } from "@/components/workspace-context";
 import { decomposeRoleWithAi } from "@/lib/ai/provider";
@@ -19,7 +20,7 @@ import { evaluateRules } from "@/lib/rules/engine";
 import { activeScenario, updateScenario } from "@/lib/workspace/create";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 
 const FREQUENCIES = ["每日", "每周", "每双周", "每月", "每季度", "按需"];
 const MODES: { id: ExecutionMode; label: string; color: string }[] = [
@@ -42,11 +43,16 @@ function RolesBody() {
   const [query, setQuery] = useState("");
   const [title, setTitle] = useState(params.get("title") ?? "");
   const [panelOpen, setPanelOpen] = useState(true);
+  const narrow = useNarrow();
   const [pending, setPending] = useState(false);
   const [note, setNote] = useState("");
   const [draft, setDraft] = useState<RoleTask[] | null>(null);
   const [draftKey, setDraftKey] = useState("");
   const draftRef = useRef<RoleTask[] | null>(null);
+
+  useEffect(() => {
+    if (narrow) setPanelOpen(false);
+  }, [narrow]);
 
   const scenario = workspace ? activeScenario(workspace) : null;
   const roles = useMemo(() => {
@@ -166,14 +172,14 @@ function RolesBody() {
 
   return (
     <Shell crumb="岗位任务拆解">
-      <div className="flex min-h-[calc(100vh-7.5rem)]">
-        <aside className="w-[280px] shrink-0 overflow-auto border-r border-line bg-white p-3">
+      <div className="flex min-h-0 flex-col pb-14 lg:h-[calc(100dvh-var(--app-header,7.5rem))] lg:min-h-[680px] lg:flex-row lg:pb-0">
+        <aside className="max-h-[42vh] w-full shrink-0 overflow-auto border-b border-line bg-white p-3 lg:max-h-none lg:w-[280px] lg:border-b-0 lg:border-r">
           <ScenarioSwitcher />
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="搜岗位或部门"
-            className="mt-3 w-full rounded-xl border border-line px-3 py-2 text-sm outline-none focus:border-primary"
+            className="mt-3 min-h-10 w-full rounded-xl border border-line px-3 py-2 text-sm outline-none focus:border-primary"
           />
           <div className="mt-3 space-y-3">
             {[...grouped.entries()].map(([dept, list]) => (
@@ -188,7 +194,7 @@ function RolesBody() {
                         key={role.title}
                         onClick={() => setTitle(role.title)}
                         className={cx(
-                          "flex w-full items-center justify-between rounded-xl px-2 py-2 text-left text-sm",
+                          "flex min-h-10 w-full items-center justify-between rounded-xl px-2 text-left text-sm",
                           active ? "bg-primarySoft text-primary" : "hover:bg-[#F6F7FB]",
                         )}
                       >
@@ -205,7 +211,7 @@ function RolesBody() {
             ))}
           </div>
         </aside>
-        <main className="min-w-0 flex-1 overflow-auto p-5">
+        <main className="min-w-0 flex-1 overflow-auto p-4 lg:p-5">
           {!title && (
             <div className="mx-auto max-w-xl pt-10">
               <h1 className="text-xl font-semibold">选一个岗位，决定哪些交给 AI</h1>
@@ -291,7 +297,7 @@ function RolesBody() {
                       })}
                     </div>
                   </div>
-                  <div className="mt-4 overflow-auto rounded-2xl border border-line bg-white">
+                  <div className="mt-4 max-w-full overflow-x-auto rounded-2xl border border-line bg-white">
                     <table className="w-full min-w-[860px] text-left text-sm">
                       <thead className="bg-[#F8F9FD] text-xs text-muted">
                         <tr>
@@ -327,7 +333,7 @@ function RolesBody() {
                                 min={0}
                                 max={100}
                                 value={Math.round(task.timeShare * 1000) / 10}
-                                className="w-16 rounded-lg border border-line px-2 py-1"
+                                className="min-h-10 w-16 rounded-lg border border-line px-2 py-1"
                                 onChange={(event) =>
                                   updateTasks(
                                     (tasks) =>
@@ -344,7 +350,7 @@ function RolesBody() {
                             <td className="px-3 py-2">
                               <select
                                 value={task.frequency}
-                                className="rounded-lg border border-line px-2 py-1"
+                                className="min-h-10 rounded-lg border border-line px-2 py-1"
                                 onChange={(event) =>
                                   updateTasks(
                                     (tasks) => tasks.map((item) => (item.id === task.id ? { ...item, frequency: event.target.value, edited: true } : item)),
@@ -364,7 +370,7 @@ function RolesBody() {
                                   <button
                                     key={mode.id}
                                     className={cx(
-                                      "rounded-lg px-2 py-1 text-left text-xs",
+                                      "min-h-10 rounded-lg px-2 text-left text-xs",
                                       task.mode === mode.id ? "bg-primarySoft font-medium text-primary" : "text-muted hover:bg-[#F6F7FB]",
                                     )}
                                     onClick={() =>
@@ -401,7 +407,7 @@ function RolesBody() {
                             </td>
                             <td className="px-3 py-2">
                               <button
-                                className="text-xs text-[#B42318]"
+                                className="inline-flex min-h-10 items-center text-xs text-[#B42318]"
                                 onClick={() => updateTasks((tasks) => tasks.filter((item) => item.id !== task.id), `删除了任务「${task.name}」`, true)}
                               >
                                 删除
@@ -442,7 +448,7 @@ function RolesBody() {
                       <label className="text-xs text-muted">
                         套用模板
                         <select
-                          className="ml-2 rounded-lg border border-line px-2 py-1 text-sm text-ink"
+                          className="ml-2 min-h-10 rounded-lg border border-line px-2 text-sm text-ink"
                           defaultValue=""
                           onChange={(event) => {
                             const picked = workspace.templates[event.target.value];

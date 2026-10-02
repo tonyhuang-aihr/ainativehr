@@ -2,6 +2,7 @@
 
 import { answerOffline } from "@/lib/ai/offlineChat";
 import { chatWithAi } from "@/lib/ai/provider";
+import { useNarrow } from "@/components/use-narrow";
 import { Badge, Button, cx } from "@/components/ui";
 import { useWorkspace } from "@/components/workspace-context";
 import { formatCny, round1 } from "@/lib/format";
@@ -24,6 +25,7 @@ export function AiPanel({
   chatSeed,
   collapsed,
   onToggle,
+  mobileChrome = "bar",
 }: {
   issues: OrgIssue[];
   metrics: OrgMetrics;
@@ -36,8 +38,11 @@ export function AiPanel({
   chatSeed?: { id: number; text: string } | null;
   collapsed: boolean;
   onToggle: () => void;
+  /** 沙盘自己有底栏时传 none，避免再叠一条。岗位页用默认的 bar。 */
+  mobileChrome?: "bar" | "none";
 }) {
   const { ai } = useWorkspace();
+  const narrow = useNarrow();
   const [messages, setMessages] = useState<{ role: "assistant" | "user"; text: string; mode?: "offline" | "llm" }[]>([
     {
       role: "assistant",
@@ -74,29 +79,59 @@ export function AiPanel({
     setPending(false);
   }
 
+  if (collapsed && narrow && mobileChrome === "none") return null;
+
+  if (collapsed && narrow) {
+    return (
+      <button
+        type="button"
+        className="fixed inset-x-0 bottom-0 z-40 flex h-12 items-center justify-between border-t border-line bg-white px-4 text-sm font-medium text-primary"
+        onClick={onToggle}
+      >
+        <span>提醒 {issues.length}</span>
+        <span>打开 AI 助手</span>
+      </button>
+    );
+  }
+
   if (collapsed) {
     return (
-      <button className="flex h-full w-12 flex-col items-center justify-center border-l border-line bg-white text-sm text-primary" onClick={onToggle}>
+      <button type="button" className="flex h-full w-12 flex-col items-center justify-center border-l border-line bg-white text-sm text-primary" onClick={onToggle}>
         <span className="[writing-mode:vertical-rl]">AI 助手</span>
       </button>
     );
   }
 
+  const sheet = narrow;
+
   return (
-    <aside className="flex h-full w-[360px] shrink-0 flex-col border-l border-line bg-white">
-      <div className="flex items-center justify-between border-b border-line px-4 py-3">
+    <>
+      {sheet && <button type="button" className="fixed inset-0 z-40 bg-[#101828]/30 lg:hidden" aria-label="关闭 AI 助手" onClick={onToggle} />}
+      <aside
+        className={cx(
+          "flex flex-col bg-white",
+          sheet
+            ? cx(
+                "fixed inset-x-0 z-50 max-h-[52vh] overflow-hidden rounded-t-2xl border-t border-line shadow-card",
+                mobileChrome === "none" ? "bottom-12" : "bottom-0",
+              )
+            : "h-full w-[360px] shrink-0 border-l border-line max-lg:hidden",
+        )}
+      >
+      {sheet && <div className="mx-auto mt-2 h-1.5 w-10 rounded-full bg-[#E6E8F0]" aria-hidden />}
+      <div className="flex items-center justify-between border-b border-line px-4 py-2">
         <div>
           <div className="text-sm font-semibold">AI 助手</div>
           <div className="text-xs text-muted">{ai.mode === "llm" ? "已连接模型，失败时退回规则" : "离线演示 · 规则引擎"}</div>
         </div>
-        <button className="text-sm text-muted" onClick={onToggle}>
+        <button type="button" className="inline-flex min-h-10 items-center px-2 text-sm text-muted" onClick={onToggle}>
           收起
         </button>
       </div>
       <div className="border-b border-line px-4 py-3">
         <div className="mb-2 text-xs font-medium text-muted">主动提醒</div>
         {issues.length === 0 && <p className="text-sm text-muted">目前没有要处理的结构问题。</p>}
-        <div className="max-h-72 space-y-2 overflow-auto">
+        <div className={cx("space-y-2 overflow-auto", sheet ? "max-h-40" : "max-h-72")}>
           {[...issues]
             .sort((a, b) => Number(b.code === "span_wide") - Number(a.code === "span_wide"))
             .slice(0, 6)
@@ -111,17 +146,17 @@ export function AiPanel({
               <p className="text-xs leading-5 text-[#344054]">{issue.message}</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {onLocate && (
-                  <Button variant="secondary" className="px-2 py-1 text-xs" onClick={() => onLocate(issue)}>
+                  <Button variant="secondary" onClick={() => onLocate(issue)}>
                     定位
                   </Button>
                 )}
                 {onSplit && issue.code === "span_wide" && (
-                  <Button variant="secondary" className="px-2 py-1 text-xs" onClick={() => onSplit(issue)}>
+                  <Button variant="secondary" onClick={() => onSplit(issue)}>
                     帮我拆分
                   </Button>
                 )}
                 {onIgnore && (
-                  <Button variant="ghost" className="px-2 py-1 text-xs" onClick={() => onIgnore(issue)}>
+                  <Button variant="ghost" onClick={() => onIgnore(issue)}>
                     忽略
                   </Button>
                 )}
@@ -138,12 +173,12 @@ export function AiPanel({
                 <p className="mt-1 text-xs leading-5 text-muted">{plan.detail}</p>
                 <div className="mt-2 flex gap-2">
                   {onPreviewPlan && (
-                    <Button variant="secondary" className="px-2 py-1 text-xs" onClick={() => onPreviewPlan(plan)}>
+                    <Button variant="secondary" onClick={() => onPreviewPlan(plan)}>
                       预览到画布
                     </Button>
                   )}
                   {onApplyPlan && (
-                    <Button className="px-2 py-1 text-xs" onClick={() => onApplyPlan(plan)}>
+                    <Button onClick={() => onApplyPlan(plan)}>
                       应用
                     </Button>
                   )}
@@ -153,7 +188,7 @@ export function AiPanel({
           </div>
         )}
       </div>
-      <div className="flex-1 space-y-3 overflow-auto px-4 py-3">
+      <div className="min-h-0 flex-1 space-y-3 overflow-auto px-4 py-3">
         {messages.map((message, index) => (
           <div key={index} className={cx("text-sm leading-6", message.role === "user" ? "text-right" : "")}>
             <div
@@ -174,7 +209,7 @@ export function AiPanel({
       <div className="border-t border-line p-3">
         <div className="mb-2 flex flex-wrap gap-1">
           {SUGGESTIONS.map((item) => (
-            <button key={item} className="rounded-full bg-primarySoft px-2 py-1 text-[11px] text-primary" onClick={() => ask(item)}>
+            <button key={item} type="button" className="inline-flex min-h-10 items-center rounded-full bg-primarySoft px-3 text-xs text-primary" onClick={() => ask(item)}>
               {item}
             </button>
           ))}
@@ -190,7 +225,7 @@ export function AiPanel({
             value={input}
             onChange={(event) => setInput(event.target.value)}
             placeholder="问问这个组织"
-            className="min-w-0 flex-1 rounded-xl border border-line px-3 py-2 text-sm outline-none focus:border-primary"
+            className="min-h-10 min-w-0 flex-1 rounded-xl border border-line px-3 py-2 text-sm outline-none focus:border-primary"
           />
           <Button type="submit" disabled={pending}>
             发送
@@ -198,5 +233,6 @@ export function AiPanel({
         </form>
       </div>
     </aside>
+    </>
   );
 }
