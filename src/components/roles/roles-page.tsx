@@ -244,7 +244,7 @@ function RolesBody() {
                       >
                         <span>
                           {role.title}
-                          <span className="mt-0.5 block text-[11px] text-muted">{role.count} 人{posture === "draft" ? " · 草稿" : ""}</span>
+                          <span className="mt-0.5 block text-[11px] text-muted">{role.count} 人{seeMarkers && posture === "draft" ? " · 草稿" : ""}</span>
                           {seeMarkers && fromAppCell(baselinePeople, scenario.snapshot.people.filter((person) => person.title === role.title)) && (
                             <span className="mt-0.5 block text-[11px] text-muted">
                               {role.title} {role.count} 人，来自原应用分析小组

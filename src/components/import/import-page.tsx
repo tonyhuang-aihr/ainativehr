@@ -298,7 +298,7 @@ export function ImportPage() {
                 <div className="text-xs font-medium text-primary">示例数据 · 486 人</div>
                 <h3 className="mt-1 text-sm font-semibold">研发中心组织调整</h3>
                 <p className="mt-2 flex-1 text-xs leading-5 text-muted">
-                  方案 A 里产品研发一部 144 人、平台部 62 人、数据智能部 71 人。含决策轨迹和待确认岗位。姓名和成本都是虚构的。
+                  方案 A 把应用分析小组并入数据组。产品研发一部 150→144 人，数据智能部 65→71 人，数据组 26 人。含决策轨迹和待确认岗位。姓名和成本都是虚构的。
                 </p>
                 <div className="mt-3">
                   <Button
