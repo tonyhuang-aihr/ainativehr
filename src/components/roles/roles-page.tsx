@@ -11,15 +11,17 @@ import {
   formatHumanAiRatio,
   releasedHoursPerMonth,
   roleAnnualCost,
+  rollupCosts,
   splitTime,
   taskShareTotal,
 } from "@/lib/cost/math";
 import { uid, formatCny, formatPercent, round1 } from "@/lib/format";
 import { canSeeIndividualPay, canSeePlanMarkers, type ExecutionMode, type Person, type RoleDecomposition, type RoleTask } from "@/lib/model/types";
-import { rolePosture, summarizePostures } from "@/lib/roles/posture";
+import { APP_CELL_NAME, presentRdCenterIssues, RD_CENTER_SAMPLE_ID } from "@/lib/demo/rdCenter";
+import { rolePosture, summarizePostures, neutralExcludedNote, peopleIncludedInRollup } from "@/lib/roles/posture";
 import { orgMetrics, scenarioRollup, topDepartment } from "@/lib/org/metrics";
 import { evaluateRules } from "@/lib/rules/engine";
-import { activeScenario, updateScenario } from "@/lib/workspace/create";
+import { activeScenario, baselineScenario, updateScenario } from "@/lib/workspace/create";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
@@ -125,9 +127,20 @@ function RolesBody() {
   }
   const focusDept = [...peopleByDept.entries()].find(([, list]) => summarizePostures(list, scenario.decompositions).pendingRoles > 0);
   const focusSummary = focusDept ? summarizePostures(focusDept[1], scenario.decompositions) : null;
-  const issues = evaluateRules(scenario.snapshot, workspace.settings.thresholds, scenario.ignoredCodes);
+  const baselinePeople = baselineScenario(workspace).snapshot.people;
+  const focusCost = focusDept
+    ? rollupCosts(peopleIncludedInRollup(focusDept[1], scenario.decompositions), scenario.decompositions, workspace.settings)
+    : null;
+  const excludedPeople = [...peopleByDept.values()].reduce((sum, list) => {
+    const summary = summarizePostures(list, scenario.decompositions);
+    return sum + summary.draftPeople + summary.pendingPeople;
+  }, 0);
+  const approverNote = neutralExcludedNote(excludedPeople, seeMarkers);
+  const rawIssues = evaluateRules(scenario.snapshot, workspace.settings.thresholds, scenario.ignoredCodes);
+  const issues = workspace.importMeta.sampleId === RD_CENTER_SAMPLE_ID ? presentRdCenterIssues(rawIssues) : rawIssues;
   const metrics = orgMetrics(scenario.snapshot);
   const scenarioCost = scenarioRollup(scenario, workspace.settings);
+  const planNote = neutralExcludedNote(scenario.snapshot.people.length - scenarioCost.headcount, seeMarkers);
   const representative = incumbents.find((person) => person.annualCost != null) ?? incumbents[0];
   const annualLabor = representative?.annualCost ?? 0;
   const laborKnown = representative?.annualCost != null;
@@ -211,6 +224,9 @@ function RolesBody() {
                     {dept} {summary.people} 人，计入汇总 {summary.includedPeople} 人、{summary.includedRoles} 个岗位。草稿 {summary.draftPeople} 人未计入。不含 {summary.pendingRoles} 个待复核岗位 · 查看清单
                   </button>
                 )}
+                {neutralExcludedNote(summary.draftPeople + summary.pendingPeople, seeMarkers) && (
+                  <p className="mt-1 px-1 text-[11px] leading-5 text-muted">{neutralExcludedNote(summary.draftPeople + summary.pendingPeople, seeMarkers)}</p>
+                )}
                 <div className="mt-1 space-y-1">
                   {list.map((role) => {
                     const active = role.title === title;
@@ -229,6 +245,11 @@ function RolesBody() {
                         <span>
                           {role.title}
                           <span className="mt-0.5 block text-[11px] text-muted">{role.count} 人{posture === "draft" ? " · 草稿" : ""}</span>
+                          {seeMarkers && fromAppCell(baselinePeople, scenario.snapshot.people.filter((person) => person.title === role.title)) && (
+                            <span className="mt-0.5 block text-[11px] text-muted">
+                              {role.title} {role.count} 人，来自原应用分析小组
+                            </span>
+                          )}
                           {pendingMark && <span className="mt-0.5 block text-[11px] text-[#B54708]">调整中，待确认岗位</span>}
                         </span>
                         {done && posture === "active" && <Badge tone="good">已拆</Badge>}
@@ -243,9 +264,15 @@ function RolesBody() {
           </div>
         </aside>
         <main className="min-w-0 flex-1 overflow-auto p-4 lg:p-5">
+          {approverNote && (
+            <p data-testid="roles-excluded-note" className="mb-4 text-sm text-muted">
+              {approverNote}
+            </p>
+          )}
           {seeMarkers && focusSummary && focusDept && (
             <div data-testid="roles-review-note" className="mb-4 rounded-2xl border border-[#FCD34D] bg-[#FFFBEB] px-4 py-3 text-sm leading-6 text-[#92400E]">
               {focusDept[0]} {focusSummary.people} 人，计入人机比和成本的是 {focusSummary.includedPeople} 人、{focusSummary.includedRoles} 个岗位（{focusSummary.people} − {focusSummary.draftPeople} − {focusSummary.pendingPeople}）。草稿和待复核都不计入汇总。
+              {focusCost && focusCost.covered > 0 ? `人机比 ${focusCost.ratio}。` : ""}
               <button type="button" className="ml-1 font-medium text-primary" onClick={() => setReviewOnly((value) => !value)}>
                 {reviewOnly ? "显示全部岗位" : `不含 ${focusSummary.pendingRoles} 个待复核岗位 · 查看清单`}
               </button>
@@ -268,6 +295,11 @@ function RolesBody() {
                   {seeMarkers && decomposition && rolePosture(decomposition) !== "active" && (
                     <p className="mt-1 text-sm text-[#B54708]">
                       调整中，待确认岗位{rolePosture(decomposition) === "draft" ? " · 草稿不计入人机比和成本" : " · 待复核，复核前不计入人机比和成本"}
+                    </p>
+                  )}
+                  {seeMarkers && fromAppCell(baselinePeople, incumbents) && (
+                    <p data-testid="role-origin" className="mt-1 text-sm text-muted">
+                      {title} {incumbents.length} 人，来自原应用分析小组
                     </p>
                   )}
                   {seeMarkers && incumbents.some((person) => person.pendingRoleConfirm) && (
@@ -326,7 +358,7 @@ function RolesBody() {
                     <span>协同任务默认把 {Math.round(workspace.settings.collabAiShare * 100)}% 工时算给 AI。算力单价 {workspace.settings.computeUnitPrice} 元/任务/月。</span>
                   </div>
                   <div className="mt-4 grid gap-3 md:grid-cols-5">
-                    <SummaryCard label="人机比" value={formatHumanAiRatio(split.ai, split.human)} hint="AI 工时 : 人工时" />
+                    <SummaryCard testId="role-ratio" label="人机比" value={formatHumanAiRatio(split.ai, split.human)} hint="人在前 · 人工时 : AI 工时" />
                     <SummaryCard label="释放工时" value={`${round1(released)} 小时/月`} hint="单人，含协同分摊" />
                     <SummaryCard label="人力成本" value={seePay && laborKnown ? formatCny(annualLabor) : seePay ? "未提供" : "已隐藏"} hint={seePay ? "单人年度，不因 AI 自动减编" : "个人薪酬仅授权角色可见"} />
                     <SummaryCard label="算力成本" value={formatCny(perPerson.compute)} hint="单人每年" />
@@ -532,8 +564,9 @@ function RolesBody() {
                         。人数不会因为释放工时自动变化。
                       </p>
                     </div>
-                    <div className="rounded-2xl border border-line bg-white p-4 text-sm">
+                    <div data-testid="plan-summary" className="rounded-2xl border border-line bg-white p-4 text-sm">
                       <div className="font-medium">当前方案汇总</div>
+                      {planNote && <p className="mt-1 text-xs text-muted">{planNote}</p>}
                       <p className="mt-2 leading-6 text-muted">
                         已拆 {scenarioCost.covered}/{scenarioCost.headcount} 人。综合人机比 {scenarioCost.ratio}，释放工时 {round1(scenarioCost.releasedHours)} 小时/月，算力 {formatCny(scenarioCost.compute)}
                         ，人力加算力 {seePay || scenarioCost.laborKnown === 0 ? formatCny(scenarioCost.total) : "薪酬按部门汇总另计"}。
@@ -551,9 +584,15 @@ function RolesBody() {
   );
 }
 
-function SummaryCard({ label, value, hint }: { label: string; value: string; hint: string }) {
+function fromAppCell(baseline: Person[], current: Person[]): boolean {
+  if (current.length === 0) return false;
+  const previous = new Map(baseline.map((person) => [person.id, person]));
+  return current.every((person) => previous.get(person.id)?.departmentPath.at(-1) === APP_CELL_NAME);
+}
+
+function SummaryCard({ label, value, hint, testId }: { label: string; value: string; hint: string; testId?: string }) {
   return (
-    <div className="rounded-2xl border border-line bg-white px-3 py-3">
+    <div data-testid={testId} className="rounded-2xl border border-line bg-white px-3 py-3">
       <div className="text-xs text-muted">{label}</div>
       <div className="mt-1 text-lg font-semibold">{value}</div>
       <div className="mt-1 text-[11px] leading-4 text-muted">{hint}</div>

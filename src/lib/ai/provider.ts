@@ -1,6 +1,7 @@
 import {
   buildChatMessages,
   buildDecisionPrefill,
+  buildDecisionPrefillMessages,
   collectPersonalSecrets,
   desensitizeMessages,
   scrubText,
@@ -112,30 +113,15 @@ export async function chatWithAi(input: {
 }
 
 export async function prefillDecisionWithAi(input: {
-  departmentName: string;
-  beforePhrase: string;
-  afterPhrase: string;
+  changes: { name: string; before: number; after: number }[];
   reviewDate: string;
   secrets: string[];
   mode: AiMode;
+  lead?: string;
 }): Promise<{ prefill: DecisionPrefill; mode: AiMode }> {
   const offline = buildDecisionPrefill(input);
   if (input.mode !== "llm") return { prefill: offline, mode: "offline" };
-  const text = await complete(
-    [
-      {
-        role: "system",
-        content:
-          "你帮 OD 起草决策说明。只根据给出的部门汇总写背景、意图、预期效果和复盘日期。不要写姓名、工号、薪酬、绩效，也不要写负责人去留或调岗。只输出 JSON：{\"background\",\"intent\",\"expectedEffect\",\"reviewDate\"}。",
-      },
-      {
-        role: "user",
-        content: `部门：${input.departmentName}。调整前 ${input.beforePhrase}。调整后 ${input.afterPhrase}。建议复盘日 ${input.reviewDate}。`,
-      },
-    ],
-    true,
-    input.secrets,
-  );
+  const text = await complete(buildDecisionPrefillMessages(input), true, input.secrets);
   const parsed = text ? parsePrefill(text) : null;
   if (!parsed) return { prefill: offline, mode: "offline" };
   return {

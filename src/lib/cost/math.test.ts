@@ -21,7 +21,7 @@ describe("人机比与成本", () => {
     const split = splitTime(tasks, 0.5);
     expect(split.ai).toBeCloseTo(0.55);
     expect(split.human).toBeCloseTo(0.45);
-    expect(formatHumanAiRatio(split.ai, split.human)).toBe("55 : 45");
+    expect(formatHumanAiRatio(split.ai, split.human)).toBe("人 : AI = 45 : 55");
     expect(releasedHoursPerMonth(tasks, 0.5, 160)).toBeCloseTo(88);
   });
 
@@ -29,7 +29,7 @@ describe("人机比与成本", () => {
     const split = splitTime(tasks, 0.25);
     expect(split.ai).toBeCloseTo(0.425);
     expect(split.human).toBeCloseTo(0.575);
-    expect(formatHumanAiRatio(split.ai, split.human)).toBe("42.5 : 57.5");
+    expect(formatHumanAiRatio(split.ai, split.human)).toBe("人 : AI = 57.5 : 42.5");
   });
 
   it("算力只计 AI 和协同任务，总成本 = 人力 + 年化算力", () => {
@@ -69,7 +69,7 @@ describe("人机比与成本", () => {
     expect(rollup.compute).toBe(9600);
     expect(rollup.total).toBe(609600);
     expect(rollup.releasedHours).toBeCloseTo(176);
-    expect(rollup.ratio).toBe("55 : 45");
+    expect(rollup.ratio).toBe("人 : AI = 45 : 55");
   });
 
   it("离线模板的工时加总为 100%", () => {

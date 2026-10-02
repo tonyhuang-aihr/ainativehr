@@ -16,7 +16,7 @@ type ShareTask = {
 
 /**
  * 人机协同按 collabAiShare 分到 AI，其余分到人。默认 50%。
- * 人机比 = AI 工时占比 : 人工时占比。
+ * 人机比按人在前显示：人 : AI = 人工时占比 : AI 工时占比。
  * 释放工时 =（完全由 AI 做的工时 + 协同工时 × 分摊比例）× 月标准工时。
  * 也就是理论上能从人身上腾出来的时间，不自动减少编制。
  */
@@ -40,9 +40,10 @@ export function splitTime(tasks: ShareTask[], collabAiShare: number): TimeSplit 
   };
 }
 
+/** 参数仍是 AI 份额在前，显示时把人放在前面。 */
 export function formatHumanAiRatio(ai: number, human: number): string {
   if (ai === 0 && human === 0) return "—";
-  return `${trimNumber(round1(ai * 100))} : ${trimNumber(round1(human * 100))}`;
+  return `人 : AI = ${trimNumber(round1(human * 100))} : ${trimNumber(round1(ai * 100))}`;
 }
 
 export function releasedHoursPerMonth(tasks: ShareTask[], collabAiShare: number, monthlyHours: number): number {

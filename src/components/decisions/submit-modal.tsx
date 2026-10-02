@@ -3,7 +3,7 @@
 import { Badge, Button } from "@/components/ui";
 import { useNarrow } from "@/components/use-narrow";
 import { prefillDecisionWithAi, type AiMode } from "@/lib/ai/provider";
-import { reviewDateMonthsAhead, type DecisionPrefill } from "@/lib/ai/desensitize";
+import { changeEnds, reviewDateMonthsAhead, type DecisionPrefill, type HeadcountChange } from "@/lib/ai/desensitize";
 import { guardIssues, stripGuardedText } from "@/lib/decisions/guard";
 import type { DecisionFieldKey, DecisionRecord, FieldOrigin, Person } from "@/lib/model/types";
 import { useEffect, useState } from "react";
@@ -18,23 +18,21 @@ const FIELDS: { key: DecisionFieldKey; label: string; multiline: boolean }[] = [
 export function SubmitDecisionModal({
   departmentName,
   departmentId,
-  beforePhrase,
-  afterPhrase,
+  changes,
+  lead,
   people,
   secrets,
   mode,
-  diffs,
   onClose,
   onSubmit,
 }: {
   departmentName: string;
   departmentId: string;
-  beforePhrase: string;
-  afterPhrase: string;
+  changes: HeadcountChange[];
+  lead?: string;
   people: Person[];
   secrets: string[];
   mode: AiMode;
-  diffs: { name: string; before: number; after: number }[];
   onClose: () => void;
   onSubmit: (record: DecisionRecord) => void;
 }) {
@@ -49,11 +47,21 @@ export function SubmitDecisionModal({
   const [sourceMode, setSourceMode] = useState<AiMode>(mode);
   const [busy, setBusy] = useState(true);
   const secretsRef = useState(() => secrets)[0];
+  const changeKey = changes.map((change) => `${change.name}\u0001${change.before}\u0001${change.after}`).join("\n");
+  const changed = changes.filter((change) => change.before !== change.after);
+  const ends = changeEnds(changes);
 
   useEffect(() => {
     let cancelled = false;
     const reviewDate = reviewDateMonthsAhead(new Date(), 6);
-    prefillDecisionWithAi({ departmentName, beforePhrase, afterPhrase, reviewDate, secrets: secretsRef, mode }).then((result) => {
+    const parsed: HeadcountChange[] = changeKey
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => {
+        const [name, before, after] = line.split("\u0001");
+        return { name, before: Number(before), after: Number(after) };
+      });
+    prefillDecisionWithAi({ changes: parsed, reviewDate, secrets: secretsRef, mode, lead }).then((result) => {
       if (cancelled) return;
       setPrefill(result.prefill);
       setSourceMode(result.mode);
@@ -62,7 +70,7 @@ export function SubmitDecisionModal({
     return () => {
       cancelled = true;
     };
-  }, [departmentName, beforePhrase, afterPhrase, mode, secretsRef]);
+  }, [changeKey, lead, mode, secretsRef]);
 
   const joined = prefill ? FIELDS.map((field) => prefill[field.key]).join("\n") : "";
   const issues = prefill ? guardIssues(joined, people) : [];
@@ -82,16 +90,17 @@ export function SubmitDecisionModal({
 
   function confirm() {
     if (!prefill || guardIssues(FIELDS.map((field) => prefill[field.key]).join("\n"), people).length > 0) return;
+    const filing = changed.find((change) => change.id === departmentId) ?? changed[0];
     onSubmit({
       id: `dec-${Date.now().toString(36)}`,
-      departmentId,
-      title: `${departmentName}结构调整`,
+      departmentId: filing?.id || departmentId,
+      title: lead || `${filing?.name ?? departmentName}结构调整`,
       date: new Date().toISOString().slice(0, 10),
       status: "pending",
       initiatorRole: "HRBP",
       approverRole: null,
-      beforeText: beforePhrase,
-      afterText: afterPhrase,
+      beforeText: ends.beforeText,
+      afterText: ends.afterText,
       fields: FIELDS.map((field) => ({ key: field.key, text: prefill[field.key], origin: origin[field.key] })),
       opinion: "",
     });
@@ -114,11 +123,13 @@ export function SubmitDecisionModal({
         </div>
         <div className="min-h-0 flex-1 space-y-3 overflow-auto px-4 py-3">
           <p className="text-xs text-muted">
-            来源：{sourceMode === "llm" ? "模型预填，已按脱敏汇总生成" : "离线预填"} · 部门 {departmentName}
+            来源：{sourceMode === "llm" ? "模型预填，已按脱敏汇总生成" : "离线预填"}
+            {lead ? ` · ${lead}` : changed.length > 0 ? ` · ${changed.map((change) => change.name).join("、")}` : ""}
           </p>
-          {diffs.length > 0 && (
-            <ul className="rounded-xl bg-[#F8F9FD] px-3 py-2 text-xs leading-5 text-muted">
-              {diffs.slice(0, 6).map((diff) => (
+          {(lead || changed.length > 0) && (
+            <ul data-testid="change-summary" className="rounded-xl bg-[#F8F9FD] px-3 py-2 text-xs leading-5 text-muted">
+              {lead && <li>{lead}</li>}
+              {changed.slice(0, 6).map((diff) => (
                 <li key={diff.name}>
                   {diff.name} {diff.before} → {diff.after}
                 </li>

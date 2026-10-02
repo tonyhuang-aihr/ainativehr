@@ -1,4 +1,4 @@
-import type { DecisionRecord, Department, Person, RoleDecomposition, RolePosture, Workspace } from "@/lib/model/types";
+import type { DecisionRecord, Department, OrgIssue, OrgSnapshot, Person, RoleDecomposition, RolePosture, Workspace } from "@/lib/model/types";
 import { createWorkspace } from "@/lib/workspace/create";
 
 export const RD_CENTER_SAMPLE_ID = "rd-center";
@@ -12,6 +12,8 @@ export const RD_DEPT = {
   dataPlatform: "D-DPLAT",
   quality: "D-QA",
   intelligence: "D-AI",
+  dataGroup: "D-DATA",
+  appCell: "D-APP",
 } as const;
 
 /** 稿面上的幅度是设计标注，不是实时的直接下级人数。只用于这套示例。 */
@@ -32,6 +34,10 @@ const ARCH = ["研发中心", "平台部", "基础架构组"];
 const DPLAT = ["研发中心", "平台部", "数据平台组"];
 const QA = ["研发中心", "质量与交付部"];
 const AI = ["研发中心", "数据智能部"];
+const DATA = ["研发中心", "数据智能部", "数据组"];
+const APP = ["研发中心", "产品研发一部", "应用分析小组"];
+
+export const APP_CELL_NAME = "应用分析小组";
 
 type Slot = {
   id: string;
@@ -100,6 +106,8 @@ const JIANG12: Slot = { id: "p-j12", name: "蒋十二", employeeId: "E11076", ti
 const SHEN: Slot = { id: "p-shen", name: "沈十三", employeeId: "E11120", title: "存储工程师", level: "P6", hireDate: "2023-09-04", performance: "符合预期" };
 const HAN: Slot = { id: "p-han", name: "韩十四", employeeId: "E12158", title: "网络工程师", level: "P5", hireDate: "2024-04-08", performance: "待改进" };
 const KONG: Slot = { id: "p-kong", name: "孔十七", employeeId: "E17017", title: "算法工程师", level: "P6", hireDate: "2021-08-02", performance: "超出预期", pendingRoleConfirm: true };
+const INTEL_LEAD = filler("p-intel-lead", "示例算法", "E18002", "算法工程师", "M3");
+const APP_MEMBERS: Slot[] = [0, 1, 2, 3].map((index) => filler(`p-app-${index + 1}`, `示例应用${index + 1}`, `E1615${index}`, "应用分析岗"));
 
 const ARCH_STABLE: Slot[] = [ZHENG7, FENG, WEI, JIANG12, SHEN, HAN];
 
@@ -111,7 +119,7 @@ function rangeFillers(prefix: string, start: number, count: number, title: strin
   });
 }
 
-function departments(): Department[] {
+function departments(plan: boolean): Department[] {
   const rows: Array<[string, string, string[], string | null, string]> = [
     [RD_DEPT.center, "研发中心", CENTER, null, CTO.id],
     [RD_DEPT.product1, "产品研发一部", P1, RD_DEPT.center, SU.id],
@@ -120,8 +128,10 @@ function departments(): Department[] {
     [RD_DEPT.arch, "基础架构组", ARCH, RD_DEPT.platform, QIAN.id],
     [RD_DEPT.dataPlatform, "数据平台组", DPLAT, RD_DEPT.platform, SUN.id],
     [RD_DEPT.quality, "质量与交付部", QA, RD_DEPT.center, ZHENG.id],
-    [RD_DEPT.intelligence, "数据智能部", AI, RD_DEPT.center, JIANG.id],
+    [RD_DEPT.intelligence, "数据智能部", AI, RD_DEPT.center, INTEL_LEAD.id],
+    [RD_DEPT.dataGroup, "数据组", DATA, RD_DEPT.intelligence, JIANG.id],
   ];
+  if (!plan) rows.push([RD_DEPT.appCell, APP_CELL_NAME, APP, RD_DEPT.product1, APP_MEMBERS[0].id]);
   return rows.map(([id, name, path, parentId, headId]) => ({ id, name, path, parentId, headId }));
 }
 
@@ -156,31 +166,66 @@ const AI_ROLES: Array<{ title: string; count: number; posture: RolePosture; aiSh
   { title: "平台分析师", count: 5, posture: "active", aiShare: 0.33 },
 ];
 
-function intelligencePeople(plan: boolean): Person[] {
-  const people: Person[] = [];
+function roleSlots(plan: boolean): Map<string, Slot[]> {
+  const grouped = new Map<string, Slot[]>();
   let serial = 16001;
   for (const role of AI_ROLES) {
-    const slots: Slot[] = [];
     let count = role.count;
-    if (!plan && role.title === "数据开发工程师") count -= 1;
-    if (!plan && role.title === "数据治理工程师") count -= 1;
+    if (!plan && (role.title === "数据开发工程师" || role.title === "数据治理工程师")) count -= 1;
+    if (!plan && role.title === "应用分析岗") count = 0;
+    const slots: Slot[] = [];
     if (role.title === "数据组组长") slots.push(JIANG);
-    if (role.title === "算法工程师") slots.push(KONG);
-    if (plan && role.title === "数据开发工程师") {
-      slots.push({ ...ZHOU, title: "数据开发工程师" });
-    }
+    if (role.title === "算法工程师") slots.push(INTEL_LEAD, KONG);
+    if (plan && role.title === "数据开发工程师") slots.push({ ...ZHOU, title: "数据开发工程师" });
     if (plan && role.title === "数据治理工程师") slots.push(WU);
+    if (plan && role.title === "应用分析岗") slots.push(...APP_MEMBERS);
     while (slots.length < count) {
       const employeeId = `E${serial}`;
       slots.push(filler(`ai-${serial}`, `示例${serial}`, employeeId, role.title, role.title.includes("组长") ? "M3" : "P6"));
       serial += 1;
     }
-    for (const slot of slots.slice(0, count)) {
-      const manager = slot.id === JIANG.id ? CTO : JIANG;
-      people.push(person({ ...slot, title: role.title }, AI, manager.id, manager.name));
-    }
+    grouped.set(
+      role.title,
+      slots.slice(0, count).map((slot) => ({ ...slot, title: role.title })),
+    );
   }
+  return grouped;
+}
+
+/** 方案 A 把应用分析岗并进来之后，数据组组长的直接下级是 12。基线停在上限上，不触发过宽。 */
+function dataGroupPeople(plan: boolean, grouped: Map<string, Slot[]>): Person[] {
+  const leads = grouped.get("数据组组长") ?? [];
+  const head = leads[0];
+  const subleads = leads.slice(1);
+  const ics = [...(grouped.get("数据开发工程师") ?? []), ...(grouped.get("数据治理工程师") ?? []), ...(grouped.get("应用分析岗") ?? [])];
+  const directIcCount = plan ? Math.max(0, 12 - subleads.length) : Math.min(5, ics.length);
+  const directIcs = ics.slice(0, directIcCount);
+  const indirect = ics.slice(directIcCount);
+  const people = [person(head, DATA, CTO.id, CTO.name)];
+  for (const slot of [...subleads, ...directIcs]) people.push(person(slot, DATA, head.id, head.name));
+  indirect.forEach((slot, index) => {
+    const manager = subleads[index % Math.max(1, subleads.length)] ?? head;
+    people.push(person(slot, DATA, manager.id, manager.name));
+  });
   return people;
+}
+
+function restIntelligencePeople(grouped: Map<string, Slot[]>): Person[] {
+  const slots = ["算法工程师", "数据产品经理", "分析工程师", "数据运营", "平台分析师"].flatMap((title) => grouped.get(title) ?? []);
+  const lead = slots.find((slot) => slot.id === INTEL_LEAD.id) ?? slots[0];
+  return slots.map((slot) =>
+    slot.id === lead.id ? person(slot, AI, CTO.id, CTO.name) : person(slot, AI, lead.id, lead.name),
+  );
+}
+
+function intelligencePeople(plan: boolean): Person[] {
+  const grouped = roleSlots(plan);
+  return [...dataGroupPeople(plan, grouped), ...restIntelligencePeople(grouped)];
+}
+
+function appCellPeople(): Person[] {
+  const [lead, ...rest] = APP_MEMBERS;
+  return [person(lead, APP, SU.id, SU.name), ...rest.map((slot) => person(slot, APP, lead.id, lead.name))];
 }
 
 function flatTeam(head: Slot, path: string[], count: number, title: string, idStart: number, extra: Slot[] = []): Person[] {
@@ -196,7 +241,15 @@ function snapshotPeople(plan: boolean): Person[] {
   const product1 = flatTeam(SU, P1, plan ? 144 : 146, "产品研发工程师", 21001, plan ? [] : [CHEN, CHU]);
   const product2 = flatTeam(HE, P2, 131, "产品研发工程师", 22001);
   const quality = flatTeam(ZHENG, QA, 77, "测试工程师", 23001);
-  return [person(CTO, CENTER, null, ""), ...product1, ...product2, ...platformPeople(plan), ...quality, ...intelligencePeople(plan)];
+  return [
+    person(CTO, CENTER, null, ""),
+    ...product1,
+    ...(plan ? [] : appCellPeople()),
+    ...product2,
+    ...platformPeople(plan),
+    ...quality,
+    ...intelligencePeople(plan),
+  ];
 }
 
 function taskPair(title: string, aiShare: number): RoleDecomposition["tasks"] {
@@ -322,12 +375,28 @@ function platformDecisions(): DecisionRecord[] {
   ];
 }
 
+/**
+ * 示例里大组的填充汇报会让很多人超过幅度上限。画布只留下数据组这一条：
+ * 应用分析小组并入之后，组长直接带 12 人，这才是 P3 要处理的提醒。
+ */
+export function presentRdCenterIssues(issues: OrgIssue[]): OrgIssue[] {
+  return issues.filter((issue) => issue.code !== "span_wide" || issue.departmentIds.includes(RD_DEPT.dataGroup));
+}
+
+export function appCellMergeLead(baseline: OrgSnapshot, current: OrgSnapshot): string | undefined {
+  const currentNames = new Set(current.departments.map((department) => department.name));
+  const removed = baseline.departments.some((department) => department.name === APP_CELL_NAME && !currentNames.has(department.name));
+  if (removed && currentNames.has("数据组")) return "应用分析小组并入数据组";
+  return undefined;
+}
+
 export function buildRdCenterWorkspace(importedAt = new Date().toISOString()): Workspace {
   const baselinePeople = snapshotPeople(false);
   const planPeople = snapshotPeople(true);
-  const depts = departments();
+  const baselineDepts = departments(false);
+  const planDepts = departments(true);
   const workspace = createWorkspace(
-    { people: baselinePeople, departments: depts },
+    { people: baselinePeople, departments: baselineDepts },
     {
       filename: "研发中心组织调整-示例数据.json",
       importedAt,
@@ -335,29 +404,30 @@ export function buildRdCenterWorkspace(importedAt = new Date().toISOString()): W
       sampleLabel: "研发中心组织调整（示例数据）",
       sheetName: "示例数据",
       peopleCount: baselinePeople.length,
-      departmentCount: depts.length,
+      departmentCount: baselineDepts.length,
       aiMode: "offline",
     },
   );
   const decompositions = intelligenceDecompositions();
-  const ignored = ["span_wide", "span_narrow", "layers_deep", "single_person_dept"] as const;
+  const quiet = ["span_wide", "span_narrow", "layers_deep", "single_person_dept"] as const;
+  const planIgnored = ["span_narrow", "layers_deep", "single_person_dept"] as const;
   return {
     ...workspace,
     activeScenarioId: "scenario-a",
     decisions: platformDecisions(),
     scenarios: workspace.scenarios.map((scenario) => {
       if (scenario.id === "baseline") {
-        return { ...scenario, snapshot: { people: baselinePeople, departments: depts }, ignoredCodes: [...ignored] };
+        return { ...scenario, snapshot: { people: baselinePeople, departments: baselineDepts }, ignoredCodes: [...quiet] };
       }
       if (scenario.id === "scenario-a") {
         return {
           ...scenario,
-          snapshot: { people: planPeople, departments: depts },
+          snapshot: { people: planPeople, departments: planDepts },
           decompositions,
-          ignoredCodes: [...ignored],
+          ignoredCodes: [...planIgnored],
         };
       }
-      return { ...scenario, ignoredCodes: [...ignored] };
+      return { ...scenario, ignoredCodes: [...quiet] };
     }),
   };
 }

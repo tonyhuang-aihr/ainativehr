@@ -1,17 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { buildDecisionPrefill } from "@/lib/ai/desensitize";
+import { buildDecisionPrefill, buildDecisionPrefillMessages, departmentHeadcountChanges } from "@/lib/ai/desensitize";
 import { rollupCosts } from "@/lib/cost/math";
 import { countExecuted, visibleDecisions } from "@/lib/decisions/trail";
 import { findPersonalLeaks, guardIssues, hasPlacement, stripGuardedText } from "@/lib/decisions/guard";
 import { noticePlainText } from "@/lib/data/noticeCopy";
 import { clearLocalBrowserData, DATA_NOTICE_KEY, WORKSPACE_KEY } from "@/lib/data/localData";
 import { parseScenarioFile, serializeScenarioFile } from "@/lib/data/scenarioFile";
-import { buildRdCenterWorkspace, RD_DEPT } from "@/lib/demo/rdCenter";
+import { appCellMergeLead, buildRdCenterWorkspace, presentRdCenterIssues, RD_DEPT, RD_SHOWCASE_SPAN } from "@/lib/demo/rdCenter";
 import type { DecisionRecord, Person, RoleDecomposition } from "@/lib/model/types";
-import { peopleInDepartment } from "@/lib/org/metrics";
+import { DEFAULT_SETTINGS } from "@/lib/model/types";
+import { directReports, peopleInDepartment, scenarioRollup } from "@/lib/org/metrics";
 import { departmentRoster } from "@/lib/roster/membership";
-import { sortRoster } from "@/lib/roster/order";
-import { peopleIncludedInRollup, summarizePostures } from "@/lib/roles/posture";
+import { reportingLevel, sortRoster } from "@/lib/roster/order";
+import { neutralExcludedNote, peopleIncludedInRollup, summarizePostures } from "@/lib/roles/posture";
+import { evaluateRules } from "@/lib/rules/engine";
 import { activeScenario, baselineScenario } from "@/lib/workspace/create";
 
 const P1 = ["研发中心", "产品研发一部"];
@@ -148,7 +150,14 @@ describe("待复核岗位不进汇总", () => {
     expect(rollup.headcount).toBe(45);
     expect(rollup.covered).toBe(45);
     expect(rollup.labor).toBe(45000);
-    expect(rollup.ratio).toBe("38 : 62");
+    expect(rollup.ratio).toBe("人 : AI = 62 : 38");
+  });
+
+  it("业务负责人只看到一句中性说明，看不到个数和名单", () => {
+    expect(neutralExcludedNote(26, false)).toBe("部分岗位暂未计入");
+    expect(neutralExcludedNote(26, false)).not.toMatch(/待复核|草稿|查看清单|\d/);
+    expect(neutralExcludedNote(26, true)).toBeNull();
+    expect(neutralExcludedNote(0, false)).toBeNull();
   });
 });
 
@@ -161,10 +170,11 @@ describe("研发中心示例", () => {
     expect(peopleInDepartment(baseline.people, PLAT)).toHaveLength(62);
     expect(peopleInDepartment(plan.people, PLAT)).toHaveLength(62);
     expect(peopleInDepartment(plan.people, P1)).toHaveLength(144);
-    expect(peopleInDepartment(baseline.people, P1)).toHaveLength(146);
+    expect(peopleInDepartment(baseline.people, P1)).toHaveLength(150);
     expect(peopleInDepartment(plan.people, AI)).toHaveLength(71);
-    expect(peopleInDepartment(baseline.people, AI)).toHaveLength(69);
+    expect(peopleInDepartment(baseline.people, AI)).toHaveLength(65);
     expect(plan.people).toHaveLength(486);
+    expect(baseline.people).toHaveLength(486);
   });
 
   it("方案 A 平台部调入 2 调出 2，花名册前 10 人按层级和工号", () => {
@@ -196,18 +206,51 @@ describe("研发中心示例", () => {
 });
 
 describe("决策预填与场景往返", () => {
-  it("预填会擦掉混进来的姓名和工号", () => {
+  const changes = [
+    { name: "产品研发一部", before: 150, after: 144 },
+    { name: "数据智能部", before: 65, after: 71 },
+    { name: "平台部", before: 62, after: 62 },
+  ];
+
+  it("预填只写人数真正变化的部门，并擦掉混进来的姓名", () => {
     const prefill = buildDecisionPrefill({
-      departmentName: "平台部",
-      beforePhrase: "赵一 E10012 共 62 人",
-      afterPhrase: "62 人",
+      changes,
+      lead: "应用分析小组并入数据组，联系人赵一 E10012",
       reviewDate: "2027-03-31",
       secrets: ["赵一", "E10012"],
     });
     const blob = JSON.stringify(prefill);
     expect(blob).not.toContain("赵一");
     expect(blob).not.toContain("E10012");
+    expect(blob).toContain("已省略");
     expect(prefill.reviewDate).toBe("2027-03-31");
+    for (const field of [prefill.background, prefill.intent, prefill.expectedEffect]) {
+      expect(field).toContain("产品研发一部 150 人 → 144 人");
+      expect(field).toContain("数据智能部 65 人 → 71 人");
+      expect(field).toContain("应用分析小组并入数据组");
+      expect(field).not.toContain("平台部");
+    }
+    const messages = buildDecisionPrefillMessages({
+      changes,
+      lead: "应用分析小组并入数据组",
+      reviewDate: "2027-03-31",
+      secrets: ["赵一"],
+    });
+    expect(messages[1].content).toContain("产品研发一部 150 人 → 144 人");
+    expect(messages[1].content).toContain("数据智能部 65 人 → 71 人");
+    expect(messages[1].content).toContain("应用分析小组并入数据组");
+    expect(messages[1].content).not.toContain("平台部");
+    expect(messages.map((turn) => turn.content).join("\n")).toContain("人 : AI");
+  });
+
+  it("少于 5 人的变化不写具体人数", () => {
+    const prefill = buildDecisionPrefill({
+      changes: [{ name: "特别组", before: 3, after: 4 }],
+      reviewDate: "2027-03-31",
+      secrets: [],
+    });
+    expect(prefill.background).toContain("特别组有人员调整");
+    expect(prefill.background).not.toMatch(/[34]/);
   });
 
   it("场景文件带上决策轨迹，旧文件没有该字段也能读", () => {
@@ -218,6 +261,80 @@ describe("决策预填与场景往返", () => {
     const raw = JSON.parse(text) as { workspace: { decisions?: unknown } };
     delete raw.workspace.decisions;
     expect(parseScenarioFile(JSON.stringify(raw))?.decisions).toEqual([]);
+  });
+});
+
+describe("P3、P4、P6 口径一致", () => {
+  const workspace = buildRdCenterWorkspace("2026-10-02T00:00:00.000Z");
+  const baseline = baselineScenario(workspace);
+  const plan = activeScenario(workspace);
+  const size = (people: Person[], name: string) => {
+    const department = plan.snapshot.departments.find((item) => item.name === name) ?? baseline.snapshot.departments.find((item) => item.name === name);
+    return department ? peopleInDepartment(people, department.path).length : -1;
+  };
+
+  it("一部 150→144，数据智能部 65→71，数据组 26 人幅度 12，两边都是 486", () => {
+    expect(size(baseline.snapshot.people, "产品研发一部")).toBe(150);
+    expect(size(plan.snapshot.people, "产品研发一部")).toBe(144);
+    expect(size(baseline.snapshot.people, "数据智能部")).toBe(65);
+    expect(size(plan.snapshot.people, "数据智能部")).toBe(71);
+    expect(size(plan.snapshot.people, "质量与交付部")).toBe(77);
+    expect(size(baseline.snapshot.people, "质量与交付部")).toBe(77);
+    expect(size(plan.snapshot.people, "平台部")).toBe(62);
+    expect(size(baseline.snapshot.people, "平台部")).toBe(62);
+    expect(size(plan.snapshot.people, "产品研发二部")).toBe(131);
+    expect(size(baseline.snapshot.people, "产品研发二部")).toBe(131);
+    expect(plan.snapshot.people).toHaveLength(486);
+    expect(baseline.snapshot.people).toHaveLength(486);
+    expect(RD_SHOWCASE_SPAN["产品研发一部"]).toBe("7.0");
+
+    const group = plan.snapshot.departments.find((item) => item.id === RD_DEPT.dataGroup)!;
+    expect(peopleInDepartment(plan.snapshot.people, group.path)).toHaveLength(26);
+    const head = plan.snapshot.people.find((person) => person.id === group.headId)!;
+    expect(directReports(plan.snapshot, head.id)).toHaveLength(12);
+    expect(baseline.snapshot.departments.some((item) => item.name === "应用分析小组")).toBe(true);
+    expect(plan.snapshot.departments.some((item) => item.name === "应用分析小组")).toBe(false);
+    expect(peopleInDepartment(baseline.snapshot.people, ["研发中心", "产品研发一部", "应用分析小组"])).toHaveLength(4);
+
+    const wide = presentRdCenterIssues(evaluateRules(plan.snapshot, DEFAULT_SETTINGS.thresholds, plan.ignoredCodes)).filter(
+      (issue) => issue.code === "span_wide",
+    );
+    expect(wide).toHaveLength(1);
+    expect(wide[0]?.departmentIds).toContain(RD_DEPT.dataGroup);
+    expect(wide[0]?.message).toContain("12");
+
+    const summary = summarizePostures(peopleInDepartment(plan.snapshot.people, ["研发中心", "数据智能部"]), plan.decompositions);
+    expect(summary).toMatchObject({ people: 71, includedPeople: 45, includedRoles: 5, draftPeople: 4, pendingPeople: 22, pendingRoles: 3 });
+    expect(scenarioRollup(plan, DEFAULT_SETTINGS).ratio).toBe("人 : AI = 61.6 : 38.4");
+
+    const changes = departmentHeadcountChanges(baseline.snapshot, plan.snapshot);
+    const lead = appCellMergeLead(baseline.snapshot, plan.snapshot);
+    expect(lead).toBe("应用分析小组并入数据组");
+    const moved = changes.filter((change) => change.before !== change.after);
+    expect(moved).toEqual([
+      expect.objectContaining({ name: "产品研发一部", before: 150, after: 144 }),
+      expect.objectContaining({ name: "数据智能部", before: 65, after: 71 }),
+    ]);
+    const prefill = buildDecisionPrefill({ changes, lead, reviewDate: "2027-04-02", secrets: [] });
+    expect(prefill.background).toContain("产品研发一部 150 人 → 144 人");
+    expect(prefill.background).toContain("数据智能部 65 人 → 71 人");
+    expect(prefill.background).toContain("应用分析小组并入数据组");
+    expect(prefill.background).not.toContain("平台部");
+  });
+
+  it("周五、吴六在基础架构组 L3，上级是钱二；平台部直属是赵一和李四", () => {
+    const platform = baseline.snapshot.people.filter((person) => person.departmentPath.join("/").startsWith(PLAT.join("/")));
+    for (const name of ["周五", "吴六"]) {
+      const person = baseline.snapshot.people.find((item) => item.name === name)!;
+      expect(person.departmentPath).toEqual([...PLAT, "基础架构组"]);
+      expect(person.managerName).toBe("钱二");
+      expect(reportingLevel(platform, person)).toBe(3);
+    }
+    const direct = baseline.snapshot.people.filter((person) => person.departmentPath.join("/") === PLAT.join("/")).map((person) => person.name);
+    expect(direct.sort()).toEqual(["李四", "赵一"]);
+    const roster = departmentRoster(baseline.snapshot.people, plan.snapshot.people, PLAT, true);
+    const departed = roster.departed.filter((person) => person.name === "周五" || person.name === "吴六");
+    expect(departed.map((person) => person.managerName)).toEqual(["钱二", "钱二"]);
   });
 });
 

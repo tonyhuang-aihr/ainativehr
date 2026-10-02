@@ -59,3 +59,9 @@ export function summarizePostures(
     pendingRoles: pendingTitles.size,
   };
 }
+
+/** 业务负责人能看到汇总被少算了，但看不到个数、名单和原因。 */
+export function neutralExcludedNote(excludedPeople: number, canSeeMarkers: boolean): string | null {
+  if (canSeeMarkers || excludedPeople <= 0) return null;
+  return "部分岗位暂未计入";
+}

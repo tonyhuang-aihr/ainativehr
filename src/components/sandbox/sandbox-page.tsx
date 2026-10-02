@@ -10,10 +10,10 @@ import { LeaderCard } from "@/components/sandbox/leader-card";
 import { useNarrow } from "@/components/use-narrow";
 import { Button, cx } from "@/components/ui";
 import { useWorkspace } from "@/components/workspace-context";
-import { collectPersonalSecrets, groupSizePhrase } from "@/lib/ai/desensitize";
+import { collectPersonalSecrets, departmentHeadcountChanges } from "@/lib/ai/desensitize";
 import { collabBundleFromSheets } from "@/lib/collab/parse";
 import { countExecuted } from "@/lib/decisions/trail";
-import { RD_CENTER_SAMPLE_ID, RD_SHOWCASE_SPAN } from "@/lib/demo/rdCenter";
+import { appCellMergeLead, presentRdCenterIssues, RD_CENTER_SAMPLE_ID, RD_SHOWCASE_SPAN } from "@/lib/demo/rdCenter";
 import { canvasLinks, goalsFor, leaderCollaborators, okrFor, scoredCollaboration } from "@/lib/collab/view";
 import { readCollabView, writeCollabView } from "@/lib/collab/viewPreference";
 import { readMobileEditHintDismissed, writeMobileEditHintDismissed } from "@/lib/ui/mobileHint";
@@ -114,7 +114,10 @@ export function SandboxPage() {
     setImpact(null);
     if (!workspace) return;
     const current = activeScenario(workspace);
-    const wide = evaluateRules(current.snapshot, workspace.settings.thresholds, current.ignoredCodes).find((issue) => issue.code === "span_wide");
+    const wide = issuesForSample(
+      workspace.importMeta.sampleId,
+      evaluateRules(current.snapshot, workspace.settings.thresholds, current.ignoredCodes),
+    ).find((issue) => issue.code === "span_wide");
     setNoticeIds(wide?.departmentIds[0] ? [wide.departmentIds[0]] : []);
     // 只在换了一份花名册时重置视图。workspace 跟着 importedAt 一起变。
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -141,7 +144,7 @@ export function SandboxPage() {
 
   const issues = useMemo(() => {
     if (!displaySnapshot || !workspace || !scenario) return [];
-    return evaluateRules(displaySnapshot, workspace.settings.thresholds, scenario.ignoredCodes);
+    return issuesForSample(workspace.importMeta.sampleId, evaluateRules(displaySnapshot, workspace.settings.thresholds, scenario.ignoredCodes));
   }, [displaySnapshot, workspace, scenario]);
 
   const metrics = scenario ? orgMetrics(scenario.snapshot) : null;
@@ -494,6 +497,7 @@ export function SandboxPage() {
               delta={formatDeltaMoney(delta.laborCost)}
             />
             <Metric label="算力成本" value={formatCny(rollup.compute)} delta={formatDeltaMoney(rollup.compute - baseRollup.compute)} />
+            <Metric label="人机比" value={rollup.ratio} delta={baseRollup.ratio === rollup.ratio ? "与基线持平" : `基线 ${baseRollup.ratio}`} wide />
           </div>
           {scenario.kind === "draft" && (
             <Button onClick={() => setSubmitOpen(true)}>提交审批</Button>
@@ -798,7 +802,7 @@ export function SandboxPage() {
             onPreviewPlan={(plan) => {
               setPreview({ snapshot: plan.snapshot, label: plan.title });
               setImpact({ before: orgMetrics(scenario.snapshot), after: orgMetrics(plan.snapshot), label: plan.title });
-              const fresh = evaluateRules(plan.snapshot, workspace.settings.thresholds, scenario.ignoredCodes);
+              const fresh = issuesForSample(workspace.importMeta.sampleId, evaluateRules(plan.snapshot, workspace.settings.thresholds, scenario.ignoredCodes));
               setNoticeIds([...new Set(fresh.map((issue) => issue.departmentIds[0]).filter((id): id is string => Boolean(id)))].slice(0, 4));
             }}
             onApplyPlan={(plan) => writeSnapshot(plan.title, plan.snapshot, noticeIds)}
@@ -842,18 +846,11 @@ export function SandboxPage() {
         <SubmitDecisionModal
           departmentName={selected?.name ?? "研发中心"}
           departmentId={selected?.id ?? displaySnapshot.departments[0]?.id ?? ""}
-          beforePhrase={groupSizePhrase(selected ? peopleInDepartment(baseline.snapshot.people, selected.path).length : baseline.snapshot.people.length)}
-          afterPhrase={groupSizePhrase(selected ? peopleInDepartment(displaySnapshot.people, selected.path).length : displaySnapshot.people.length)}
+          changes={departmentHeadcountChanges(baseline.snapshot, displaySnapshot)}
+          lead={workspace.importMeta.sampleId === RD_CENTER_SAMPLE_ID ? appCellMergeLead(baseline.snapshot, displaySnapshot) : undefined}
           people={scenario.snapshot.people}
           secrets={collectPersonalSecrets(scenario.snapshot, workspace.collab)}
           mode={ai.mode}
-          diffs={displaySnapshot.departments
-            .map((department) => ({
-              name: department.name,
-              before: peopleInDepartment(baseline.snapshot.people, department.path).length,
-              after: peopleInDepartment(displaySnapshot.people, department.path).length,
-            }))
-            .filter((item) => item.before !== item.after)}
           onClose={() => setSubmitOpen(false)}
           onSubmit={(record) => {
             commit({ ...workspace, decisions: [...(workspace.decisions ?? []), record] }, "提交了决策说明，等待审批");
@@ -865,9 +862,13 @@ export function SandboxPage() {
   );
 }
 
-function Metric({ label, value, delta }: { label: string; value: string; delta: string }) {
+function issuesForSample(sampleId: string | null | undefined, issues: OrgIssue[]) {
+  return sampleId === RD_CENTER_SAMPLE_ID ? presentRdCenterIssues(issues) : issues;
+}
+
+function Metric({ label, value, delta, wide }: { label: string; value: string; delta: string; wide?: boolean }) {
   return (
-    <div className="min-w-[120px] shrink-0 rounded-xl border border-line px-3 py-1.5">
+    <div className={cx("shrink-0 rounded-xl border border-line px-3 py-1.5", wide ? "min-w-[210px]" : "min-w-[120px]")}>
       <div className="text-[11px] text-muted">{label}</div>
       <div className="text-sm font-semibold">{value}</div>
       <div className="text-[11px] text-muted">{delta}</div>

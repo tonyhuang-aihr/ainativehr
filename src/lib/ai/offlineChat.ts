@@ -12,7 +12,7 @@ export function answerOffline(question: string, issues: OrgIssue[], metrics: Org
     );
     lines.push("岗位总成本 = 仍在编的人力成本 + 算力成本。算力按「每个用到 AI 的任务 × 单价 × 12 个月」计，纯人工任务不计费。释放出来的工时会单独显示，不会自动把人减掉。");
   } else if (/人机|任务|拆解/.test(text)) {
-    lines.push("人机比是「交给 AI 的工时 : 仍由人做的工时」。人机协同默认各算一半，管理员可以改这个比例。");
+    lines.push("人机比写成「人 : AI = 人工时 : AI 工时」，人在前。人机协同默认各算一半，管理员可以改这个比例。");
     lines.push("要看某个岗位，打开「岗位任务拆解」，选中岗位后生成清单，再逐条改执行方式。基线不会被改，试算写在方案里。");
   } else if (related.length > 0) {
     lines.push("和你问的相关，当前组织里有这些提醒：");
