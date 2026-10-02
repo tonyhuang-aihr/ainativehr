@@ -5,6 +5,7 @@ import { ScenarioSwitcher, Shell } from "@/components/shell";
 import { useNarrow } from "@/components/use-narrow";
 import { Badge, Button, cx } from "@/components/ui";
 import { useWorkspace } from "@/components/workspace-context";
+import { collectPersonalSecrets } from "@/lib/ai/desensitize";
 import { decomposeRoleWithAi } from "@/lib/ai/provider";
 import {
   formatHumanAiRatio,
@@ -143,7 +144,7 @@ function RolesBody() {
     if (!title) return;
     if (decomposition && !window.confirm("重新生成会覆盖当前清单。刚才的修改可以通过撤销找回来。")) return;
     setPending(true);
-    const result = await decomposeRoleWithAi(title, ai.mode);
+    const result = await decomposeRoleWithAi(title, ai.mode, scenario ? collectPersonalSecrets(scenario.snapshot, workspace?.collab) : []);
     writeRole(result.tasks, result.mode === "llm" ? "ai" : "template", `生成了「${title}」的任务清单`);
     setPending(false);
   }

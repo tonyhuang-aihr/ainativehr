@@ -1,9 +1,19 @@
+import { resolveLlmConfig } from "@/lib/ai/llmConfig";
+
 type ChatTurn = { role: "system" | "user" | "assistant"; content: string };
 
+/**
+ * 只做转发，不把请求体写入日志或数据库。
+ * 浏览器在调用前已经去掉姓名、工号、薪酬和绩效。
+ */
 export async function POST(request: Request) {
-  const apiKey = process.env.LLM_API_KEY;
-  const baseUrl = process.env.LLM_BASE_URL;
-  if (!apiKey || !baseUrl) {
+  const config = resolveLlmConfig({
+    LLM_PROVIDER: process.env.LLM_PROVIDER,
+    LLM_BASE_URL: process.env.LLM_BASE_URL,
+    LLM_API_KEY: process.env.LLM_API_KEY,
+    LLM_MODEL: process.env.LLM_MODEL,
+  });
+  if (!config.enabled) {
     return Response.json({ error: "offline" }, { status: 503 });
   }
   let body: { messages?: ChatTurn[]; json?: boolean };
@@ -16,14 +26,14 @@ export async function POST(request: Request) {
   if (messages.length === 0) return Response.json({ error: "empty" }, { status: 400 });
 
   try {
-    const response = await fetch(`${baseUrl.replace(/\/$/, "")}/chat/completions`, {
+    const response = await fetch(`${config.baseUrl}/chat/completions`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${config.apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: process.env.LLM_MODEL || "gpt-4o-mini",
+        model: config.model,
         temperature: 0.2,
         messages,
         ...(body.json ? { response_format: { type: "json_object" } } : {}),

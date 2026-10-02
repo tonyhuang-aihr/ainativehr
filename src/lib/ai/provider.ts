@@ -1,7 +1,8 @@
+import { buildChatMessages, collectPersonalSecrets, desensitizeMessages, scrubText, type ChatTurn } from "@/lib/ai/desensitize";
 import { decomposeRoleOffline } from "@/lib/ai/templates";
 import { answerOffline } from "@/lib/ai/offlineChat";
 import { matchColumns } from "@/lib/import/matchColumns";
-import type { ColumnMatch, OrgIssue, RoleTask } from "@/lib/model/types";
+import type { CollabBundle, ColumnMatch, OrgIssue, OrgSnapshot, RoleTask } from "@/lib/model/types";
 import type { OrgMetrics } from "@/lib/org/metrics";
 
 export type AiMode = "offline" | "llm";
@@ -11,10 +12,8 @@ export type AiStatus = {
   model: string | null;
 };
 
-type ChatTurn = { role: "system" | "user" | "assistant"; content: string };
-
 /**
- * 所有模型调用都从这里出去。没配密钥、接口失败或返回无法解析时，退回确定性结果。
+ * 所有模型调用都从这里出去，并先经过脱敏。没配密钥、接口失败或返回无法解析时，退回确定性结果。
  * 界面必须标明当时用的是模型还是离线规则。
  */
 export async function fetchAiStatus(): Promise<AiStatus> {
@@ -29,18 +28,23 @@ export async function fetchAiStatus(): Promise<AiStatus> {
   }
 }
 
-export async function matchColumnsWithAi(headers: string[], mode: AiMode): Promise<{ matches: ColumnMatch[]; mode: AiMode }> {
+export async function matchColumnsWithAi(
+  headers: string[],
+  mode: AiMode,
+  secrets: string[] = [],
+): Promise<{ matches: ColumnMatch[]; mode: AiMode }> {
   if (mode === "llm") {
     const text = await complete(
       [
         {
           role: "system",
           content:
-            "你是组织数据清洗助手。只输出 JSON 对象 {\"matches\":[...]}，不要解释。每项包含 field, header, confidence, reason。field 只能是 name, department, title, manager, employeeId, level, annualCost, hireDate, location, performance, email, status。一列最多一个字段。",
+            "你是组织数据清洗助手。只根据列名给出对应关系，不要猜测单元格里的内容。只输出 JSON 对象 {\"matches\":[...]}，不要解释。每项包含 field, header, confidence, reason。field 只能是 name, department, title, manager, employeeId, level, annualCost, hireDate, location, performance, email, status。一列最多一个字段。",
         },
-        { role: "user", content: `列名：${headers.join(" | ")}` },
+        { role: "user", content: `列名：${headers.map((header) => scrubText(header, secrets)).join(" | ")}` },
       ],
       true,
+      secrets,
     );
     const parsed = text ? parseMatches(text, headers) : null;
     if (parsed && parsed.length > 0) return { matches: parsed, mode: "llm" };
@@ -51,18 +55,21 @@ export async function matchColumnsWithAi(headers: string[], mode: AiMode): Promi
 export async function decomposeRoleWithAi(
   title: string,
   mode: AiMode,
+  secrets: string[] = [],
 ): Promise<{ tasks: RoleTask[]; mode: AiMode }> {
-  if (mode === "llm") {
+  const roleTitle = scrubText(title, secrets).trim();
+  if (mode === "llm" && roleTitle) {
     const text = await complete(
       [
         {
           role: "system",
           content:
-            "你帮助 OD 把岗位拆成任务。只输出 JSON 对象 {\"tasks\":[...]}。每项包含 name, timeShare(0到1), frequency, mode(human|ai|collab), reason, confidence(0到1)。timeShare 相加为 1。不要评价个人，不要输出排名。",
+            "你帮助 OD 把岗位拆成任务。只根据岗位名称输出，不要假设员工是谁。只输出 JSON 对象 {\"tasks\":[...]}。每项包含 name, timeShare(0到1), frequency, mode(human|ai|collab), reason, confidence(0到1)。timeShare 相加为 1。不要评价个人，不要输出排名、薪酬或绩效。",
         },
-        { role: "user", content: `岗位名称：${title}。请给 5 到 8 条任务。` },
+        { role: "user", content: `岗位名称：${roleTitle}。请给 5 到 8 条任务。` },
       ],
       true,
+      secrets,
     );
     const tasks = text ? parseTasks(text) : null;
     if (tasks) return { tasks, mode: "llm" };
@@ -70,33 +77,39 @@ export async function decomposeRoleWithAi(
   return { tasks: decomposeRoleOffline(title), mode: "offline" };
 }
 
-export async function chatWithAi(
-  question: string,
-  context: string,
-  mode: AiMode,
-  issues: OrgIssue[],
-  metrics: OrgMetrics,
-): Promise<{ text: string; mode: AiMode }> {
-  if (mode === "llm") {
-    const text = await complete([
-      {
-        role: "system",
-        content:
-          "你是组织设计沙盘里的 OD 助手。用简体中文，短一些，先给结论。你只提建议，不宣称已经改了架构。不要做个人绩效排名，不要评价某个员工好不好。敏感薪酬只讨论汇总数。",
-      },
-      { role: "user", content: `${context}\n\n用户问题：${question}` },
-    ]);
+export async function chatWithAi(input: {
+  question: string;
+  mode: AiMode;
+  snapshot: OrgSnapshot | null;
+  collab?: CollabBundle | null;
+  issues: OrgIssue[];
+  metrics: OrgMetrics;
+}): Promise<{ text: string; mode: AiMode }> {
+  const secrets = collectPersonalSecrets(input.snapshot, input.collab);
+  if (input.mode === "llm") {
+    const text = await complete(
+      buildChatMessages({
+        question: input.question,
+        snapshot: input.snapshot,
+        issues: input.issues,
+        metrics: input.metrics,
+        secrets,
+      }),
+      false,
+      secrets,
+    );
     if (text) return { text, mode: "llm" };
   }
-  return { text: answerOffline(question, issues, metrics), mode: "offline" };
+  return { text: answerOffline(input.question, input.issues, input.metrics), mode: "offline" };
 }
 
-async function complete(messages: ChatTurn[], json = false): Promise<string | null> {
+async function complete(messages: ChatTurn[], json = false, secrets: string[] = []): Promise<string | null> {
+  const safe = desensitizeMessages(messages, secrets);
   try {
     const response = await fetch("/api/ai/complete", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messages, json }),
+      body: JSON.stringify({ messages: safe, json }),
     });
     if (!response.ok) return null;
     const body = (await response.json()) as { text?: string };

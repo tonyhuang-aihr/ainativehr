@@ -5,7 +5,7 @@ import { chatWithAi } from "@/lib/ai/provider";
 import { useNarrow } from "@/components/use-narrow";
 import { Badge, Button, cx } from "@/components/ui";
 import { useWorkspace } from "@/components/workspace-context";
-import { formatCny, round1 } from "@/lib/format";
+import { activeScenario } from "@/lib/workspace/create";
 import type { OrgIssue } from "@/lib/model/types";
 import type { StructurePlan } from "@/lib/org/mutate";
 import type { OrgMetrics } from "@/lib/org/metrics";
@@ -41,7 +41,7 @@ export function AiPanel({
   /** 沙盘自己有底栏时传 none，避免再叠一条。岗位页用默认的 bar。 */
   mobileChrome?: "bar" | "none";
 }) {
-  const { ai } = useWorkspace();
+  const { ai, workspace } = useWorkspace();
   const narrow = useNarrow();
   const [messages, setMessages] = useState<{ role: "assistant" | "user"; text: string; mode?: "offline" | "llm" }[]>([
     {
@@ -68,12 +68,15 @@ export function AiPanel({
     setInput("");
     setMessages((current) => [...current, { role: "user", text }]);
     setPending(true);
-    const context = [
-      `人数 ${metrics.headcount}，层级 ${metrics.layers}，平均管理幅度 ${round1(metrics.avgSpan)}。`,
-      `人力成本 ${metrics.laborCost == null ? "未提供" : formatCny(metrics.laborCost)}。`,
-      `提醒：${issues.slice(0, 6).map((issue) => issue.message).join(" / ") || "无"}`,
-    ].join("\n");
-    const result = await chatWithAi(text, context, ai.mode, issues, metrics);
+    const scenario = workspace ? activeScenario(workspace) : null;
+    const result = await chatWithAi({
+      question: text,
+      mode: ai.mode,
+      snapshot: scenario?.snapshot ?? null,
+      collab: workspace?.collab ?? null,
+      issues,
+      metrics,
+    });
     const reply = result.mode === "llm" ? result.text : result.text || answerOffline(text, issues, metrics);
     setMessages((current) => [...current, { role: "assistant", text: reply, mode: result.mode }]);
     setPending(false);

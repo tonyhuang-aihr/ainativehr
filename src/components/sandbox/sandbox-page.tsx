@@ -290,7 +290,7 @@ export function SandboxPage() {
 
   function talkAbout(issue: OrgIssue) {
     setPanelOpen(true);
-    setChatSeed({ id: Date.now(), text: `请用口语解释这条结构提醒，并说明我可以怎么改、改完如何撤销：${issue.message}` });
+    setChatSeed({ id: Date.now(), text: `请用口语解释这条结构提醒（${issue.title}），并说明我可以怎么改、改完如何撤销。不要点名个人。` });
     locate(issue);
   }
 

@@ -2,8 +2,9 @@
 
 import { Badge, Button, cx } from "@/components/ui";
 import { useWorkspace } from "@/components/workspace-context";
+import { parseScenarioFile, serializeScenarioFile } from "@/lib/data/scenarioFile";
 import { formatWhen } from "@/lib/format";
-import type { ViewerRole } from "@/lib/model/types";
+import type { ViewerRole, Workspace } from "@/lib/model/types";
 import { DEFAULT_SETTINGS } from "@/lib/model/types";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -15,6 +16,16 @@ const LINKS = [
   { href: "/roles", label: "岗位拆解" },
 ];
 
+function downloadScenario(workspace: Workspace) {
+  const blob = new Blob([serializeScenarioFile(workspace)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "组织沙盘-场景.json";
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 const ROLES: { id: ViewerRole; label: string }[] = [
   { id: "od", label: "OD 专家" },
   { id: "approver", label: "业务负责人" },
@@ -23,9 +34,10 @@ const ROLES: { id: ViewerRole; label: string }[] = [
 
 export function Shell({ crumb, children }: { crumb: string; children: ReactNode }) {
   const pathname = usePathname();
-  const { workspace, ai, canUndo, canRedo, undo, redo, commit, setViewerRole } = useWorkspace();
+  const { workspace, ai, canUndo, canRedo, undo, redo, commit, replaceWorkspace, setViewerRole } = useWorkspace();
   const [auditOpen, setAuditOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [fileNote, setFileNote] = useState("");
   const role = workspace?.settings.viewerRole ?? "od";
   const headerRef = useRef<HTMLElement>(null);
   const sampleLabel = workspace?.importMeta.sampleLabel;
@@ -107,6 +119,37 @@ export function Shell({ crumb, children }: { crumb: string; children: ReactNode 
             当前以业务负责人查看：个人薪酬已隐藏，成本只显示到部门汇总。
           </div>
         )}
+        <div className="flex flex-wrap items-center gap-2 border-t border-line bg-[#F8F9FD] px-3 py-2 text-xs leading-5 text-muted">
+          <span className="min-w-0 flex-1">花名册和方案只保存在这台浏览器里，不会上传到服务器。换设备或清理缓存前，请导出场景文件。</span>
+          <Button variant="secondary" className="px-3" disabled={!workspace} onClick={() => workspace && downloadScenario(workspace)}>
+            导出场景
+          </Button>
+          <label className="inline-flex min-h-10 cursor-pointer items-center rounded-xl border border-line bg-white px-3 text-sm font-medium text-ink">
+            导入场景
+            <input
+              type="file"
+              accept="application/json,.json"
+              className="hidden"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                event.target.value = "";
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = () => {
+                  const next = parseScenarioFile(String(reader.result ?? ""));
+                  if (!next) {
+                    setFileNote("这个文件不是本沙盘导出的场景。请选择导出的 JSON。");
+                    return;
+                  }
+                  replaceWorkspace(next);
+                  setFileNote("已从场景文件恢复。数据仍只在这台浏览器里。");
+                };
+                reader.readAsText(file);
+              }}
+            />
+          </label>
+          {fileNote && <span className="text-ink">{fileNote}</span>}
+        </div>
       </header>
       <div className="flex min-h-0 flex-1 flex-col">{children}</div>
       {auditOpen && workspace && (

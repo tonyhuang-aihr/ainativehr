@@ -1,6 +1,6 @@
 import type { Workspace } from "@/lib/model/types";
 
-/** 持久化隔在这层后面。本期是浏览器本地存储，以后可以换成 SQLite 或内部服务。 */
+/** 花名册和方案只写在这台浏览器的 localStorage，不发到服务端。 */
 export interface WorkspaceRepository {
   load(): Promise<Workspace | null>;
   save(workspace: Workspace): Promise<void>;
