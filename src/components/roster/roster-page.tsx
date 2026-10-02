@@ -3,7 +3,7 @@
 import { Shell } from "@/components/shell";
 import { Button, cx } from "@/components/ui";
 import { useWorkspace } from "@/components/workspace-context";
-import { canSeeIndividualPay } from "@/lib/model/types";
+import { canSeeIndividualPay, showIndividualFields } from "@/lib/model/types";
 import { departmentRoster, personInDepartment } from "@/lib/roster/membership";
 import { levelLabel, reportingLevel, sortRoster } from "@/lib/roster/order";
 import { activeScenario, baselineScenario } from "@/lib/workspace/create";
@@ -24,7 +24,7 @@ export function RosterPage() {
 
 function RosterBody() {
   const params = useSearchParams();
-  const { ready, workspace } = useWorkspace();
+  const { ready, workspace, touch } = useWorkspace();
   const [query, setQuery] = useState("");
   const [deptId, setDeptId] = useState(params.get("dept") ?? "");
   const [level, setLevel] = useState("");
@@ -82,7 +82,8 @@ function RosterBody() {
     );
   }
 
-  const seePay = canSeeIndividualPay(workspace.settings.viewerRole);
+  const allowedPay = canSeeIndividualPay(workspace.settings.viewerRole);
+  const seePay = showIndividualFields(workspace.settings.viewerRole, workspace.settings.revealPay);
   const department = scenario.snapshot.departments.find((item) => item.id === deptId);
   const levels = [...new Set(rows.map((row) => row.person.level).filter(Boolean))].sort();
   const places = [...new Set(rows.map((row) => row.person.location).filter(Boolean))].sort();
@@ -153,6 +154,19 @@ function RosterBody() {
             >
               对照基线
             </button>
+            {allowedPay && (
+              <Button
+                variant="secondary"
+                onClick={() =>
+                  touch((current) => ({
+                    ...current,
+                    settings: { ...current.settings, revealPay: !current.settings.revealPay },
+                  }))
+                }
+              >
+                {seePay ? "隐藏薪酬和绩效" : "显示薪酬和绩效"}
+              </Button>
+            )}
             <Button variant="secondary" onClick={exportFile}>
               导出 Excel
             </Button>

@@ -177,6 +177,8 @@ export type AppSettings = {
   monthlyHours: number;
   thresholds: RuleThresholds;
   viewerRole: ViewerRole;
+  /** 授权身份也要显式打开，花名册才显示薪酬和绩效。默认关闭。 */
+  revealPay?: boolean;
 };
 
 export type Scenario = {
@@ -299,6 +301,10 @@ export const REQUIRED_FIELDS: ColumnField[] = [
 
 export function canSeeIndividualPay(role: ViewerRole): boolean {
   return role === "od" || role === "admin";
+}
+
+export function showIndividualFields(role: ViewerRole, revealPay: boolean | undefined): boolean {
+  return canSeeIndividualPay(role) && revealPay === true;
 }
 
 /** 负责人卡片含个人协作次数，只给 OD / 管理员。业务负责人只看部门间连线。 */

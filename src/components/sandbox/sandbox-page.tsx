@@ -18,7 +18,7 @@ import { canvasLinks, goalsFor, leaderCollaborators, okrFor, scoredCollaboration
 import { readCollabView, writeCollabView } from "@/lib/collab/viewPreference";
 import { readMobileEditHintDismissed, writeMobileEditHintDismissed } from "@/lib/ui/mobileHint";
 import { formatCny, formatDeltaMoney, formatDeltaNumber, round1 } from "@/lib/format";
-import { canSeeIndividualPay, canSeeLeaderCard, type CollabBundle, type OrgIssue, type OrgSnapshot } from "@/lib/model/types";
+import { canSeeLeaderCard, showIndividualFields, type CollabBundle, type OrgIssue, type OrgSnapshot } from "@/lib/model/types";
 import { departmentAccent, scaleAccent, type ColorMode } from "@/lib/org/color";
 import { childIds, layoutDepartments, NODE_H, NODE_W } from "@/lib/org/layout";
 import { mergeDepartments, movePeople, proposeSpanRelief, reparentDepartment, type StructurePlan } from "@/lib/org/mutate";
@@ -452,7 +452,7 @@ export function SandboxPage() {
 
   const selected = displaySnapshot.departments.find((department) => department.id === selectedId) ?? null;
   const selectedPeople = selected ? displaySnapshot.people.filter((person) => person.departmentPath.join("/") === selected.path.join("/")) : [];
-  const seePay = canSeeIndividualPay(workspace.settings.viewerRole);
+  const seePay = showIndividualFields(workspace.settings.viewerRole, workspace.settings.revealPay);
   const seeCard = canSeeLeaderCard(workspace.settings.viewerRole);
   const head = selected ? displaySnapshot.people.find((person) => person.id === selected.headId) : undefined;
   const collaborators = head ? leaderCollaborators(displaySnapshot, head.id, collabPairs) : [];
