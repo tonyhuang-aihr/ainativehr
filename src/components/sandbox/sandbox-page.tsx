@@ -9,6 +9,7 @@ import { Button, cx } from "@/components/ui";
 import { useWorkspace } from "@/components/workspace-context";
 import { collabBundleFromSheets } from "@/lib/collab/parse";
 import { canvasLinks, goalsFor, leaderCollaborators, okrFor, scoredCollaboration } from "@/lib/collab/view";
+import { readCollabView, writeCollabView } from "@/lib/collab/viewPreference";
 import { formatCny, formatDeltaMoney, formatDeltaNumber, round1 } from "@/lib/format";
 import { canSeeIndividualPay, canSeeLeaderCard, type CollabBundle, type OrgIssue, type OrgSnapshot } from "@/lib/model/types";
 import { departmentAccent, scaleAccent, type ColorMode } from "@/lib/org/color";
@@ -47,7 +48,7 @@ export function SandboxPage() {
   const [focusId, setFocusId] = useState<string | null>(null);
   const [panelOpen, setPanelOpen] = useState(true);
   const [instance, setInstance] = useState<ReactFlowInstance<Node<DeptNodeData>, Edge> | null>(null);
-  const [collabOn, setCollabOn] = useState(true);
+  const [collabOn, setCollabOn] = useState(false);
   const [dragPositions, setDragPositions] = useState<Record<string, { x: number; y: number }>>({});
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [deptPending, setDeptPending] = useState<DeptPending | null>(null);
@@ -65,6 +66,15 @@ export function SandboxPage() {
   const scenario = workspace ? activeScenario(workspace) : null;
   const baseline = workspace ? baselineScenario(workspace) : null;
   const displaySnapshot = preview?.snapshot ?? scenario?.snapshot ?? null;
+
+  useEffect(() => {
+    setCollabOn(readCollabView(window.localStorage));
+  }, []);
+
+  function setCollabView(visible: boolean) {
+    setCollabOn(visible);
+    writeCollabView(window.localStorage, visible);
+  }
 
   const importedAt = workspace?.importMeta.importedAt ?? "";
   useEffect(() => {
@@ -377,7 +387,7 @@ export function SandboxPage() {
       }
       const ignored = [...bundle.ignoredContentHeaders, ...bundle.ignoredRankHeaders];
       commit({ ...workspace, collab: bundle }, `导入协作统计${ignored.length ? `，已忽略 ${ignored.join("、")}` : ""}`);
-      setCollabOn(true);
+      setCollabView(true);
       setBanner(ignored.length ? `已忽略内容或评级列：${ignored.join("、")}。这些内容没有保存。` : "");
     } catch {
       setBanner("协作文件解析失败。");
@@ -422,6 +432,20 @@ export function SandboxPage() {
       <div className="flex h-[calc(100vh-7.5rem)] min-h-[680px] flex-col">
         <div className="flex flex-wrap items-center gap-3 border-b border-line bg-white px-4 py-3">
           <ScenarioSwitcher />
+          <button
+            type="button"
+            aria-pressed={collabOn}
+            onClick={() => setCollabView(!collabOn)}
+            className={cx(
+              "inline-flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium",
+              collabOn ? "border-[#DDD6FE] bg-[#F5F3FF] text-[#6D28D9]" : "border-line bg-white text-ink",
+            )}
+          >
+            <span className={cx("relative h-5 w-9 rounded-full", collabOn ? "bg-collab" : "bg-[#E6E8F0]")} aria-hidden>
+              <span className={cx("absolute top-0.5 h-4 w-4 rounded-full bg-white shadow", collabOn ? "left-4" : "left-0.5")} />
+            </span>
+            协作视图
+          </button>
           <div className="flex min-w-0 flex-1 flex-wrap gap-2">
             <Metric label="总人数" value={String(metrics.headcount)} delta={formatDeltaNumber(delta.headcount)} />
             <Metric label="层级数" value={String(metrics.layers)} delta={formatDeltaNumber(delta.layers)} />
@@ -487,13 +511,6 @@ export function SandboxPage() {
                 ))}
               </div>
             </div>
-            <button
-              className={cx("rounded-xl border px-3 py-2 text-left text-xs", collabOn ? "border-[#DDD6FE] bg-[#F5F3FF] text-[#6D28D9]" : "border-line text-muted")}
-              onClick={() => setCollabOn((value) => !value)}
-            >
-              协作视图 {collabOn ? "开" : "关"}
-              <span className="mt-1 block leading-5">只画部门对部门。线越粗协作越强。</span>
-            </button>
             <Button variant="secondary" onClick={() => instance?.fitView({ padding: 0.2, duration: 400 })}>
               适应画布
             </Button>
