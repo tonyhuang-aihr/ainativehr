@@ -40,10 +40,16 @@ export function splitTime(tasks: ShareTask[], collabAiShare: number): TimeSplit 
   };
 }
 
-/** 参数仍是 AI 份额在前，显示时把人放在前面。 */
-export function formatHumanAiRatio(ai: number, human: number): string {
+/** 参数仍是 AI 份额在前。返回值只有数字，人在前，标签由界面另写「人 : AI」。 */
+export function formatHumanAiPair(ai: number, human: number): string {
   if (ai === 0 && human === 0) return "—";
-  return `人 : AI = ${trimNumber(round1(human * 100))} : ${trimNumber(round1(ai * 100))}`;
+  return `${trimNumber(round1(human * 100))} : ${trimNumber(round1(ai * 100))}`;
+}
+
+/** 带标签的完整写法，用于有足够宽度的句子。 */
+export function formatHumanAiRatio(ai: number, human: number): string {
+  const pair = formatHumanAiPair(ai, human);
+  return pair === "—" ? pair : `人 : AI = ${pair}`;
 }
 
 export function releasedHoursPerMonth(tasks: ShareTask[], collabAiShare: number, monthlyHours: number): number {

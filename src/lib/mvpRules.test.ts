@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { buildDecisionPrefill, buildDecisionPrefillMessages, departmentHeadcountChanges } from "@/lib/ai/desensitize";
+import {
+  buildDecisionPrefill,
+  buildDecisionPrefillMessages,
+  departmentHeadcountChanges,
+  newlyWideSpans,
+  structureMoves,
+} from "@/lib/ai/desensitize";
 import { rollupCosts } from "@/lib/cost/math";
 import { countExecuted, visibleDecisions } from "@/lib/decisions/trail";
 import { findPersonalLeaks, guardIssues, hasPlacement, stripGuardedText } from "@/lib/decisions/guard";
@@ -212,35 +218,54 @@ describe("决策预填与场景往返", () => {
     { name: "平台部", before: 62, after: 62 },
   ];
 
-  it("预填只写人数真正变化的部门，并擦掉混进来的姓名", () => {
+  it("预填三段各写各的，不重复开头，也不把内部规则写进正文", () => {
+    const moves = [{ name: "赵一专项组", from: "产品研发一部", to: "数据组", people: 4 }];
+    const spans = [{ department: "数据组", span: 12, limit: 8 }];
     const prefill = buildDecisionPrefill({
       changes,
-      lead: "应用分析小组并入数据组，联系人赵一 E10012",
+      moves,
+      spans,
       reviewDate: "2027-03-31",
       secrets: ["赵一", "E10012"],
     });
-    const blob = JSON.stringify(prefill);
+    const blob = [prefill.background, prefill.intent, prefill.expectedEffect, prefill.reviewDate].join("\n");
     expect(blob).not.toContain("赵一");
     expect(blob).not.toContain("E10012");
     expect(blob).toContain("已省略");
     expect(prefill.reviewDate).toBe("2027-03-31");
-    for (const field of [prefill.background, prefill.intent, prefill.expectedEffect]) {
-      expect(field).toContain("产品研发一部 150 人 → 144 人");
-      expect(field).toContain("数据智能部 65 人 → 71 人");
-      expect(field).toContain("应用分析小组并入数据组");
-      expect(field).not.toContain("平台部");
+    for (const banned of ["人数没有变化的部门不写进这次说明", "这次调整以", "不写进这次说明"]) {
+      expect(blob).not.toContain(banned);
     }
+    const openings = [prefill.background, prefill.intent, prefill.expectedEffect].map((field) => field.slice(0, 8));
+    expect(new Set(openings).size).toBe(3);
+    expect(prefill.background).toContain("已省略专项组 4 人原在产品研发一部");
+    expect(prefill.background).not.toContain("→");
+    expect(prefill.intent).toContain("并入数据组");
+    expect(prefill.intent).not.toContain("150");
+    expect(prefill.expectedEffect).toContain("产品研发一部 150 人 → 144 人");
+    expect(prefill.expectedEffect).toContain("数据智能部 65 人 → 71 人");
+    expect(prefill.expectedEffect.match(/150 人 → 144 人/g)).toHaveLength(1);
+    expect(prefill.expectedEffect.match(/65 人 → 71 人/g)).toHaveLength(1);
+    expect(prefill.expectedEffect).toContain("管理幅度变为 12");
+    expect(prefill.expectedEffect).toContain("建议上限 8");
+    expect(prefill.expectedEffect).not.toContain("平台部");
+
     const messages = buildDecisionPrefillMessages({
       changes,
-      lead: "应用分析小组并入数据组",
+      moves,
+      spans,
       reviewDate: "2027-03-31",
       secrets: ["赵一"],
     });
+    const prompt = messages.map((turn) => turn.content).join("\n");
+    expect(prompt).not.toContain("赵一");
+    expect(prompt).not.toContain("这次调整以");
+    expect(prompt).not.toContain("不写进这次说明");
+    expect(prompt).not.toContain("专项组 4");
+    expect(prompt).toContain("有人员调整");
     expect(messages[1].content).toContain("产品研发一部 150 人 → 144 人");
     expect(messages[1].content).toContain("数据智能部 65 人 → 71 人");
-    expect(messages[1].content).toContain("应用分析小组并入数据组");
     expect(messages[1].content).not.toContain("平台部");
-    expect(messages.map((turn) => turn.content).join("\n")).toContain("人 : AI");
   });
 
   it("少于 5 人的变化不写具体人数", () => {
@@ -308,18 +333,39 @@ describe("P3、P4、P6 口径一致", () => {
     expect(scenarioRollup(plan, DEFAULT_SETTINGS).ratio).toBe("人 : AI = 61.6 : 38.4");
 
     const changes = departmentHeadcountChanges(baseline.snapshot, plan.snapshot);
-    const lead = appCellMergeLead(baseline.snapshot, plan.snapshot);
-    expect(lead).toBe("应用分析小组并入数据组");
+    expect(appCellMergeLead(baseline.snapshot, plan.snapshot)).toBe("应用分析小组并入数据组");
+    const moves = structureMoves(baseline.snapshot, plan.snapshot);
+    const spans = newlyWideSpans(baseline.snapshot, plan.snapshot, DEFAULT_SETTINGS.thresholds.spanWide);
+    expect(moves).toEqual([expect.objectContaining({ name: "应用分析小组", from: "产品研发一部", to: "数据组", people: 4 })]);
+    expect(spans).toEqual([expect.objectContaining({ department: "数据组", span: 12, limit: 8 })]);
     const moved = changes.filter((change) => change.before !== change.after);
     expect(moved).toEqual([
       expect.objectContaining({ name: "产品研发一部", before: 150, after: 144 }),
       expect.objectContaining({ name: "数据智能部", before: 65, after: 71 }),
     ]);
-    const prefill = buildDecisionPrefill({ changes, lead, reviewDate: "2027-04-02", secrets: [] });
-    expect(prefill.background).toContain("产品研发一部 150 人 → 144 人");
-    expect(prefill.background).toContain("数据智能部 65 人 → 71 人");
-    expect(prefill.background).toContain("应用分析小组并入数据组");
-    expect(prefill.background).not.toContain("平台部");
+    const prefill = buildDecisionPrefill({ changes, moves, spans, reviewDate: "2027-04-02", secrets: [] });
+    const blob = [prefill.background, prefill.intent, prefill.expectedEffect].join("\n");
+    for (const banned of ["人数没有变化的部门不写进这次说明", "这次调整以", "不写进这次说明"]) {
+      expect(blob).not.toContain(banned);
+    }
+    const openings = [prefill.background, prefill.intent, prefill.expectedEffect].map((field) => field.slice(0, 8));
+    expect(new Set(openings).size).toBe(3);
+    expect(prefill.background).toContain("应用分析小组 4 人原在产品研发一部");
+    expect(prefill.background).not.toContain("→");
+    expect(prefill.intent).toContain("并入数据组");
+    expect(prefill.intent).not.toContain("150");
+    expect(prefill.expectedEffect).toContain("产品研发一部 150 人 → 144 人");
+    expect(prefill.expectedEffect).toContain("数据智能部 65 人 → 71 人");
+    expect(prefill.expectedEffect).toContain("数据组的管理幅度变为 12");
+    expect(prefill.expectedEffect).toContain("建议上限 8");
+    expect(prefill.expectedEffect).not.toContain("平台部");
+    const prompt = buildDecisionPrefillMessages({ changes, moves, spans, reviewDate: "2027-04-02", secrets: [] })
+      .map((turn) => turn.content)
+      .join("\n");
+    expect(prompt).not.toContain("应用分析小组 4");
+    expect(prompt).toContain("有人员调整");
+    expect(prompt).not.toContain("这次调整以");
+    expect(prompt).not.toContain("不写进这次说明");
   });
 
   it("周五、吴六在基础架构组 L3，上级是钱二；平台部直属是赵一和李四", () => {

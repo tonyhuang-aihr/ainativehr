@@ -183,28 +183,131 @@ export function changeEnds(changes: HeadcountChange[]): { beforeText: string; af
   };
 }
 
-/** 决策说明的离线预填。只写相对基线人数有变化的部门，再过一遍 scrub。 */
+export type StructureMove = {
+  name: string;
+  from: string;
+  to: string;
+  people: number;
+};
+
+export type SpanShift = {
+  department: string;
+  span: number;
+  limit: number;
+};
+
+function peopleOnPath(people: OrgSnapshot["people"], path: string[]): OrgSnapshot["people"] {
+  const key = path.join("/");
+  return people.filter((person) => {
+    const current = person.departmentPath.join("/");
+    return current === key || current.startsWith(`${key}/`);
+  });
+}
+
+function spanCounts(snapshot: OrgSnapshot): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const person of snapshot.people) {
+    if (!person.managerId || person.managerId === person.id) continue;
+    counts.set(person.managerId, (counts.get(person.managerId) ?? 0) + 1);
+  }
+  return counts;
+}
+
+/** 基线有、方案里没了的部门，按人员去向看成一次并入。 */
+export function structureMoves(baseline: OrgSnapshot, current: OrgSnapshot): StructureMove[] {
+  const currentIds = new Set(current.departments.map((department) => department.id));
+  const currentPeople = new Map(current.people.map((person) => [person.id, person]));
+  const moves: StructureMove[] = [];
+  for (const department of baseline.departments) {
+    if (currentIds.has(department.id) || department.path.length < 2) continue;
+    const members = peopleOnPath(baseline.people, department.path);
+    if (members.length === 0) continue;
+    const destinations = new Map<string, number>();
+    for (const member of members) {
+      const now = currentPeople.get(member.id);
+      const destination = now?.departmentPath.at(-1);
+      if (!destination || destination === department.name) continue;
+      destinations.set(destination, (destinations.get(destination) ?? 0) + 1);
+    }
+    const top = [...destinations.entries()].sort((left, right) => right[1] - left[1])[0];
+    if (!top) continue;
+    moves.push({
+      name: department.name,
+      from: department.path[department.path.length - 2] ?? department.path[0],
+      to: top[0],
+      people: members.length,
+    });
+  }
+  return moves;
+}
+
+/** 只记这次新超过建议上限的幅度，并且只写部门，不写人。 */
+export function newlyWideSpans(baseline: OrgSnapshot, current: OrgSnapshot, limit: number): SpanShift[] {
+  const before = spanCounts(baseline);
+  const after = spanCounts(current);
+  const seen = new Set<string>();
+  const shifts: SpanShift[] = [];
+  for (const person of current.people) {
+    const next = after.get(person.id) ?? 0;
+    const previous = before.get(person.id) ?? 0;
+    if (next <= limit || previous > limit) continue;
+    const department = person.departmentPath.at(-1);
+    if (!department || seen.has(department)) continue;
+    seen.add(department);
+    shifts.push({ department, span: next, limit });
+  }
+  return shifts;
+}
+
+function scrubMove(move: StructureMove, secrets: string[]): StructureMove {
+  return {
+    name: scrubText(move.name, secrets),
+    from: scrubText(move.from, secrets),
+    to: scrubText(move.to, secrets),
+    people: move.people,
+  };
+}
+
+/** 决策说明的离线预填。背景、意图、预期效果各写一件事，再过一遍 scrub。 */
 export function buildDecisionPrefill(input: {
   changes: HeadcountChange[];
   reviewDate: string;
   secrets: string[];
-  /** 结构上的主变化，例如小组并入。人数没变的部门不要写进这里。 */
-  lead?: string;
+  moves?: StructureMove[];
+  spans?: SpanShift[];
 }): DecisionPrefill {
-  const lines = changedOnly(input.changes).map(headcountChangePhrase);
-  const joined = lines.join("；");
-  const lead = input.lead?.trim() ?? "";
-  const leadSentence = lead ? `这次调整以${lead}为主。` : "";
-  const background = joined
-    ? `${leadSentence}相对基线，人数有变化的部门是：${joined}。`
-    : leadSentence || "相对基线，没有部门的人数发生变化。";
-  const intent = joined
-    ? `${leadSentence}按这些人数变化调整结构：${joined}。人数没有变化的部门不写进这次说明。`
-    : leadSentence || "部门人数没有变化，先确认是否还需要提交结构说明。";
-  const expectedEffect = joined
-    ? `${leadSentence}复盘时对照这些变化是否落地：${joined}。`
-    : leadSentence || "复盘时确认部门人数仍与基线一致。";
-  const scrub = (text: string) => scrubText(text, input.secrets);
+  const secrets = input.secrets;
+  const moves = (input.moves ?? []).map((move) => scrubMove(move, secrets));
+  const spans = (input.spans ?? []).map((span) => ({ ...span, department: scrubText(span.department, secrets) }));
+  const changed = changedOnly(input.changes);
+  const joined = changed.map(headcountChangePhrase).join("；");
+  const background = moves.length
+    ? moves.map((move) => `${move.name} ${move.people} 人原在${move.from}，和${move.to}不在同一个部门。`).join("")
+    : changed.length
+      ? changed
+          .map((change) =>
+            change.before < SMALL_GROUP || change.after < SMALL_GROUP ? `${change.name}有人员调整。` : `${change.name}调整前是 ${change.before} 人。`,
+          )
+          .join("")
+      : "相对基线，部门人数和结构都没有变化。";
+  const intent = moves.length
+    ? moves.map((move) => `把${move.name}并入${move.to}，让原先在${move.from}的这一组归到${move.to}。`).join("")
+    : changed.length
+      ? `用意是调整编制：${changed
+          .map((change) => {
+            if (change.before < SMALL_GROUP || change.after < SMALL_GROUP) return `${change.name}有人员调整`;
+            if (change.after > change.before) return `${change.name}增加人数`;
+            return `${change.name}减少人数`;
+          })
+          .join("，")}。`
+      : "结构没有变化，可以先不提交说明。";
+  const effectParts: string[] = [];
+  if (joined) effectParts.push(`可核对的人数变化是：${joined}。`);
+  for (const span of spans) {
+    effectParts.push(`${span.department}的管理幅度变为 ${span.span}，超过建议上限 ${span.limit}，需要后续跟进。`);
+  }
+  const expectedEffect = effectParts.join("") || "复盘时确认部门人数仍与基线一致。";
+  const scrub = (text: string) => scrubText(text, secrets);
   return {
     background: scrub(background),
     intent: scrub(intent),
@@ -213,28 +316,37 @@ export function buildDecisionPrefill(input: {
   };
 }
 
-/** 发给模型的决策说明提示。只包含有变化的部门汇总，并且先脱敏。 */
+function maskedMove(move: StructureMove): string {
+  const who = move.people < SMALL_GROUP ? `${move.name}有人员调整` : `${move.name} ${move.people} 人`;
+  return `${who}，原在${move.from}，并入${move.to}`;
+}
+
+/** 发给模型的决策说明提示。少于 5 人的移动不写具体人数，并且先脱敏。 */
 export function buildDecisionPrefillMessages(input: {
   changes: HeadcountChange[];
   reviewDate: string;
   secrets: string[];
-  lead?: string;
+  moves?: StructureMove[];
+  spans?: SpanShift[];
 }): ChatTurn[] {
   const facts = changedOnly(input.changes).map(headcountChangePhrase).join("；") || "没有部门人数变化";
-  const lead = input.lead?.trim() ? `主变化：${input.lead.trim()}。` : "";
+  const moveFacts = (input.moves ?? []).map((move) => maskedMove(scrubMove(move, input.secrets))).join("；");
+  const spanFacts = (input.spans ?? [])
+    .map((span) => `${scrubText(span.department, input.secrets)}的管理幅度变为 ${span.span}，建议上限 ${span.limit}`)
+    .join("；");
+  const lines = [
+    moveFacts ? `结构调整：${moveFacts}。` : "",
+    `人数变化：${facts}。`,
+    spanFacts ? `管理幅度：${spanFacts}。` : "",
+    `建议复盘日 ${input.reviewDate}。`,
+  ].filter(Boolean);
   return [
     {
       role: "system",
       content:
-        "你帮 OD 起草决策说明。只根据给出的主变化和部门人数变化写背景、意图、预期效果。如果给出了主变化，三段都先写这个结构变化，再写人数。不要把人数没变的部门写成这次调整，也不要提没有出现在变化清单里的部门。不要写姓名、工号、薪酬、绩效，也不要写负责人去留或调岗。少于 5 人的变化会写成「有人员调整」，不要追问具体人数。人机比若出现，写成「人 : AI = 人工时 : AI 工时」，人在前。只输出 JSON：{\"background\",\"intent\",\"expectedEffect\",\"reviewDate\"}。",
+        "你帮 OD 起草决策说明。只根据用户给出的事实写三段，且各写各的：背景只写调整前的位置和分开的原因；意图只写要归到哪里；预期效果只写可核对的人数变化，以及超过建议上限的管理幅度。人数变化只写在预期效果里，三段不要用同一句开头。不要写姓名、工号、薪酬、绩效，也不要写负责人去留或调岗。少于 5 人写成「有人员调整」，不要追问具体人数。不要把写作要求写进正文。只输出 JSON：{\"background\",\"intent\",\"expectedEffect\",\"reviewDate\"}。",
     },
-    {
-      role: "user",
-      content: scrubText(
-        `${lead}人数有变化的部门：${facts}。建议复盘日 ${input.reviewDate}。背景、意图和预期效果都只写这些变化。`,
-        input.secrets,
-      ),
-    },
+    { role: "user", content: scrubText(lines.join(""), input.secrets) },
   ];
 }
 

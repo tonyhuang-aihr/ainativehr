@@ -10,13 +10,14 @@ import { LeaderCard } from "@/components/sandbox/leader-card";
 import { useNarrow } from "@/components/use-narrow";
 import { Button, cx } from "@/components/ui";
 import { useWorkspace } from "@/components/workspace-context";
-import { collectPersonalSecrets, departmentHeadcountChanges } from "@/lib/ai/desensitize";
+import { collectPersonalSecrets, departmentHeadcountChanges, newlyWideSpans, structureMoves } from "@/lib/ai/desensitize";
 import { collabBundleFromSheets } from "@/lib/collab/parse";
 import { countExecuted } from "@/lib/decisions/trail";
-import { appCellMergeLead, presentRdCenterIssues, RD_CENTER_SAMPLE_ID, RD_SHOWCASE_SPAN } from "@/lib/demo/rdCenter";
+import { presentRdCenterIssues, RD_CENTER_SAMPLE_ID, RD_SHOWCASE_SPAN } from "@/lib/demo/rdCenter";
 import { canvasLinks, goalsFor, leaderCollaborators, okrFor, scoredCollaboration } from "@/lib/collab/view";
 import { readCollabView, writeCollabView } from "@/lib/collab/viewPreference";
 import { readMobileEditHintDismissed, writeMobileEditHintDismissed } from "@/lib/ui/mobileHint";
+import { formatHumanAiPair } from "@/lib/cost/math";
 import { formatCny, formatDeltaMoney, formatDeltaNumber, round1 } from "@/lib/format";
 import { canSeeLeaderCard, showIndividualFields, type CollabBundle, type OrgIssue, type OrgSnapshot } from "@/lib/model/types";
 import { departmentAccent, scaleAccent, type ColorMode } from "@/lib/org/color";
@@ -497,7 +498,15 @@ export function SandboxPage() {
               delta={formatDeltaMoney(delta.laborCost)}
             />
             <Metric label="算力成本" value={formatCny(rollup.compute)} delta={formatDeltaMoney(rollup.compute - baseRollup.compute)} />
-            <Metric label="人机比" value={rollup.ratio} delta={baseRollup.ratio === rollup.ratio ? "与基线持平" : `基线 ${baseRollup.ratio}`} wide />
+            <Metric
+              label="人 : AI"
+              value={formatHumanAiPair(rollup.aiShare, rollup.humanShare)}
+              delta={
+                formatHumanAiPair(baseRollup.aiShare, baseRollup.humanShare) === formatHumanAiPair(rollup.aiShare, rollup.humanShare)
+                  ? "与基线持平"
+                  : `基线 ${formatHumanAiPair(baseRollup.aiShare, baseRollup.humanShare)}`
+              }
+            />
           </div>
           {scenario.kind === "draft" && (
             <Button onClick={() => setSubmitOpen(true)}>提交审批</Button>
@@ -847,7 +856,8 @@ export function SandboxPage() {
           departmentName={selected?.name ?? "研发中心"}
           departmentId={selected?.id ?? displaySnapshot.departments[0]?.id ?? ""}
           changes={departmentHeadcountChanges(baseline.snapshot, displaySnapshot)}
-          lead={workspace.importMeta.sampleId === RD_CENTER_SAMPLE_ID ? appCellMergeLead(baseline.snapshot, displaySnapshot) : undefined}
+          moves={structureMoves(baseline.snapshot, displaySnapshot)}
+          spans={newlyWideSpans(baseline.snapshot, displaySnapshot, workspace.settings.thresholds.spanWide)}
           people={scenario.snapshot.people}
           secrets={collectPersonalSecrets(scenario.snapshot, workspace.collab)}
           mode={ai.mode}
@@ -870,7 +880,7 @@ function Metric({ label, value, delta, wide }: { label: string; value: string; d
   return (
     <div className={cx("shrink-0 rounded-xl border border-line px-3 py-1.5", wide ? "min-w-[210px]" : "min-w-[120px]")}>
       <div className="text-[11px] text-muted">{label}</div>
-      <div className="text-sm font-semibold">{value}</div>
+      <div className="whitespace-nowrap text-sm font-semibold">{value}</div>
       <div className="text-[11px] text-muted">{delta}</div>
     </div>
   );

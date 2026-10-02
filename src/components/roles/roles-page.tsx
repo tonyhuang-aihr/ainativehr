@@ -8,7 +8,7 @@ import { useWorkspace } from "@/components/workspace-context";
 import { collectPersonalSecrets } from "@/lib/ai/desensitize";
 import { decomposeRoleWithAi } from "@/lib/ai/provider";
 import {
-  formatHumanAiRatio,
+  formatHumanAiPair,
   releasedHoursPerMonth,
   roleAnnualCost,
   rollupCosts,
@@ -272,7 +272,12 @@ function RolesBody() {
           {seeMarkers && focusSummary && focusDept && (
             <div data-testid="roles-review-note" className="mb-4 rounded-2xl border border-[#FCD34D] bg-[#FFFBEB] px-4 py-3 text-sm leading-6 text-[#92400E]">
               {focusDept[0]} {focusSummary.people} 人，计入人机比和成本的是 {focusSummary.includedPeople} 人、{focusSummary.includedRoles} 个岗位（{focusSummary.people} − {focusSummary.draftPeople} − {focusSummary.pendingPeople}）。草稿和待复核都不计入汇总。
-              {focusCost && focusCost.covered > 0 ? `人机比 ${focusCost.ratio}。` : ""}
+              {focusCost && focusCost.covered > 0 ? (
+                <>
+                  {" "}
+                  人 : AI <span className="whitespace-nowrap">{formatHumanAiPair(focusCost.aiShare, focusCost.humanShare)}</span>。
+                </>
+              ) : null}
               <button type="button" className="ml-1 font-medium text-primary" onClick={() => setReviewOnly((value) => !value)}>
                 {reviewOnly ? "显示全部岗位" : `不含 ${focusSummary.pendingRoles} 个待复核岗位 · 查看清单`}
               </button>
@@ -358,7 +363,7 @@ function RolesBody() {
                     <span>协同任务默认把 {Math.round(workspace.settings.collabAiShare * 100)}% 工时算给 AI。算力单价 {workspace.settings.computeUnitPrice} 元/任务/月。</span>
                   </div>
                   <div className="mt-4 grid gap-3 md:grid-cols-5">
-                    <SummaryCard testId="role-ratio" label="人机比" value={formatHumanAiRatio(split.ai, split.human)} hint="人在前 · 人工时 : AI 工时" />
+                    <SummaryCard testId="role-ratio" label="人 : AI" value={formatHumanAiPair(split.ai, split.human)} hint="人在前 · 人工时 : AI 工时" />
                     <SummaryCard label="释放工时" value={`${round1(released)} 小时/月`} hint="单人，含协同分摊" />
                     <SummaryCard label="人力成本" value={seePay && laborKnown ? formatCny(annualLabor) : seePay ? "未提供" : "已隐藏"} hint={seePay ? "单人年度，不因 AI 自动减编" : "个人薪酬仅授权角色可见"} />
                     <SummaryCard label="算力成本" value={formatCny(perPerson.compute)} hint="单人每年" />
@@ -568,7 +573,9 @@ function RolesBody() {
                       <div className="font-medium">当前方案汇总</div>
                       {planNote && <p className="mt-1 text-xs text-muted">{planNote}</p>}
                       <p className="mt-2 leading-6 text-muted">
-                        已拆 {scenarioCost.covered}/{scenarioCost.headcount} 人。综合人机比 {scenarioCost.ratio}，释放工时 {round1(scenarioCost.releasedHours)} 小时/月，算力 {formatCny(scenarioCost.compute)}
+                        已拆 {scenarioCost.covered}/{scenarioCost.headcount} 人。综合人机比 人 : AI{" "}
+                        <span className="whitespace-nowrap">{formatHumanAiPair(scenarioCost.aiShare, scenarioCost.humanShare)}</span>
+                        ，释放工时 {round1(scenarioCost.releasedHours)} 小时/月，算力 {formatCny(scenarioCost.compute)}
                         ，人力加算力 {seePay || scenarioCost.laborKnown === 0 ? formatCny(scenarioCost.total) : "薪酬按部门汇总另计"}。
                       </p>
                     </div>
@@ -594,7 +601,7 @@ function SummaryCard({ label, value, hint, testId }: { label: string; value: str
   return (
     <div data-testid={testId} className="rounded-2xl border border-line bg-white px-3 py-3">
       <div className="text-xs text-muted">{label}</div>
-      <div className="mt-1 text-lg font-semibold">{value}</div>
+      <div className="mt-1 whitespace-nowrap text-lg font-semibold">{value}</div>
       <div className="mt-1 text-[11px] leading-4 text-muted">{hint}</div>
     </div>
   );

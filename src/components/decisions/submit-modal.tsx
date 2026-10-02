@@ -3,7 +3,7 @@
 import { Badge, Button } from "@/components/ui";
 import { useNarrow } from "@/components/use-narrow";
 import { prefillDecisionWithAi, type AiMode } from "@/lib/ai/provider";
-import { changeEnds, reviewDateMonthsAhead, type DecisionPrefill, type HeadcountChange } from "@/lib/ai/desensitize";
+import { changeEnds, reviewDateMonthsAhead, type DecisionPrefill, type HeadcountChange, type SpanShift, type StructureMove } from "@/lib/ai/desensitize";
 import { guardIssues, stripGuardedText } from "@/lib/decisions/guard";
 import type { DecisionFieldKey, DecisionRecord, FieldOrigin, Person } from "@/lib/model/types";
 import { useEffect, useState } from "react";
@@ -19,7 +19,8 @@ export function SubmitDecisionModal({
   departmentName,
   departmentId,
   changes,
-  lead,
+  moves = [],
+  spans = [],
   people,
   secrets,
   mode,
@@ -29,7 +30,8 @@ export function SubmitDecisionModal({
   departmentName: string;
   departmentId: string;
   changes: HeadcountChange[];
-  lead?: string;
+  moves?: StructureMove[];
+  spans?: SpanShift[];
   people: Person[];
   secrets: string[];
   mode: AiMode;
@@ -48,7 +50,10 @@ export function SubmitDecisionModal({
   const [busy, setBusy] = useState(true);
   const secretsRef = useState(() => secrets)[0];
   const changeKey = changes.map((change) => `${change.name}\u0001${change.before}\u0001${change.after}`).join("\n");
+  const moveKey = moves.map((move) => `${move.name}\u0001${move.from}\u0001${move.to}\u0001${move.people}`).join("\n");
+  const spanKey = spans.map((span) => `${span.department}\u0001${span.span}\u0001${span.limit}`).join("\n");
   const changed = changes.filter((change) => change.before !== change.after);
+  const moveSummary = moves.map((move) => `${move.name}并入${move.to}`).join("；");
   const ends = changeEnds(changes);
 
   useEffect(() => {
@@ -61,7 +66,21 @@ export function SubmitDecisionModal({
         const [name, before, after] = line.split("\u0001");
         return { name, before: Number(before), after: Number(after) };
       });
-    prefillDecisionWithAi({ changes: parsed, reviewDate, secrets: secretsRef, mode, lead }).then((result) => {
+    const parsedMoves: StructureMove[] = moveKey
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => {
+        const [name, from, to, peopleCount] = line.split("\u0001");
+        return { name, from, to, people: Number(peopleCount) };
+      });
+    const parsedSpans: SpanShift[] = spanKey
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => {
+        const [department, span, limit] = line.split("\u0001");
+        return { department, span: Number(span), limit: Number(limit) };
+      });
+    prefillDecisionWithAi({ changes: parsed, reviewDate, secrets: secretsRef, mode, moves: parsedMoves, spans: parsedSpans }).then((result) => {
       if (cancelled) return;
       setPrefill(result.prefill);
       setSourceMode(result.mode);
@@ -70,7 +89,7 @@ export function SubmitDecisionModal({
     return () => {
       cancelled = true;
     };
-  }, [changeKey, lead, mode, secretsRef]);
+  }, [changeKey, moveKey, spanKey, mode, secretsRef]);
 
   const joined = prefill ? FIELDS.map((field) => prefill[field.key]).join("\n") : "";
   const issues = prefill ? guardIssues(joined, people) : [];
@@ -94,7 +113,7 @@ export function SubmitDecisionModal({
     onSubmit({
       id: `dec-${Date.now().toString(36)}`,
       departmentId: filing?.id || departmentId,
-      title: lead || `${filing?.name ?? departmentName}结构调整`,
+      title: moveSummary || `${filing?.name ?? departmentName}结构调整`,
       date: new Date().toISOString().slice(0, 10),
       status: "pending",
       initiatorRole: "HRBP",
@@ -124,11 +143,11 @@ export function SubmitDecisionModal({
         <div className="min-h-0 flex-1 space-y-3 overflow-auto px-4 py-3">
           <p className="text-xs text-muted">
             来源：{sourceMode === "llm" ? "模型预填，已按脱敏汇总生成" : "离线预填"}
-            {lead ? ` · ${lead}` : changed.length > 0 ? ` · ${changed.map((change) => change.name).join("、")}` : ""}
+            {moveSummary ? ` · ${moveSummary}` : changed.length > 0 ? ` · ${changed.map((change) => change.name).join("、")}` : ""}
           </p>
-          {(lead || changed.length > 0) && (
+          {(moveSummary || changed.length > 0) && (
             <ul data-testid="change-summary" className="rounded-xl bg-[#F8F9FD] px-3 py-2 text-xs leading-5 text-muted">
-              {lead && <li>{lead}</li>}
+              {moveSummary && <li>{moveSummary}</li>}
               {changed.slice(0, 6).map((diff) => (
                 <li key={diff.name}>
                   {diff.name} {diff.before} → {diff.after}

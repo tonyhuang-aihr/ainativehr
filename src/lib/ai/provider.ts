@@ -117,7 +117,8 @@ export async function prefillDecisionWithAi(input: {
   reviewDate: string;
   secrets: string[];
   mode: AiMode;
-  lead?: string;
+  moves?: { name: string; from: string; to: string; people: number }[];
+  spans?: { department: string; span: number; limit: number }[];
 }): Promise<{ prefill: DecisionPrefill; mode: AiMode }> {
   const offline = buildDecisionPrefill(input);
   if (input.mode !== "llm") return { prefill: offline, mode: "offline" };
