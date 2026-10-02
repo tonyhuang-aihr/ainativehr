@@ -59,6 +59,8 @@ export type Person = {
   location: string;
   performance: string;
   email: string;
+  /** 只是个别人调动时标在人上。不进入决策轨迹。 */
+  pendingRoleConfirm?: boolean;
 };
 
 export type Department = {
@@ -125,11 +127,43 @@ export type RoleTask = {
   edited: boolean;
 };
 
+/** 草稿和待复核都不进入人机比、成本汇总。 */
+export type RolePosture = "active" | "draft" | "pending_review";
+
 export type RoleDecomposition = {
   roleTitle: string;
   tasks: RoleTask[];
   updatedAt: string;
   source: "ai" | "template" | "user";
+  posture?: RolePosture;
+};
+
+export type DecisionStatus = "executed" | "rejected" | "pending";
+
+export type FieldOrigin = "ai" | "user";
+
+export type DecisionFieldKey = "background" | "intent" | "expectedEffect" | "reviewDate";
+
+export type DecisionField = {
+  key: DecisionFieldKey;
+  text: string;
+  origin: FieldOrigin;
+};
+
+/** 发起人和审批人只存角色，不存姓名。 */
+export type DecisionRecord = {
+  id: string;
+  departmentId: string;
+  title: string;
+  date: string;
+  status: DecisionStatus;
+  initiatorRole: string;
+  approverRole: string | null;
+  beforeText: string;
+  afterText: string;
+  fields: DecisionField[];
+  opinion: string;
+  sourceNote?: string;
 };
 
 export type ViewerRole = "od" | "approver" | "admin";
@@ -223,6 +257,8 @@ export type Workspace = {
   importMeta: ImportMeta;
   audit: AuditEntry[];
   collab: CollabBundle | null;
+  /** 部门决策轨迹。旧场景文件可能没有这一项。 */
+  decisions?: DecisionRecord[];
 };
 
 export const DEFAULT_THRESHOLDS: RuleThresholds = {
@@ -267,5 +303,10 @@ export function canSeeIndividualPay(role: ViewerRole): boolean {
 
 /** 负责人卡片含个人协作次数，只给 OD / 管理员。业务负责人只看部门间连线。 */
 export function canSeeLeaderCard(role: ViewerRole): boolean {
+  return role === "od" || role === "admin";
+}
+
+/** 方案里的「调整中」标识只给能看方案的人。审批人看不到。 */
+export function canSeePlanMarkers(role: ViewerRole): boolean {
   return role === "od" || role === "admin";
 }

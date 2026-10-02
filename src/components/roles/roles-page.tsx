@@ -15,7 +15,8 @@ import {
   taskShareTotal,
 } from "@/lib/cost/math";
 import { uid, formatCny, formatPercent, round1 } from "@/lib/format";
-import { canSeeIndividualPay, type ExecutionMode, type RoleDecomposition, type RoleTask } from "@/lib/model/types";
+import { canSeeIndividualPay, canSeePlanMarkers, type ExecutionMode, type Person, type RoleDecomposition, type RoleTask } from "@/lib/model/types";
+import { rolePosture, summarizePostures } from "@/lib/roles/posture";
 import { orgMetrics, scenarioRollup, topDepartment } from "@/lib/org/metrics";
 import { evaluateRules } from "@/lib/rules/engine";
 import { activeScenario, updateScenario } from "@/lib/workspace/create";
@@ -49,6 +50,7 @@ function RolesBody() {
   const [note, setNote] = useState("");
   const [draft, setDraft] = useState<RoleTask[] | null>(null);
   const [draftKey, setDraftKey] = useState("");
+  const [reviewOnly, setReviewOnly] = useState(false);
   const draftRef = useRef<RoleTask[] | null>(null);
 
   useEffect(() => {
@@ -69,6 +71,7 @@ function RolesBody() {
   }, [scenario]);
 
   const filtered = roles.filter((role) => {
+    if (reviewOnly && scenario && rolePosture(scenario.decompositions[role.title]) !== "pending_review") return false;
     const needle = query.trim();
     if (!needle) return true;
     return role.title.includes(needle) || [...role.depts].some((dept) => dept.includes(needle));
@@ -112,6 +115,16 @@ function RolesBody() {
   const tasksForView = draftKey === syncKey ? draft : decomposition ? decomposition.tasks.map((task) => ({ ...task })) : null;
   draftRef.current = tasksForView;
   const seePay = canSeeIndividualPay(workspace.settings.viewerRole);
+  const seeMarkers = canSeePlanMarkers(workspace.settings.viewerRole);
+  const peopleByDept = new Map<string, Person[]>();
+  for (const person of scenario.snapshot.people) {
+    const key = topDepartment(person);
+    const list = peopleByDept.get(key) ?? [];
+    list.push(person);
+    peopleByDept.set(key, list);
+  }
+  const focusDept = [...peopleByDept.entries()].find(([, list]) => summarizePostures(list, scenario.decompositions).pendingRoles > 0);
+  const focusSummary = focusDept ? summarizePostures(focusDept[1], scenario.decompositions) : null;
   const issues = evaluateRules(scenario.snapshot, workspace.settings.thresholds, scenario.ignoredCodes);
   const metrics = orgMetrics(scenario.snapshot);
   const scenarioCost = scenarioRollup(scenario, workspace.settings);
@@ -128,6 +141,7 @@ function RolesBody() {
       tasks,
       updatedAt: new Date().toISOString(),
       source,
+      posture: scenario?.decompositions[title]?.posture,
     };
     const base = redirected ? { ...workspace, activeScenarioId: draftId } : workspace;
     commit(
@@ -183,36 +197,60 @@ function RolesBody() {
             className="mt-3 min-h-10 w-full rounded-xl border border-line px-3 py-2 text-sm outline-none focus:border-primary"
           />
           <div className="mt-3 space-y-3">
-            {[...grouped.entries()].map(([dept, list]) => (
+            {[...grouped.entries()].map(([dept, list]) => {
+              const summary = summarizePostures(peopleByDept.get(dept) ?? [], scenario.decompositions);
+              return (
               <div key={dept}>
                 <div className="px-1 text-[11px] font-medium text-muted">{dept}</div>
+                {seeMarkers && summary.pendingRoles > 0 && (
+                  <button
+                    type="button"
+                    className="mt-1 px-1 text-left text-[11px] leading-5 text-[#B54708]"
+                    onClick={() => setReviewOnly(true)}
+                  >
+                    {dept} {summary.people} 人，计入汇总 {summary.includedPeople} 人、{summary.includedRoles} 个岗位。草稿 {summary.draftPeople} 人未计入。不含 {summary.pendingRoles} 个待复核岗位 · 查看清单
+                  </button>
+                )}
                 <div className="mt-1 space-y-1">
                   {list.map((role) => {
                     const active = role.title === title;
                     const done = Boolean(scenario.decompositions[role.title]);
+                    const posture = rolePosture(scenario.decompositions[role.title]);
+                    const pendingMark = seeMarkers && (posture === "draft" || posture === "pending_review");
                     return (
                       <button
                         key={role.title}
                         onClick={() => setTitle(role.title)}
                         className={cx(
-                          "flex min-h-10 w-full items-center justify-between rounded-xl px-2 text-left text-sm",
+                          "flex min-h-10 w-full items-center justify-between gap-2 rounded-xl px-2 py-1 text-left text-sm",
                           active ? "bg-primarySoft text-primary" : "hover:bg-[#F6F7FB]",
                         )}
                       >
                         <span>
                           {role.title}
-                          <span className="mt-0.5 block text-[11px] text-muted">{role.count} 人</span>
+                          <span className="mt-0.5 block text-[11px] text-muted">{role.count} 人{posture === "draft" ? " · 草稿" : ""}</span>
+                          {pendingMark && <span className="mt-0.5 block text-[11px] text-[#B54708]">调整中，待确认岗位</span>}
                         </span>
-                        {done && <Badge tone="good">已拆</Badge>}
+                        {done && posture === "active" && <Badge tone="good">已拆</Badge>}
+                        {pendingMark && <Badge tone="warn">{posture === "draft" ? "草稿" : "待复核"}</Badge>}
                       </button>
                     );
                   })}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </aside>
         <main className="min-w-0 flex-1 overflow-auto p-4 lg:p-5">
+          {seeMarkers && focusSummary && focusDept && (
+            <div data-testid="roles-review-note" className="mb-4 rounded-2xl border border-[#FCD34D] bg-[#FFFBEB] px-4 py-3 text-sm leading-6 text-[#92400E]">
+              {focusDept[0]} {focusSummary.people} 人，计入人机比和成本的是 {focusSummary.includedPeople} 人、{focusSummary.includedRoles} 个岗位（{focusSummary.people} − {focusSummary.draftPeople} − {focusSummary.pendingPeople}）。草稿和待复核都不计入汇总。
+              <button type="button" className="ml-1 font-medium text-primary" onClick={() => setReviewOnly((value) => !value)}>
+                {reviewOnly ? "显示全部岗位" : `不含 ${focusSummary.pendingRoles} 个待复核岗位 · 查看清单`}
+              </button>
+            </div>
+          )}
           {!title && (
             <div className="mx-auto max-w-xl pt-10">
               <h1 className="text-xl font-semibold">选一个岗位，决定哪些交给 AI</h1>
@@ -227,6 +265,20 @@ function RolesBody() {
                 <div>
                   <div className="text-xs text-muted">{scenario.name}{scenario.kind === "baseline" ? " · 只读，生成后会写入方案 A" : ""}</div>
                   <h1 className="mt-1 text-2xl font-semibold">{title}</h1>
+                  {seeMarkers && decomposition && rolePosture(decomposition) !== "active" && (
+                    <p className="mt-1 text-sm text-[#B54708]">
+                      调整中，待确认岗位{rolePosture(decomposition) === "draft" ? " · 草稿不计入人机比和成本" : " · 待复核，复核前不计入人机比和成本"}
+                    </p>
+                  )}
+                  {seeMarkers && incumbents.some((person) => person.pendingRoleConfirm) && (
+                    <p className="mt-1 text-sm text-[#B54708]">
+                      {incumbents
+                        .filter((person) => person.pendingRoleConfirm)
+                        .map((person) => person.name)
+                        .join("、")}
+                      {" · 调整中，待确认岗位"}
+                    </p>
+                  )}
                   <p className="mt-1 text-sm text-muted">
                     {incumbents.length} 人在岗
                     {incumbents.length > 0 ? ` · ${[...new Set(incumbents.map((person) => person.departmentPath.at(-1)))].slice(0, 3).join("、")}` : ""}

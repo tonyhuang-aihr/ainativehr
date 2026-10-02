@@ -1,7 +1,9 @@
 "use client";
 
+import { DataNotice } from "@/components/data/data-notice";
 import { Badge, Button, cx } from "@/components/ui";
 import { useWorkspace } from "@/components/workspace-context";
+import { readDataNoticeAccepted } from "@/lib/data/localData";
 import { parseScenarioFile, serializeScenarioFile } from "@/lib/data/scenarioFile";
 import { formatWhen } from "@/lib/format";
 import type { ViewerRole, Workspace } from "@/lib/model/types";
@@ -14,6 +16,7 @@ const LINKS = [
   { href: "/", label: "导入" },
   { href: "/sandbox", label: "沙盘" },
   { href: "/roles", label: "岗位拆解" },
+  { href: "/roster", label: "花名册" },
 ];
 
 function downloadScenario(workspace: Workspace) {
@@ -38,9 +41,14 @@ export function Shell({ crumb, children }: { crumb: string; children: ReactNode 
   const [auditOpen, setAuditOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [fileNote, setFileNote] = useState("");
+  const [noticeOpen, setNoticeOpen] = useState(false);
   const role = workspace?.settings.viewerRole ?? "od";
   const headerRef = useRef<HTMLElement>(null);
   const sampleLabel = workspace?.importMeta.sampleLabel;
+
+  useEffect(() => {
+    setNoticeOpen(!readDataNoticeAccepted(window.localStorage));
+  }, []);
 
   useEffect(() => {
     const el = headerRef.current;
@@ -121,6 +129,9 @@ export function Shell({ crumb, children }: { crumb: string; children: ReactNode 
         )}
         <div className="flex flex-wrap items-center gap-2 border-t border-line bg-[#F8F9FD] px-3 py-2 text-xs leading-5 text-muted">
           <span className="min-w-0 flex-1">花名册和方案只保存在这台浏览器里，不会上传到服务器。换设备或清理缓存前，请导出场景文件。</span>
+          <Link href="/settings/data" className="inline-flex min-h-10 items-center text-sm font-medium text-primary">
+            数据说明
+          </Link>
           <Button variant="secondary" className="px-3" disabled={!workspace} onClick={() => workspace && downloadScenario(workspace)}>
             导出场景
           </Button>
@@ -152,6 +163,7 @@ export function Shell({ crumb, children }: { crumb: string; children: ReactNode 
         </div>
       </header>
       <div className="flex min-h-0 flex-1 flex-col">{children}</div>
+      {noticeOpen && <DataNotice onAccept={() => setNoticeOpen(false)} />}
       {auditOpen && workspace && (
         <Dialog title="变更记录" onClose={() => setAuditOpen(false)}>
           <p className="mb-3 text-sm text-muted">导入、修复、忽略提醒和任务修改都会记在这里。撤销会回到上一个状态。</p>

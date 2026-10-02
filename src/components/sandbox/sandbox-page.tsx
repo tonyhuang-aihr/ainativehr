@@ -4,11 +4,16 @@ import { AiPanel } from "@/components/ai-panel";
 import { ScenarioSwitcher, Shell } from "@/components/shell";
 import { CollabEdge, type CollabEdgeData } from "@/components/sandbox/collab-edge";
 import { DeptNode, type DeptBubble, type DeptNodeData } from "@/components/sandbox/dept-node";
+import { SubmitDecisionModal } from "@/components/decisions/submit-modal";
+import { DeptPanel } from "@/components/sandbox/dept-panel";
 import { LeaderCard } from "@/components/sandbox/leader-card";
 import { useNarrow } from "@/components/use-narrow";
 import { Button, cx } from "@/components/ui";
 import { useWorkspace } from "@/components/workspace-context";
+import { collectPersonalSecrets, groupSizePhrase } from "@/lib/ai/desensitize";
 import { collabBundleFromSheets } from "@/lib/collab/parse";
+import { countExecuted } from "@/lib/decisions/trail";
+import { RD_CENTER_SAMPLE_ID, RD_SHOWCASE_SPAN } from "@/lib/demo/rdCenter";
 import { canvasLinks, goalsFor, leaderCollaborators, okrFor, scoredCollaboration } from "@/lib/collab/view";
 import { readCollabView, writeCollabView } from "@/lib/collab/viewPreference";
 import { readMobileEditHintDismissed, writeMobileEditHintDismissed } from "@/lib/ui/mobileHint";
@@ -42,7 +47,7 @@ type DeptPending = { sourceId: string; targetId: string };
 type PeoplePending = { personIds: string[]; targetDeptId: string; snapshot: OrgSnapshot };
 
 export function SandboxPage() {
-  const { ready, workspace, commit } = useWorkspace();
+  const { ready, workspace, commit, ai } = useWorkspace();
   const [collapsed, setCollapsed] = useState<Set<string> | null>(null);
   const [colorMode, setColorMode] = useState<ColorMode>("dept");
   const [query, setQuery] = useState("");
@@ -62,10 +67,11 @@ export function SandboxPage() {
   const [dismissedBubbles, setDismissedBubbles] = useState<string[]>([]);
   const [impact, setImpact] = useState<Impact | null>(null);
   const [banner, setBanner] = useState("");
-  const [picked, setPicked] = useState<string[]>([]);
   const [chatSeed, setChatSeed] = useState<{ id: number; text: string } | null>(null);
   const [mobileSheet, setMobileSheet] = useState<null | "tools" | "dept" | "alerts">(null);
   const [showEditHint, setShowEditHint] = useState(false);
+  const [showLeader, setShowLeader] = useState(false);
+  const [submitOpen, setSubmitOpen] = useState(false);
   const narrow = useNarrow();
 
   const scenario = workspace ? activeScenario(workspace) : null;
@@ -106,7 +112,6 @@ export function SandboxPage() {
     setPreview(null);
     setPlans([]);
     setImpact(null);
-    setPicked([]);
     if (!workspace) return;
     const current = activeScenario(workspace);
     const wide = evaluateRules(current.snapshot, workspace.settings.thresholds, current.ignoredCodes).find((issue) => issue.code === "span_wide");
@@ -179,6 +184,8 @@ export function SandboxPage() {
           label: issue.title,
           tone: issue.severity === "red" ? ("bad" as const) : issue.severity === "yellow" ? ("warn" as const) : ("info" as const),
         }));
+      const decisionCount = countExecuted(workspace.decisions ?? [], department.id);
+      if (decisionCount > 0) badges.unshift({ label: `决策轨迹（${decisionCount}）`, tone: "info" as const });
       const accent =
         colorMode === "dept"
           ? departmentAccent(department.path)
@@ -209,7 +216,12 @@ export function SandboxPage() {
           name: department.name,
           head: head ? `负责人 ${head.name} · ${head.title}` : "暂无负责人",
           headcount: members.length,
-          span: span == null ? "—" : String(span),
+          span:
+            workspace.importMeta.sampleId === RD_CENTER_SAMPLE_ID && RD_SHOWCASE_SPAN[department.name]
+              ? RD_SHOWCASE_SPAN[department.name]
+              : span == null
+                ? "—"
+                : String(span),
           cost: !hasCost ? "成本未提供" : `人力 ${formatCny(labor)}`,
           accent,
           active: selectedId === department.id || focusId === department.id,
@@ -424,7 +436,7 @@ export function SandboxPage() {
     );
   }
 
-  if (!workspace || !scenario || !displaySnapshot || !metrics || !delta || !rollup || !baseRollup) {
+  if (!workspace || !scenario || !baseline || !displaySnapshot || !metrics || !delta || !rollup || !baseRollup) {
     return (
       <Shell crumb="沙盘">
         <div className="mx-auto max-w-lg p-10 text-center">
@@ -483,6 +495,9 @@ export function SandboxPage() {
             />
             <Metric label="算力成本" value={formatCny(rollup.compute)} delta={formatDeltaMoney(rollup.compute - baseRollup.compute)} />
           </div>
+          {scenario.kind === "draft" && (
+            <Button onClick={() => setSubmitOpen(true)}>提交审批</Button>
+          )}
           {scenario.kind === "draft" && (
             <Button
               variant="secondary"
@@ -635,6 +650,7 @@ export function SandboxPage() {
               onNodeClick={(_, node) => {
                 setSelectedId(node.id);
                 setFocusId(node.id);
+                setShowLeader(false);
                 if (narrow) setMobileSheet("dept");
               }}
               proOptions={{ hideAttribution: false }}
@@ -645,9 +661,9 @@ export function SandboxPage() {
             {selected && (
               <div
                 className={cx(
-                  "flex-col gap-2 overflow-auto bg-white lg:absolute lg:bottom-3 lg:left-3 lg:top-12 lg:z-10 lg:flex lg:w-[320px] lg:bg-transparent lg:pr-1",
+                  "flex-col gap-2 overflow-auto bg-white lg:absolute lg:bottom-3 lg:left-3 lg:top-12 lg:z-10 lg:flex lg:w-[380px] lg:bg-transparent lg:pr-1",
                   mobileSheet === "dept"
-                    ? "fixed inset-x-0 bottom-12 z-40 flex max-h-[52vh] rounded-t-2xl border border-line p-3 shadow-card lg:bottom-3 lg:right-auto lg:top-12 lg:z-10 lg:max-h-none lg:w-[320px] lg:rounded-none lg:border-0 lg:p-0 lg:shadow-none"
+                    ? "fixed inset-x-0 bottom-12 z-40 flex max-h-[70vh] rounded-t-2xl border border-line p-3 shadow-card lg:bottom-3 lg:right-auto lg:top-12 lg:z-10 lg:max-h-none lg:w-[380px] lg:rounded-none lg:border-0 lg:p-0 lg:shadow-none"
                     : "hidden",
                 )}
               >
@@ -657,64 +673,39 @@ export function SandboxPage() {
                     关闭
                   </button>
                 </div>
-                <LeaderCard
-                  sample={Boolean(workspace.collab?.sample || workspace.importMeta.sampleLabel)}
-                  locked={!seeCard}
-                  title={head?.title ?? "暂无负责人"}
-                  name={head?.name ?? "未指定"}
-                  department={selected.name}
-                  okr={head && seeCard ? okrFor(workspace.collab, head.name) : null}
-                  goals={head && seeCard ? goalsFor(workspace.collab, head.name) : []}
-                  collaborators={seeCard ? collaborators : []}
-                  updatedAt={workspace.collab?.updatedAt ?? ""}
-                  windowDays={workspace.collab?.windowDays ?? 90}
+                {showLeader && (
+                  <LeaderCard
+                    sample={Boolean(workspace.collab?.sample || workspace.importMeta.sampleLabel)}
+                    locked={!seeCard}
+                    title={head?.title ?? "暂无负责人"}
+                    name={head?.name ?? "未指定"}
+                    department={selected.name}
+                    okr={head && seeCard ? okrFor(workspace.collab, head.name) : null}
+                    goals={head && seeCard ? goalsFor(workspace.collab, head.name) : []}
+                    collaborators={seeCard ? collaborators : []}
+                    updatedAt={workspace.collab?.updatedAt ?? ""}
+                    windowDays={workspace.collab?.windowDays ?? 90}
+                  />
+                )}
+                <DeptPanel
+                  department={selected}
+                  departments={displaySnapshot.departments}
+                  currentPeople={displaySnapshot.people}
+                  baselinePeople={baseline?.snapshot.people ?? []}
+                  decisions={workspace.decisions ?? []}
+                  seePay={seePay}
+                  onClose={() => {
+                    setSelectedId(null);
+                    setMobileSheet(null);
+                  }}
+                  onShowLeader={() => setShowLeader(true)}
                 />
-                <div className="rounded-2xl border border-line bg-white p-3 shadow-card">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <div className="text-sm font-semibold">{selected.name}</div>
-                      <div className="text-xs text-muted">{selected.path.join(" / ")}</div>
-                    </div>
-                    <button className="inline-flex min-h-10 items-center px-2 text-xs text-muted" onClick={() => setSelectedId(null)}>
-                      关闭
-                    </button>
-                  </div>
-                  <p className="mt-1 text-[11px] leading-5 text-muted">按住卡片拖到别的部门。下面的人也可以拖过去，Shift 点选多人。子树共 {peopleInDepartment(displaySnapshot.people, selected.path).length} 人。</p>
-                  <ul className="mt-2 max-h-40 space-y-1 overflow-auto text-xs">
-                    {selectedPeople.map((person) => (
-                      <li
-                        key={person.id}
-                        draggable
-                        onDragStart={(event) => {
-                          const ids = picked.includes(person.id) ? picked : [person.id];
-                          event.dataTransfer.setData("application/x-people", JSON.stringify(ids));
-                          event.dataTransfer.setData("text/plain", ids.join(","));
-                          event.dataTransfer.effectAllowed = "move";
-                        }}
-                        onClick={(event) => {
-                          if (!event.shiftKey) return;
-                          setPicked((current) => (current.includes(person.id) ? current.filter((id) => id !== person.id) : [...current, person.id]));
-                        }}
-                        className={cx(
-                          "flex min-h-10 cursor-grab items-center justify-between gap-2 rounded-lg px-2",
-                          picked.includes(person.id) ? "bg-primarySoft" : "bg-[#F8F9FD]",
-                        )}
-                      >
-                        <span>
-                          {person.name}
-                          <span className="text-muted"> · {person.title}</span>
-                        </span>
-                        {seePay && person.annualCost != null && <span className="text-muted">{formatCny(person.annualCost)}</span>}
-                      </li>
-                    ))}
-                  </ul>
-                  <Link
-                    href={`/roles?title=${encodeURIComponent(head?.title || selectedPeople[0]?.title || "")}`}
-                    className="mt-2 inline-flex min-h-10 items-center text-xs font-medium text-primary"
-                  >
-                    拆解这个部门的岗位
+                <p className="px-1 text-[11px] leading-5 text-muted">
+                  按住部门卡片拖到别的部门。手机上只查看，拖拽改架构请用电脑。
+                  <Link href={`/roles?title=${encodeURIComponent(head?.title || selectedPeople[0]?.title || "")}`} className="ml-1 font-medium text-primary">
+                    拆解岗位
                   </Link>
-                </div>
+                </p>
               </div>
             )}
             {collabOn && (
@@ -847,6 +838,29 @@ export function SandboxPage() {
           </button>
         </nav>
       </div>
+      {submitOpen && scenario.kind === "draft" && (
+        <SubmitDecisionModal
+          departmentName={selected?.name ?? "研发中心"}
+          departmentId={selected?.id ?? displaySnapshot.departments[0]?.id ?? ""}
+          beforePhrase={groupSizePhrase(selected ? peopleInDepartment(baseline.snapshot.people, selected.path).length : baseline.snapshot.people.length)}
+          afterPhrase={groupSizePhrase(selected ? peopleInDepartment(displaySnapshot.people, selected.path).length : displaySnapshot.people.length)}
+          people={scenario.snapshot.people}
+          secrets={collectPersonalSecrets(scenario.snapshot, workspace.collab)}
+          mode={ai.mode}
+          diffs={displaySnapshot.departments
+            .map((department) => ({
+              name: department.name,
+              before: peopleInDepartment(baseline.snapshot.people, department.path).length,
+              after: peopleInDepartment(displaySnapshot.people, department.path).length,
+            }))
+            .filter((item) => item.before !== item.after)}
+          onClose={() => setSubmitOpen(false)}
+          onSubmit={(record) => {
+            commit({ ...workspace, decisions: [...(workspace.decisions ?? []), record] }, "提交了决策说明，等待审批");
+            setSubmitOpen(false);
+          }}
+        />
+      )}
     </Shell>
   );
 }

@@ -30,6 +30,7 @@ function workspace(): Workspace {
     },
     audit: [],
     collab: null,
+    decisions: [],
   };
 }
 

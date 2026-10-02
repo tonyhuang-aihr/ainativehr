@@ -136,3 +136,37 @@ export function buildChatMessages(input: {
     { role: "user", content: scrubText(body, secrets) },
   ];
 }
+
+export type DecisionPrefill = {
+  background: string;
+  intent: string;
+  expectedEffect: string;
+  reviewDate: string;
+};
+
+/** 决策说明的离线预填。调用方传入的已经是部门汇总，这里再过一遍 scrub。 */
+export function buildDecisionPrefill(input: {
+  departmentName: string;
+  beforePhrase: string;
+  afterPhrase: string;
+  reviewDate: string;
+  secrets: string[];
+}): DecisionPrefill {
+  const background = `${input.departmentName}当前的结构承接口径不统一。调整前规模 ${input.beforePhrase}，调整后规模 ${input.afterPhrase}。`;
+  const intent = "把同一类交付收到一套结构里，缩短交付周期，并把管理幅度收回到建议区间。";
+  const expectedEffect = "核心服务的可用性维持在现有目标附近，管理幅度回到建议区间。复盘时只对照当初写的结构预期。";
+  const scrub = (text: string) => scrubText(text, input.secrets);
+  return {
+    background: scrub(background),
+    intent: scrub(intent),
+    expectedEffect: scrub(expectedEffect),
+    reviewDate: scrub(input.reviewDate),
+  };
+}
+
+export function reviewDateMonthsAhead(today: Date, months = 6): string {
+  const next = new Date(today.getTime());
+  next.setMonth(next.getMonth() + months);
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${next.getFullYear()}-${pad(next.getMonth() + 1)}-${pad(next.getDate())}`;
+}

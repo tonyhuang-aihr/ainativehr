@@ -1,5 +1,6 @@
 import { rollupCosts, type CostRollup } from "@/lib/cost/math";
 import type { AppSettings, Department, OrgSnapshot, Person, Scenario } from "@/lib/model/types";
+import { peopleIncludedInRollup } from "@/lib/roles/posture";
 
 export type OrgMetrics = {
   headcount: number;
@@ -49,7 +50,7 @@ export function diffMetrics(current: OrgMetrics, baseline: OrgMetrics) {
 }
 
 export function scenarioRollup(scenario: Scenario, settings: AppSettings): CostRollup {
-  return rollupCosts(scenario.snapshot.people, scenario.decompositions, settings);
+  return rollupCosts(peopleIncludedInRollup(scenario.snapshot.people, scenario.decompositions), scenario.decompositions, settings);
 }
 
 export function topDepartment(person: Person): string {

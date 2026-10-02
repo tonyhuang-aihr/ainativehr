@@ -12,6 +12,7 @@ import { parsePastedTable, parseWorkbook } from "@/lib/import/parseWorkbook";
 import { tableToPeople } from "@/lib/import/rows";
 import { orgMetrics, peopleInDepartment } from "@/lib/org/metrics";
 import { FIELD_LABEL, REQUIRED_FIELDS, type CollabBundle, type ColumnField, type ColumnMatch, type RawPerson, type SheetTable } from "@/lib/model/types";
+import { buildRdCenterWorkspace } from "@/lib/demo/rdCenter";
 import { createWorkspace } from "@/lib/workspace/create";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -293,6 +294,23 @@ export function ImportPage() {
               <Badge tone="info">虚构，可直接点开</Badge>
             </div>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              <Card className="flex flex-col p-4">
+                <div className="text-xs font-medium text-primary">示例数据 · 486 人</div>
+                <h3 className="mt-1 text-sm font-semibold">研发中心组织调整</h3>
+                <p className="mt-2 flex-1 text-xs leading-5 text-muted">
+                  方案 A 里产品研发一部 144 人、平台部 62 人、数据智能部 71 人。含决策轨迹和待确认岗位。姓名和成本都是虚构的。
+                </p>
+                <div className="mt-3">
+                  <Button
+                    onClick={() => {
+                      replaceWorkspace(buildRdCenterWorkspace());
+                      router.push("/sandbox");
+                    }}
+                  >
+                    载入并进入沙盘
+                  </Button>
+                </div>
+              </Card>
               {SAMPLES.map((sample) => (
                 <Card key={sample.id} className="flex flex-col p-4">
                   <div className="text-xs font-medium text-primary">{sample.meta}</div>

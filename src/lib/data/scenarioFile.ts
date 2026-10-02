@@ -31,5 +31,5 @@ export function parseScenarioFile(text: string): Workspace | null {
   if (record.kind !== SCENARIO_FILE_KIND) return null;
   const workspace = record.workspace;
   if (!workspace || workspace.version !== 1 || !Array.isArray(workspace.scenarios) || workspace.scenarios.length === 0) return null;
-  return { ...workspace, collab: workspace.collab ?? null };
+  return { ...workspace, collab: workspace.collab ?? null, decisions: workspace.decisions ?? [] };
 }

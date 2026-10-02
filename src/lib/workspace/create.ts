@@ -50,6 +50,7 @@ export function createWorkspace(
         label: "把导入的花名册保存为基线，并复制出方案 A / B / C",
       },
     ],
+    decisions: [],
   };
 }
 

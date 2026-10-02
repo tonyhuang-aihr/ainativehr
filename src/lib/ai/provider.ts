@@ -1,4 +1,12 @@
-import { buildChatMessages, collectPersonalSecrets, desensitizeMessages, scrubText, type ChatTurn } from "@/lib/ai/desensitize";
+import {
+  buildChatMessages,
+  buildDecisionPrefill,
+  collectPersonalSecrets,
+  desensitizeMessages,
+  scrubText,
+  type ChatTurn,
+  type DecisionPrefill,
+} from "@/lib/ai/desensitize";
 import { decomposeRoleOffline } from "@/lib/ai/templates";
 import { answerOffline } from "@/lib/ai/offlineChat";
 import { matchColumns } from "@/lib/import/matchColumns";
@@ -101,6 +109,56 @@ export async function chatWithAi(input: {
     if (text) return { text, mode: "llm" };
   }
   return { text: answerOffline(input.question, input.issues, input.metrics), mode: "offline" };
+}
+
+export async function prefillDecisionWithAi(input: {
+  departmentName: string;
+  beforePhrase: string;
+  afterPhrase: string;
+  reviewDate: string;
+  secrets: string[];
+  mode: AiMode;
+}): Promise<{ prefill: DecisionPrefill; mode: AiMode }> {
+  const offline = buildDecisionPrefill(input);
+  if (input.mode !== "llm") return { prefill: offline, mode: "offline" };
+  const text = await complete(
+    [
+      {
+        role: "system",
+        content:
+          "你帮 OD 起草决策说明。只根据给出的部门汇总写背景、意图、预期效果和复盘日期。不要写姓名、工号、薪酬、绩效，也不要写负责人去留或调岗。只输出 JSON：{\"background\",\"intent\",\"expectedEffect\",\"reviewDate\"}。",
+      },
+      {
+        role: "user",
+        content: `部门：${input.departmentName}。调整前 ${input.beforePhrase}。调整后 ${input.afterPhrase}。建议复盘日 ${input.reviewDate}。`,
+      },
+    ],
+    true,
+    input.secrets,
+  );
+  const parsed = text ? parsePrefill(text) : null;
+  if (!parsed) return { prefill: offline, mode: "offline" };
+  return {
+    prefill: {
+      background: scrubText(parsed.background, input.secrets),
+      intent: scrubText(parsed.intent, input.secrets),
+      expectedEffect: scrubText(parsed.expectedEffect, input.secrets),
+      reviewDate: scrubText(parsed.reviewDate, input.secrets) || offline.reviewDate,
+    },
+    mode: "llm",
+  };
+}
+
+function parsePrefill(text: string): DecisionPrefill | null {
+  const data = readJson(text);
+  if (!data || typeof data !== "object") return null;
+  const record = data as Record<string, unknown>;
+  const background = String(record.background ?? "").trim();
+  const intent = String(record.intent ?? "").trim();
+  const expectedEffect = String(record.expectedEffect ?? "").trim();
+  const reviewDate = String(record.reviewDate ?? "").trim();
+  if (!background || !intent || !expectedEffect) return null;
+  return { background, intent, expectedEffect, reviewDate };
 }
 
 async function complete(messages: ChatTurn[], json = false, secrets: string[] = []): Promise<string | null> {
