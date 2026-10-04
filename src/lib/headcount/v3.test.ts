@@ -85,7 +85,11 @@ describe("负责人按范围进入，小组成本在接口里就是区间", () =
     expect(view.yearEnd.people).toBe(33);
     expect(view.yearEnd.agents).toBe(7);
     expect(view.aiRatio).toBe("72 : 28");
-    expect(JSON.stringify(view)).not.toContain("1 人入职");
+    const blob = JSON.stringify(view);
+    expect(blob).not.toContain("1 人入职");
+    expect(blob).not.toContain("1 人加入");
+    expect(blob).not.toContain("+29.0");
+    expect(blob).not.toContain("−35.0");
   });
 });
 

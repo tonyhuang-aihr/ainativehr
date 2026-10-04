@@ -83,13 +83,43 @@ function shownMoney(mask: boolean, yuan: number, signed = false): string {
   return signed ? formatSignedWan(yuan) : formatWan(yuan);
 }
 
-function driverLines(facts: ConclusionFacts, mask: boolean): { detail: string; label: string }[] {
-  const moneyOf = (yuan: number) => shownMoney(mask, yuan, true);
-  const personnelSmall =
+function personnelIsSmall(facts: ConclusionFacts): boolean {
+  return (
     (facts.joinHires > 0 && facts.joinHires < 2) ||
     (facts.joinTransfers > 0 && facts.joinTransfers < 2) ||
     (facts.leaveExits > 0 && facts.leaveExits < 2) ||
-    (facts.leaveTransfers > 0 && facts.leaveTransfers < 2);
+    (facts.leaveTransfers > 0 && facts.leaveTransfers < 2)
+  );
+}
+
+function groupedConclusion(facts: ConclusionFacts): string {
+  const annual = formatWan(facts.annualYuan);
+  const current = formatWan(facts.currentYuan);
+  const people = formatSignedWan(facts.joinYuan + facts.leaveYuan);
+  const agent = formatSignedWan(facts.agentYuan);
+  const budgetWan = facts.budgetYuan == null ? null : roundToHalfWan(facts.budgetYuan);
+  const annualWan = roundToHalfWan(facts.annualYuan);
+  let budget = "本组未单独设置预算";
+  if (budgetWan != null) {
+    const gap = Number((annualWan - budgetWan).toFixed(1));
+    budget = gap > 0 ? `超出部门预算 ${gap.toFixed(1)} 万` : gap < 0 ? `低于部门预算 ${Math.abs(gap).toFixed(1)} 万` : "与部门预算持平";
+  }
+  return `${facts.year} 年预计 ${annual} 万，${budget}。现有人员和 Agent 年化 ${current} 万。已确认的 ${facts.joins + facts.leaves} 人变动 ${people} 万，Agent 调整 ${agent} 万。`;
+}
+
+function groupedBasis(facts: ConclusionFacts): string[] {
+  return [
+    `全年预计 ${formatWan(facts.annualYuan)} 万，来自四个季度相加后再取整。`,
+    `当前年化 ${formatWan(facts.currentYuan)} 万。`,
+    `已确认的 ${facts.joins + facts.leaves} 人变动 ${formatSignedWan(facts.joinYuan + facts.leaveYuan)} 万，不单列一个人的金额。`,
+    `Agent 调整 ${formatSignedWan(facts.agentYuan)} 万。`,
+    "经济补偿和 Agent 实施、培训没有进入这句结论。",
+  ];
+}
+
+function driverLines(facts: ConclusionFacts, mask: boolean): { detail: string; label: string }[] {
+  const moneyOf = (yuan: number) => shownMoney(mask, yuan, true);
+  const personnelSmall = personnelIsSmall(facts);
   const lines: { detail: string; label: string }[] = [];
   if (personnelSmall) {
     if (facts.joins + facts.leaves > 0) {
@@ -168,10 +198,16 @@ export function buildLeaderView(
     conclusion: {
       text: mask
         ? `${facts.year} 年${facts.name}的成本按区间显示（${yearBand(facts.annualYuan)} 万）。管辖范围内有不足 5 人的组，本组不返回精确金额。`
-        : (options.conclusionText ?? templateConclusion(facts)),
-      origin: options.conclusionOrigin ?? "template",
+        : personnelIsSmall(facts)
+          ? groupedConclusion(facts)
+          : (options.conclusionText ?? templateConclusion(facts)),
+      origin: mask || personnelIsSmall(facts) ? "template" : (options.conclusionOrigin ?? "template"),
     },
-    basis: mask ? ["本组成本按区间返回。管辖范围内有不足 5 人的组，精确金额不出现在这个接口里。"] : basisLines(facts),
+    basis: mask
+      ? ["本组成本按区间返回。管辖范围内有不足 5 人的组，精确金额不出现在这个接口里。"]
+      : personnelIsSmall(facts)
+        ? groupedBasis(facts)
+        : basisLines(facts),
     budgetYuanLabel: budgetWan == null ? null : formatWan(facts.budgetYuan ?? 0),
     annualLabel: mask ? yearBand(facts.annualYuan) : formatWan(facts.annualYuan),
     deltaLabel: mask ? null : gap == null ? null : gap === 0 ? "与预算持平" : gap > 0 ? `多 ${gap.toFixed(1)} 万` : `少 ${Math.abs(gap).toFixed(1)} 万`,
@@ -180,12 +216,16 @@ export function buildLeaderView(
     next: {
       count: facts.movementCount,
       netLabel: shownMoney(mask, facts.inFlightYuan, true),
-      joins: { count: facts.joins, detail: `入职 ${facts.joinHires} · 转入 ${facts.joinTransfers}`, label: shownMoney(mask, facts.joinYuan, true) },
-      leaves: {
-        count: facts.leaves,
-        detail: `离职 ${facts.leaveExits} · 转出 ${facts.leaveTransfers}`,
-        label: shownMoney(mask, facts.leaveYuan, true),
-      },
+      joins: personnelIsSmall(facts)
+        ? { count: facts.joins + facts.leaves, detail: `${facts.joins + facts.leaves} 人变动`, label: shownMoney(mask, facts.joinYuan + facts.leaveYuan, true) }
+        : { count: facts.joins, detail: `入职 ${facts.joinHires} · 转入 ${facts.joinTransfers}`, label: shownMoney(mask, facts.joinYuan, true) },
+      leaves: personnelIsSmall(facts)
+        ? { count: 0, detail: "已并入人员变动", label: "—" }
+        : {
+            count: facts.leaves,
+            detail: `离职 ${facts.leaveExits} · 转出 ${facts.leaveTransfers}`,
+            label: shownMoney(mask, facts.leaveYuan, true),
+          },
       agents: {
         detail: `新增 ${facts.agentAdded} · 扩容 ${facts.agentExpanded} · 下线 ${facts.agentOffline}`,
         label: shownMoney(mask, facts.agentYuan, true),
