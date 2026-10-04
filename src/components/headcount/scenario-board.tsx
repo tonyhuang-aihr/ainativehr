@@ -67,7 +67,7 @@ export function ScenarioBoardView({ board, notice }: { board: ScenarioBoard; not
         </div>
         <p className="px-4 pb-2 text-xs text-muted">{COMPARE_SCROLL_HINT}</p>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px] border-collapse text-sm">
+          <table className="w-full min-w-[720px] border-separate border-spacing-0 text-sm">
             <thead>
               <tr className="border-y border-line text-right">
                 <th className={`px-4 py-3 text-left font-medium text-muted ${sticky}`} />
