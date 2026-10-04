@@ -5,6 +5,7 @@ import {
   compensationMonthsFromAverage,
   completeMonths,
   estimateSeverance,
+  type CompMark,
   NOTICE_PAY_BASE,
   noticePayMonthly,
   resolveTenureMonths,
@@ -240,6 +241,7 @@ describe("第 47 条经济补偿", () => {
       effectiveDate: "2027-03-31",
       cityMonthly: 12_500,
     });
+    expect(he.compensationMonths).toBe(3);
     expect(he.amount).toBeCloseTo(58_750, 6);
     expect(he.capped).toBe(false);
     const cao = estimateSeverance({
@@ -249,6 +251,61 @@ describe("第 47 条经济补偿", () => {
       effectiveDate: "2027-03-31",
       cityMonthly: 12_300,
     });
+    expect(cao.compensationMonths).toBe(5.5);
     expect(cao.amount).toBeCloseTo(137_500, 6);
+  });
+});
+
+describe("司龄含生效日，零头天数也折月", () => {
+  const beijing = 12_500;
+  const effectiveDate = "2027-03-31";
+
+  function pay(input: Partial<Parameters<typeof estimateSeverance>[0]> & { mark: CompMark; hireDate?: string }) {
+    return estimateSeverance({ gradeAnnual: 0, monthlyWageBase: 25_000, cityMonthly: beijing, effectiveDate, ...input });
+  }
+
+  it("a1 到 d3 和拉萨", () => {
+    expect(pay({ mark: "N+1", monthlyWageBase: 60_000, hireDate: "2012-03-01" }).amount).toBe(510_000);
+    expect(pay({ mark: "N+1", monthlyWageBase: 60_000, hireDate: "2019-01-15" }).amount).toBe(378_750);
+    expect(pay({ mark: "N", monthlyWageBase: 60_000, hireDate: "2012-03-01" }).amount).toBe(450_000);
+    expect(pay({ mark: "N", monthlyWageBase: 60_000, hireDate: "2019-01-15" }).amount).toBe(318_750);
+    expect(pay({ mark: "N+1", monthlyWageBase: null, gradeAnnual: 800_000, hireDate: "2012-03-01" }).amount).toBeCloseTo(516_666.67, 2);
+    expect(pay({ mark: "N", monthlyWageBase: null, gradeAnnual: 300_000, hireDate: "2019-01-15" }).amount).toBe(212_500);
+    expect(pay({ mark: "N+1", monthlyWageBase: null, gradeAnnual: 300_000, hireDate: "2019-01-15" }).amount).toBe(237_500);
+    const long = pay({ mark: "N+1", monthlyWageBase: 30_000, hireDate: "2007-01-01" });
+    expect(long.capped).toBe(false);
+    expect(long.compensationMonths).toBe(20.5);
+    expect(long.amount).toBe(645_000);
+    const exact = pay({ mark: "N", monthlyWageBase: 37_500, hireDate: "2012-03-01" });
+    expect(exact.capped).toBe(false);
+    expect(exact.compensationMonths).toBe(15.5);
+    expect(exact.amount).toBe(581_250);
+    expect(pay({ mark: "不计", monthlyWageBase: 60_000, hireDate: "2012-03-01" }).amount).toBe(0);
+    const lhasa = pay({ mark: "N+1", monthlyWageBase: 60_000, hireDate: "2012-03-01", cityMonthly: null });
+    expect(lhasa.capped).toBe(false);
+    expect(lhasa.amount).toBe(990_000);
+    expect(lhasa.warning).toContain("未封顶");
+  });
+
+  it("e1 到 e11：12 年封顶和满 6 个月用同一套含首尾的届满日", () => {
+    expect(pay({ mark: "N", hireDate: "2015-04-01" }).amount).toBe(300_000);
+    expect(pay({ mark: "N", hireDate: "2015-03-31" }).amount).toBe(312_500);
+    expect(pay({ mark: "N", monthlyWageBase: 60_000, hireDate: "2015-03-31" }).amount).toBe(450_000);
+    expect(pay({ mark: "N", monthlyWageBase: 60_000, hireDate: "2015-04-01" }).amount).toBe(450_000);
+    expect(pay({ mark: "N", monthlyWageBase: 60_000, hireDate: "2015-10-01" }).amount).toBe(450_000);
+    expect(pay({ mark: "N", monthlyWageBase: 60_000, hireDate: "2015-10-02" }).amount).toBe(431_250);
+    expect(pay({ mark: "N", monthlyWageBase: 60_000, hireDate: "2014-04-02" }).amount).toBe(450_000);
+    expect(pay({ mark: "N", hireDate: "2026-10-01" }).amount).toBe(25_000);
+    expect(pay({ mark: "N", hireDate: "2026-10-02" }).amount).toBe(12_500);
+    expect(pay({ mark: "N", hireDate: "2027-03-31" }).amount).toBe(12_500);
+    expect(pay({ mark: "N+1", hireDate: "2025-10-01" }).amount).toBe(75_000);
+  });
+
+  it("m1 到 m5：没有对应日时取月末，届满日当天算满", () => {
+    expect(pay({ mark: "N", hireDate: "2026-08-31", effectiveDate: "2027-02-27" }).amount).toBe(12_500);
+    expect(pay({ mark: "N", hireDate: "2026-08-31", effectiveDate: "2027-02-28" }).amount).toBe(25_000);
+    expect(pay({ mark: "N", hireDate: "2026-10-31", effectiveDate: "2027-04-29" }).amount).toBe(12_500);
+    expect(pay({ mark: "N", hireDate: "2026-10-31", effectiveDate: "2027-04-30" }).amount).toBe(25_000);
+    expect(pay({ mark: "N", hireDate: "2026-10-01", effectiveDate: "2027-03-30" }).amount).toBe(25_000);
   });
 });

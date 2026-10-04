@@ -29,11 +29,12 @@ export type HeadcountAction =
   | "viewLogs"
   | "wipe"
   | "export"
-  | "viewLeader";
+  | "viewLeader"
+  | "viewScenarios";
 
 const MATRIX: Record<HeadcountRole, HeadcountAction[]> = {
-  od: ["viewBusiness", "import", "editConfig", "viewCompensation", "viewOneOff", "export"],
-  hrbp: ["viewBusiness", "viewLeader"],
+  od: ["viewBusiness", "import", "editConfig", "viewCompensation", "viewOneOff", "export", "viewScenarios"],
+  hrbp: ["viewBusiness", "viewLeader", "viewScenarios"],
   leader: ["viewBusiness", "viewLeader"],
   hr_admin: ["viewBusiness", "viewCompensation", "viewOneOff", "toggleExact", "viewLogs", "export"],
   sys_admin: ["manageUsers", "viewLogs", "wipe"],

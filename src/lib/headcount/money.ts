@@ -35,14 +35,12 @@ export function sumWithinHalfWan(totalWan: number, partsWan: number[]): boolean 
   return Math.abs(roundingGapWan(totalWan, partsWan)) <= 0.5;
 }
 
-/**
- * 取整差为 0 时不需要说明。
- * 有差时用部门页上的 ⓘ：各项分别取整，合计可能差 0.5。
- */
+/** 取整差为 0 时不需要说明。有差时只写这一句。 */
+export const ROUNDING_GAP_NOTE = "各项分别取整到 0.5 万，合计按未取整金额加总后再取整，可能差 0.5 万。";
+
 export function roundingGapNote(gapWan: number): string | null {
   if (Math.abs(gapWan) < 0.05) return null;
-  const gap = Math.abs(gapWan).toFixed(1);
-  return `各项分别取整，合计可能差 0.5。各项分别取整到 0.5 万，相加与合计差 ${gap} 万；合计按未取整金额加总后取整`;
+  return ROUNDING_GAP_NOTE;
 }
 
 function wanLabel(yuanStep: number): string {

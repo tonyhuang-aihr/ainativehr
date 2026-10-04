@@ -1,4 +1,4 @@
-import { dateParts, parseIsoDate } from "@/lib/headcount/calendar";
+import { dateParts, parseIsoDate, utcDate } from "@/lib/headcount/calendar";
 
 export type CompMark = "不计" | "N" | "N+1";
 
@@ -17,7 +17,30 @@ export type SeveranceResult = {
   warning: string | null;
 };
 
-/** 入职日到生效日的完整月数。生效日当天若还没到入职的「日」，不满一个月。 */
+const DAY_MS = 86_400_000;
+
+function lastDayOfMonth(year: number, month: number): number {
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
+
+function addMonthsUtc(ms: number, months: number): number {
+  const parts = dateParts(ms);
+  const index = parts.month - 1 + months;
+  const year = parts.year + Math.floor(index / 12);
+  const month = (index % 12) + 1;
+  return utcDate(year, month, Math.min(parts.day, lastDayOfMonth(year, month)));
+}
+
+/**
+ * 口径 B，已定。整年、整月和满 6 个月都看这个届满日。
+ * 起算日是入职日前一天。满 k 个整月的日子，是起算日在第 k 个月的对应日；该月没有这一天，就取该月最后一天。
+ * 生效日大于等于届满日，即满 k 个月。
+ */
+export function fullMonthBoundary(hireMs: number, months: number): number {
+  return addMonthsUtc(hireMs - DAY_MS, months);
+}
+
+/** 入职日到生效日的完整日历月，用来汇总部门平均司龄。零头天数不进这个整数。 */
 export function completeMonths(hireDate: string, effectiveDate: string): number {
   const hire = parseIsoDate(hireDate);
   const effective = parseIsoDate(effectiveDate);
@@ -28,6 +51,32 @@ export function completeMonths(hireDate: string, effectiveDate: string): number 
   if (to.day < from.day) months -= 1;
   if (months < 0) throw new SeveranceInputError("入职日期晚于生效日");
   return months;
+}
+
+export type ServiceLength = { years: number; remainderMonths: number; remainderDays: number };
+
+/** 入职日到生效日，含两端。整月数全部由 fullMonthBoundary 判定。 */
+export function serviceLength(hireDate: string, effectiveDate: string): ServiceLength {
+  const hire = parseIsoDate(hireDate);
+  const effective = parseIsoDate(effectiveDate);
+  if (effective < hire) throw new SeveranceInputError("入职日期晚于生效日");
+  let complete = 0;
+  while (effective >= fullMonthBoundary(hire, complete + 1)) {
+    complete += 1;
+    if (complete > 12 * 80) break;
+  }
+  const years = Math.floor(complete / 12);
+  const remainderMonths = complete % 12;
+  const remainderDays = Math.max(0, Math.round((effective - fullMonthBoundary(hire, complete)) / DAY_MS));
+  return { years, remainderMonths, remainderDays };
+}
+
+/** 第 47 条折月：整年各计 1 个月；零头满 6 个月再计 1 年；零头不满 6 个月但多出几天也计半个月。 */
+export function compensationMonthsFromDates(hireDate: string, effectiveDate: string): number {
+  const service = serviceLength(hireDate, effectiveDate);
+  if (service.remainderMonths >= 6) return service.years + 1;
+  if (service.remainderMonths > 0 || service.remainderDays > 0) return service.years + 0.5;
+  return service.years;
 }
 
 /** 满 1 年 1 个月；6 个月以上不满 1 年按 1 年；不满 6 个月按半个月。正好 6 个月算「6 个月以上」。 */
@@ -112,15 +161,14 @@ export function estimateSeverance(input: {
   if (input.mark === "不计") {
     return { amount: 0, compensationMonths: 0, monthlyBase: 0, capped: false, warning: null };
   }
-  let complete: number;
+  let months: number;
   if (input.averageMonths != null) {
-    complete = Math.round(input.averageMonths);
+    months = compensationMonths(Math.round(input.averageMonths));
   } else {
     if (!input.hireDate) throw new SeveranceInputError("缺入职日期");
     if (!input.effectiveDate) throw new SeveranceInputError("缺生效日");
-    complete = completeMonths(input.hireDate, input.effectiveDate);
+    months = compensationMonthsFromDates(input.hireDate, input.effectiveDate);
   }
-  let months = compensationMonths(complete);
   const wage = monthlyWage(input.gradeAnnual, input.monthlyWageBase);
   let base = wage;
   let capped = false;

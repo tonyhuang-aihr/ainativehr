@@ -3,6 +3,8 @@ import { buildClosure } from "@/lib/headcount/authz";
 import type { AppDatabase } from "@/lib/headcount/db/client";
 import * as schema from "@/lib/headcount/db/schema";
 import { hashPassword } from "@/lib/headcount/password";
+import { serializeDefinition } from "@/lib/headcount/db/scenarios";
+import { presetScenarios } from "@/lib/headcount/scenario";
 import { DEMO_ACCOUNTS, DEMO_PASSWORD, OTHER_ANNUAL, OTHER_MONTHLY, samplePlan } from "@/lib/headcount/sample";
 
 export const SAMPLE_VERSION = "sample-2027-1";
@@ -236,11 +238,13 @@ export async function seedSample(db: AppDatabase, options?: { replaceUsers?: boo
     enabled: false,
     createdAt: Date.parse("2026-10-04T02:15:00Z"),
   });
-  await db.insert(schema.scenarios).values({
-    id: "later",
-    name: "情景与时间线",
-    source: "manual",
-    version: 1,
-    note: "H3、P1、P2 尚未开放",
-  });
+  await db.insert(schema.scenarios).values(
+    presetScenarios().map((item) => ({
+      id: item.id,
+      name: item.name,
+      source: item.source,
+      version: 1,
+      note: serializeDefinition(item),
+    })),
+  );
 }

@@ -28,6 +28,11 @@ describe("角色与部门树", () => {
     expect(can(lin, "viewBusiness")).toBe(true);
     expect(can(lin, "viewCompensation")).toBe(false);
     expect(can(lin, "import")).toBe(false);
+    expect(can(lin, "viewScenarios")).toBe(true);
+    expect(can(huang, "viewScenarios")).toBe(true);
+    expect(can(zhao, "viewScenarios")).toBe(false);
+    expect(can(hr, "viewScenarios")).toBe(false);
+    expect(can(admin, "viewScenarios")).toBe(false);
   });
 
   it("越权动作按角色拒绝", () => {
