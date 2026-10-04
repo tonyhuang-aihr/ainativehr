@@ -18,7 +18,7 @@ import { assumptionUnits, resolvePrefill } from "@/lib/headcount/scenarioView";
 import { commitScenarioMemory, openScenarioMemory } from "@/lib/headcount/scenarioMemoryStore";
 import { ScenarioStateTooLarge } from "@/lib/headcount/scenarioCookieCodec";
 import { acceptStoredScenarios, mergeScenarioState, scenarioDelta } from "@/lib/headcount/scenarioState";
-import { executeScenarioCommand, visibleScenarioCatalog, type ScenarioCommand, type WriteScope } from "@/lib/headcount/scenarioWrites";
+import { executeScenarioCommand, importableSandboxPlans, visibleScenarioCatalog, type ScenarioCommand, type WriteScope } from "@/lib/headcount/scenarioWrites";
 import {
   bindAccount,
   createAccount,
@@ -374,11 +374,14 @@ export async function adoptDemoStateAction(plans: ScenarioDefinition[]): Promise
 }
 
 export async function importSampleSandboxAction(formData: FormData) {
-  const definition = scenarioFromSandbox(buildRdCenterWorkspace(), quarterValue(formData.get("quarter")));
   const user = await scenarioActor();
   const memory = await openScenarioMemory(user);
-  const id = memory.companyWide ? definition.id : `sandbox-${memory.root ?? "bu"}-${Date.now()}`;
-  await runScenarioCommand({ type: "import", definition, id }, "导入沙盘方案");
+  const scope = writeScopeOf(memory);
+  const sampleId = String(formData.get("sampleId") ?? "");
+  const offers = importableSandboxPlans([scenarioFromSandbox(buildRdCenterWorkspace(), quarterValue(formData.get("quarter")))], scope);
+  const chosen = offers.find((item) => item.id === sampleId);
+  if (!chosen) scenarioNotice("无权查看");
+  await runScenarioCommand({ type: "import", definition: chosen, id: chosen.id }, "导入沙盘方案");
 }
 
 export async function importSandboxFileAction(formData: FormData) {

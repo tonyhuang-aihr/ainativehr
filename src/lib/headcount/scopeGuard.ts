@@ -17,6 +17,14 @@ export class ScenarioMissing extends Error {
   }
 }
 
+export class DepartmentMissing extends Error {
+  readonly status = 404;
+  constructor(message = "部门不存在") {
+    super(message);
+    this.name = "DepartmentMissing";
+  }
+}
+
 const COMPANY_SCENARIO_IDS = new Set(["jx", "jz", "jj", "bs", "fa"]);
 const PROJECTED_PRESET = /^bu-(.+)-(jz|jj|bs|fa|jx)$/;
 

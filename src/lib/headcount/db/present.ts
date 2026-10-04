@@ -3,7 +3,7 @@ import "server-only";
 import { resolveLlmConfig } from "@/lib/ai/llmConfig";
 import type { ChatTurn } from "@/lib/ai/desensitize";
 import { can, visibleDepartmentIds, type HeadcountUser } from "@/lib/headcount/authz";
-import { assertDepartmentVisible, ScopeDenied, seesCompany } from "@/lib/headcount/scopeGuard";
+import { assertDepartmentVisible, DepartmentMissing, ScopeDenied, seesCompany } from "@/lib/headcount/scopeGuard";
 import { chooseConclusion, conclusionFacts, directChildFacts } from "@/lib/headcount/conclusion";
 import { buildScopeOverview, maskPageCosts, pageKind, scopeHasSmallGroup, scopeRoots, type ScopeOverview } from "@/lib/headcount/overview";
 import { getDb } from "@/lib/headcount/db/client";
@@ -50,8 +50,9 @@ export async function openLeader(user: SessionUser, requestedId?: string, detail
   if (!can(user, "viewLeader") && !can(user, "viewBusiness")) throw new Error("无权查看");
   if (user.role === "sys_admin") throw new Error("无权查看");
   const { db, departments, visible } = await scopeFor(user);
+  if (requestedId && !departments.some((department) => department.id === requestedId)) throw new DepartmentMissing();
+  if (requestedId && !visible.includes(requestedId)) throw new ScopeDenied("部门不在授权范围");
   const requested = requestedId && visible.includes(requestedId) ? requestedId : null;
-  if (requestedId && !requested) throw new ScopeDenied("部门不在授权范围");
   const roots = scopeRoots(departments, visible);
   const departmentId = requested ?? roots[0] ?? visible[0];
   if (!departmentId) throw new Error("没有可查看的部门");
@@ -130,9 +131,16 @@ export async function openBaseline(user: HeadcountUser, detail?: DetailQuery) {
   return { overview, view, asOf: plan.asOf, year: plan.year };
 }
 
+export async function assertKnownDepartment(departmentId: string): Promise<void> {
+  const db = await getDb();
+  const departments = await loadDepartments(db);
+  if (!departments.some((department) => department.id === departmentId)) throw new DepartmentMissing();
+}
+
 export async function openDepartment(user: HeadcountUser, departmentId: string, detail?: DetailQuery) {
-  if (!can(user, "viewBusiness") || user.role === "leader") throw new Error("无权查看底座");
+  if (!can(user, "viewBusiness") || user.role === "leader") throw new ScopeDenied("无权查看底座");
   const { db, visible, departments } = await scopeFor(user);
+  if (!departments.some((department) => department.id === departmentId)) throw new DepartmentMissing();
   assertDepartmentVisible(visible, departmentId);
   const plan = await loadPlan(db, { departmentIds: visible, sensitive: can(user, "viewOneOff") });
   const result = computePlan(plan);

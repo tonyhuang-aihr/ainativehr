@@ -1,15 +1,4 @@
-import {
-  addScenarioChangeAction,
-  copyScenarioAction,
-  createScenarioAction,
-  deleteScenarioAction,
-  importSampleSandboxAction,
-  importSandboxFileAction,
-  prefillAssumptionsAction,
-  renameScenarioAction,
-  saveAssumptionsAction,
-  toggleScenarioAction,
-} from "@/lib/headcount/actions";
+import type { ReactNode } from "react";
 import { SandboxLocalRestore } from "@/components/headcount/sandbox-restore";
 import { ScenarioFileField } from "@/components/headcount/scenario-file-field";
 import { DepartmentDailyRows } from "@/components/headcount/department-daily-rows";
@@ -17,6 +6,19 @@ import { InfoMark } from "@/components/headcount/info-mark";
 import { COMPARE_SCROLL_HINT, HRBP_SCENARIO_TOTAL_NOTE, SCENARIO_TOTAL_NOTE, TIMELINE_CHANGE_NOTE } from "@/lib/headcount/copy";
 import type { ScenarioDefinition } from "@/lib/headcount/scenario";
 import type { ScenarioBoard } from "@/lib/headcount/scenarioView";
+
+const WRITE_ACTION = "/headcount/scenarios/write";
+
+export type SandboxOffer = { id: string; label: string; caption: string };
+
+function WriteForm({ intent, className, encType, children }: { intent: string; className?: string; encType?: string; children: ReactNode }) {
+  return (
+    <form action={WRITE_ACTION} className={className} encType={encType} method="post">
+      <input name="intent" type="hidden" value={intent} />
+      {children}
+    </form>
+  );
+}
 
 const field = "w-full rounded-xl border border-line px-3 py-2";
 
@@ -33,10 +35,12 @@ export function ScenarioBoardView({
   board,
   notice,
   sandboxRestore,
+  sandboxOffers = [],
 }: {
   board: ScenarioBoard;
   notice?: string;
   sandboxRestore?: { userId: string; scopeKey: string; plans: ScenarioDefinition[]; authoritative: boolean } | null;
+  sandboxOffers?: SandboxOffer[];
 }) {
   return (
     <div className="space-y-4">
@@ -196,7 +200,7 @@ export function ScenarioBoardView({
                   <th className="px-4 py-2 font-medium">Agent</th>
                   <th className="px-4 py-2 font-medium">人工</th>
                   <th className="px-4 py-2 font-medium">Agent 成本</th>
-                  <th className="px-4 py-2 font-medium">一次性</th>
+                  {board.showOneOff ? <th className="px-4 py-2 font-medium">一次性</th> : null}
                   <th className="px-4 py-2 font-medium">总成本</th>
                 </tr>
               </thead>
@@ -208,7 +212,7 @@ export function ScenarioBoardView({
                     <td className="px-4 py-2">{row.agents}</td>
                     <td className="px-4 py-2">{row.labor}</td>
                     <td className="px-4 py-2">{row.agentCost}</td>
-                    <td className="px-4 py-2">{row.oneOff}</td>
+                    {board.showOneOff ? <td className="px-4 py-2">{row.oneOff}</td> : null}
                     <td className="px-4 py-2 font-medium">{row.total}</td>
                   </tr>
                 ))}
@@ -231,7 +235,7 @@ export function ScenarioBoardView({
       </p>
 
       <section className="grid gap-4 lg:grid-cols-2">
-        <form action={saveAssumptionsAction} className="space-y-3 rounded-2xl border border-line bg-white p-4 text-sm">
+        <WriteForm className="space-y-3 rounded-2xl border border-line bg-white p-4 text-sm" intent="assumptions">
           <h2 className="font-medium">编辑假设 · {board.scenarios.find((item) => item.id === board.focusId)?.name}</h2>
           <input name="id" type="hidden" value={board.focusId} />
           <label className="block">
@@ -259,20 +263,20 @@ export function ScenarioBoardView({
               保存假设
             </button>
           </div>
-        </form>
-        <form action={prefillAssumptionsAction} className="space-y-3 rounded-2xl border border-line bg-white p-4 text-sm">
+        </WriteForm>
+        <WriteForm className="space-y-3 rounded-2xl border border-line bg-white p-4 text-sm" intent="prefill">
           <h2 className="font-medium">预填假设</h2>
           <input name="id" type="hidden" value={board.focusId} />
           <p className="leading-6 text-muted">预填先走脱敏。不足 5 人的部门不送人数，也不送能反推到个人的金额。</p>
           <button className="rounded-xl border border-line px-3 py-2" type="submit">
             用默认值或模型预填
           </button>
-        </form>
+        </WriteForm>
       </section>
 
       <section className="rounded-2xl border border-line bg-white p-4 text-sm">
         <h2 className="font-medium">按季度记一笔变动</h2>
-        <form action={addScenarioChangeAction} className="mt-3 grid gap-3 md:grid-cols-4">
+        <WriteForm className="mt-3 grid gap-3 md:grid-cols-4" intent="change">
           <input name="id" type="hidden" value={board.focusId} />
           <select className={field} name="kind">
             <option value="hire">增员</option>
@@ -308,7 +312,7 @@ export function ScenarioBoardView({
           <button className="rounded-xl bg-primary px-3 py-2 text-white" type="submit">
             记入这一季
           </button>
-        </form>
+        </WriteForm>
         <p className="mt-2 text-xs text-muted">减员成本算到最后工作日，含当天。补偿只按部门合计显示，不落个人金额。</p>
       </section>
 
@@ -321,43 +325,43 @@ export function ScenarioBoardView({
                 {item.name}
               </a>
               <span className="text-xs text-muted">{item.compared ? "对比中" : "未加入对比"}</span>
-              <form action={toggleScenarioAction}>
+              <WriteForm intent="toggle">
                 <input name="id" type="hidden" value={item.id} />
                 {item.compared ? null : <input name="compared" type="hidden" value="on" />}
                 <button className="rounded-lg px-2 py-1 text-primary" type="submit">
                   {item.compared ? "移出对比" : "加入对比"}
                 </button>
-              </form>
-              <form action={copyScenarioAction}>
+              </WriteForm>
+              <WriteForm intent="copy">
                 <input name="id" type="hidden" value={item.id} />
                 <button className="rounded-lg px-2 py-1 text-primary" type="submit">
                   复制
                 </button>
-              </form>
-              <form action={renameScenarioAction} className="flex items-center gap-2">
+              </WriteForm>
+              <WriteForm className="flex items-center gap-2" intent="rename">
                 <input name="id" type="hidden" value={item.id} />
                 <input className="w-36 rounded-lg border border-line px-2 py-1" name="name" placeholder="新名称" />
                 <button className="rounded-lg px-2 py-1 text-primary" type="submit">
                   重命名
                 </button>
-              </form>
+              </WriteForm>
               {item.source === "copy" || (item.source === "sandbox" && item.id !== "fa") ? (
-                <form action={deleteScenarioAction}>
+                <WriteForm intent="delete">
                   <input name="id" type="hidden" value={item.id} />
                   <button className="rounded-lg px-2 py-1 text-primary" type="submit">
                     删除
                   </button>
-                </form>
+                </WriteForm>
               ) : null}
             </li>
           ))}
         </ul>
-        <form action={createScenarioAction} className="mt-3 flex flex-wrap items-center gap-2">
+        <WriteForm className="mt-3 flex flex-wrap items-center gap-2" intent="create">
           <input className={field} name="name" placeholder="新场景名称" />
           <button className="rounded-xl border border-line px-3 py-2" type="submit">
             新建场景
           </button>
-        </form>
+        </WriteForm>
       </section>
 
       <section id="sandbox-import" className="rounded-2xl border border-line bg-white p-4 text-sm">
@@ -370,7 +374,7 @@ export function ScenarioBoardView({
             {board.importSpan ? <p>管理幅度 {board.importSpan}</p> : null}
           </div>
         ) : null}
-        <form action={importSandboxFileAction} className="mt-3 flex flex-wrap items-center gap-3">
+        <WriteForm className="mt-3 flex flex-wrap items-center gap-3" encType="multipart/form-data" intent="import-file">
           <ScenarioFileField />
           <select className="rounded-xl border border-line px-3 py-2" name="quarter" defaultValue="2">
             <option value="1">Q1 生效</option>
@@ -381,14 +385,21 @@ export function ScenarioBoardView({
           <button className="rounded-xl border border-line px-3 py-2" type="submit">
             上传方案文件
           </button>
-        </form>
-        <form action={importSampleSandboxAction} className="mt-3 flex flex-wrap items-center gap-3">
-          <input name="quarter" type="hidden" value="2" />
-          <button className="rounded-xl bg-primary px-3 py-2 text-white" type="submit">
-            载入沙盘示例方案 A
-          </button>
-          <span className="text-muted">应用分析小组并入数据组</span>
-        </form>
+        </WriteForm>
+        {sandboxOffers.length === 0 ? (
+          <p className="mt-3 leading-6 text-muted">没有可导入的沙盘示例。只能载入范围完全落在本事业部内的方案。</p>
+        ) : (
+          sandboxOffers.map((offer) => (
+            <WriteForm key={offer.id} className="mt-3 flex flex-wrap items-center gap-3" intent="import-sample">
+              <input name="sampleId" type="hidden" value={offer.id} />
+              <input name="quarter" type="hidden" value="2" />
+              <button className="rounded-xl bg-primary px-3 py-2 text-white" type="submit">
+                {offer.label}
+              </button>
+              {offer.caption ? <span className="text-muted">{offer.caption}</span> : null}
+            </WriteForm>
+          ))
+        )}
       </section>
 
       <p className="text-xs text-muted">{board.footer}</p>

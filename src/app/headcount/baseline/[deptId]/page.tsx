@@ -1,9 +1,9 @@
 import { LeaderBoard } from "@/components/headcount/leader-board";
-import { openDepartment } from "@/lib/headcount/db/present";
+import { assertKnownDepartment, openDepartment } from "@/lib/headcount/db/present";
 import { detailQueryFromSearch } from "@/lib/headcount/rosterPage";
-import { ScopeDenied } from "@/lib/headcount/scopeGuard";
+import { DepartmentMissing, ScopeDenied } from "@/lib/headcount/scopeGuard";
 import { currentUser } from "@/lib/headcount/session";
-import { forbidden, redirect } from "next/navigation";
+import { forbidden, notFound, redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -16,14 +16,21 @@ export default async function BaselineDepartmentPage({
 }) {
   const user = await currentUser();
   if (!user) redirect("/headcount/login");
-  if (user.role === "leader") redirect("/headcount/leader");
-  if (user.role === "sys_admin") redirect("/headcount/admin");
   const { deptId } = await params;
+  try {
+    await assertKnownDepartment(deptId);
+  } catch (error) {
+    if (error instanceof DepartmentMissing) notFound();
+    throw error;
+  }
+  if (user.role === "leader") forbidden();
+  if (user.role === "sys_admin") redirect("/headcount/admin");
   const detail = detailQueryFromSearch(await searchParams);
   let data;
   try {
     data = await openDepartment(user, deptId, detail);
   } catch (error) {
+    if (error instanceof DepartmentMissing) notFound();
     if (error instanceof ScopeDenied) forbidden();
     throw error;
   }

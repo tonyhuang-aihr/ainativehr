@@ -59,27 +59,25 @@ export function canDeleteScenario(definition: { id: string; source: string }): b
   return definition.source === "copy" || definition.source === "sandbox";
 }
 
-/** 公司示例方案进事业部时改记本部门，不保留范围外的部门名。 */
+/**
+ * 整份方案的部门都必须落在授权范围内才能导入。
+ * 碰到范围外的部门、未归属 Agent、或说明里点到范围外部门时，整份拒绝，不裁掉、不改记到本部门。
+ */
 export function scopeSandboxImport(definition: ScenarioDefinition, scope: WriteScope, id: string): ScenarioDefinition | null {
   if (scope.companyWide) return definition;
-  const rootName = scope.rootName;
-  if (!rootName) return null;
-  const mentionsOutside = (text: string | null) =>
-    Boolean(text && scope.names.some((name) => !scope.allowed.has(name) && text.includes(name)));
-  const next: ScenarioDefinition = {
-    ...definition,
-    id,
-    hires: definition.hires.filter((hire) => scope.allowed.has(hire.departmentName)),
-    cuts: definition.cuts.filter((cut) => scope.allowed.has(cut.departmentName)),
-    agents: definition.agents.map((agent) => ({
-      ...agent,
-      departmentName: agent.departmentName && scope.allowed.has(agent.departmentName) ? agent.departmentName : rootName,
-    })),
-    extraAgentOneOff: [],
-    structureNote: mentionsOutside(definition.structureNote) ? null : definition.structureNote,
-    spanAlert: definition.spanAlert && scope.allowed.has(definition.spanAlert.department) ? definition.spanAlert : null,
-  };
+  const next: ScenarioDefinition = { ...definition, id };
   return scenarioFitsScope(next, scope.allowed, scope.names, false) ? next : null;
+}
+
+/** 导入列表和导入动作共用这一套：范围外的方案不会出现，直接导入也会被拒绝。 */
+export function importableSandboxPlans(candidates: readonly ScenarioDefinition[], scope: WriteScope): ScenarioDefinition[] {
+  const plans: ScenarioDefinition[] = [];
+  for (const definition of candidates) {
+    const id = scope.companyWide ? definition.id : `sandbox-${scope.rootId ?? "bu"}-${definition.id}`;
+    const scoped = scopeSandboxImport(definition, scope, id);
+    if (scoped) plans.push(scoped);
+  }
+  return plans;
 }
 
 function upsert(catalog: readonly ScenarioDefinition[], next: ScenarioDefinition): ScenarioDefinition[] {

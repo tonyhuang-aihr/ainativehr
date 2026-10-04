@@ -11,7 +11,7 @@ import { scenarioFromSandbox } from "@/lib/headcount/sandboxImport";
 import { presetScenarios, type ScenarioDefinition } from "@/lib/headcount/scenario";
 import { packScenarioCookie, ScenarioStateTooLarge, unpackScenarioCookie } from "@/lib/headcount/scenarioCookieCodec";
 import { COOKIE_CHUNK_CHARS, decodeCookieChunks, encodeCookieChunks, MAX_COOKIE_CHUNKS, mergeScenarioState, parseScenarioEnvelope, scenarioDelta, serializeEnvelope } from "@/lib/headcount/scenarioState";
-import { executeScenarioCommand, scopeSandboxImport, visibleScenarioCatalog, type ScenarioCommand, type ScenarioWrite, type WriteScope } from "@/lib/headcount/scenarioWrites";
+import { executeScenarioCommand, importableSandboxPlans, scopeSandboxImport, visibleScenarioCatalog, type ScenarioCommand, type ScenarioWrite, type WriteScope } from "@/lib/headcount/scenarioWrites";
 
 const result = computePlan(samplePlan());
 const names = result.plan.departments.map((department) => department.name);
@@ -44,6 +44,25 @@ function apply(jar: ReturnType<typeof browserJar>, scope: WriteScope, command: S
   const outcome = executeScenarioCommand(catalog, visible, scope, command);
   if (outcome.ok) jar.save(outcome.catalog);
   return outcome;
+}
+
+function inBusinessSandbox(id: string): ScenarioDefinition {
+  const seed = presetScenarios()[0];
+  return {
+    ...seed,
+    id,
+    name: "一部范围内方案",
+    source: "sandbox",
+    compared: true,
+    hires: [],
+    agents: [{ name: "一部 Agent", count: 1, monthly: 1000, effectiveDate: "2027-04-01", oneOff: 0, departmentName: "产品研发一部" }],
+    extraAgentOneOff: [],
+    cuts: [],
+    ratio: "未拆解",
+    ratioNote: "沙盘尚未拆解",
+    structureNote: null,
+    spanAlert: null,
+  };
 }
 
 function change(id: string, department: string, kind = "hire"): ScenarioCommand {
@@ -102,7 +121,7 @@ describe("演示模式的场景差量可以跨实例重放", () => {
       expect(outcome.ok).toBe(true);
       if (outcome.ok) catalog = outcome.catalog;
     }
-    const imported = scopeSandboxImport(scenarioFromSandbox(buildRdCenterWorkspace(), 2), linScope, "sandbox-prod1-sample");
+    const imported = scopeSandboxImport(inBusinessSandbox("local-sample"), linScope, "sandbox-prod1-sample");
     expect(imported).not.toBeNull();
     const saved = executeScenarioCommand(catalog, visibleScenarioCatalog(catalog, linScope), linScope, { type: "import", definition: imported!, id: "sandbox-prod1-sample" });
     expect(saved.ok).toBe(true);
@@ -175,14 +194,18 @@ describe("HRBP 在事业部内写入", () => {
     });
     expect(assumptions.ok).toBe(true);
 
-    const imported = apply(jar, linScope, { type: "import", definition: scenarioFromSandbox(buildRdCenterWorkspace(), 2), id: "sandbox-prod1-1" });
-    expect(imported.ok).toBe(true);
-    if (imported.ok) {
-      expect(imported.changed?.id).toBe("sandbox-prod1-1");
-      expect(imported.changed?.id).not.toBe("fa");
-      expect(imported.changed?.agents.every((agent) => agent.departmentName === "产品研发一部")).toBe(true);
-      expect(imported.changed?.structureNote ?? "").not.toContain("数据智能部");
-      expect(JSON.stringify(imported.changed)).not.toContain("16,095.5");
+    const companyPlan = scenarioFromSandbox(buildRdCenterWorkspace(), 2);
+    const imported = apply(jar, linScope, { type: "import", definition: companyPlan, id: "sandbox-prod1-1" });
+    expect(imported.ok).toBe(false);
+    if (!imported.ok) expect(imported.notice).toBe("无权查看");
+    const ownPlan = inBusinessSandbox("local-lin");
+    const ownImport = apply(jar, linScope, { type: "import", definition: ownPlan, id: "sandbox-prod1-1" });
+    expect(ownImport.ok).toBe(true);
+    if (ownImport.ok) {
+      expect(ownImport.changed?.id).toBe("sandbox-prod1-1");
+      expect(ownImport.changed?.agents.every((agent) => agent.departmentName === "产品研发一部")).toBe(true);
+      expect(JSON.stringify(ownImport.changed)).not.toContain("数据智能部");
+      expect(JSON.stringify(ownImport.changed)).not.toContain("16,095.5");
     }
 
     const denied = apply(jar, linScope, change("copy-lin", "质量与交付部"));
@@ -201,6 +224,36 @@ describe("HRBP 在事业部内写入", () => {
     expect(visibleScenarioCatalog(jar.load(), linScope).some((item) => item.id === "copy-lin")).toBe(false);
     const locked = apply(jar, linScope, { type: "delete", id: "bu-prod1-jz" });
     expect(locked.ok).toBe(false);
+  });
+
+  it("导入列表和导入动作都拒绝碰到事业部外部门的方案", () => {
+    const companyPlan = scenarioFromSandbox(buildRdCenterWorkspace(), 2);
+    expect(companyPlan.agents.some((agent) => agent.departmentName === "数据智能部")).toBe(true);
+    const base = inBusinessSandbox("local");
+    const agent = base.agents[0];
+    const outside = [
+      companyPlan,
+      { ...base, agents: [{ ...agent, departmentName: "数据智能部" }] },
+      { ...base, agents: [{ ...agent, departmentName: null }] },
+      { ...base, hires: [{ departmentName: "质量与交付部", grade: "P6", count: 1, effectiveDate: "2027-04-01" }] },
+      { ...base, cuts: [{ departmentName: "质量与交付部", grade: "P6", count: 1, effectiveDate: "2027-04-01", mark: "N" as const, tenureYears: 2, groupSize: 1 }] },
+      { ...base, structureNote: "数据智能部 65→71 人。" },
+      { ...base, spanAlert: { department: "数据智能部", span: 12, limit: 8 } },
+    ];
+    for (const plan of outside) {
+      expect(importableSandboxPlans([plan], linScope), plan.id).toEqual([]);
+      const outcome = executeScenarioCommand(presetScenarios(), visibleScenarioCatalog(presetScenarios(), linScope), linScope, {
+        type: "import",
+        definition: plan,
+        id: "sandbox-prod1-rejected",
+      });
+      expect(outcome.ok, plan.id).toBe(false);
+      if (!outcome.ok) expect(outcome.notice).toBe("无权查看");
+    }
+    const listed = importableSandboxPlans([base], linScope);
+    expect(listed.map((item) => item.agents[0]?.departmentName)).toEqual(["产品研发一部"]);
+    expect(listed[0]?.id).toBe("sandbox-prod1-local");
+    expect(importableSandboxPlans([companyPlan], companyScope).map((item) => item.id)).toEqual(["fa"]);
   });
 
   it("公司口径的示例方案仍保持原编号", () => {
