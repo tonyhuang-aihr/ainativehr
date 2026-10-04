@@ -5,6 +5,7 @@ import { loadClosure, loadDepartments } from "@/lib/headcount/db/queries";
 import { loadScenarioDefinitions, parseDefinition, saveScenarioDefinition } from "@/lib/headcount/db/scenarios";
 import { isSeedSandboxPreset, sameScenarioDefinition } from "@/lib/headcount/sandboxMemory";
 import { scenarioFitsScope, seesCompany } from "@/lib/headcount/scopeGuard";
+import { COMPARISON_CAP } from "@/lib/headcount/scenarioView";
 
 function planId(raw: unknown): string {
   if (!raw || typeof raw !== "object" || !("id" in raw) || typeof raw.id !== "string") return "";
@@ -45,7 +46,7 @@ export async function applyLocalSandboxRestore(
     if (current && !isSeedSandboxPreset(current)) continue;
     if (current && sameScenarioDefinition(current, definition)) continue;
     const others = existing.filter((item) => item.compared && item.id !== definition.id).length;
-    const next = { ...definition, compared: others >= 3 ? false : definition.compared };
+    const next = { ...definition, compared: others >= COMPARISON_CAP ? false : definition.compared };
     await saveScenarioDefinition(db, next);
     const index = existing.findIndex((item) => item.id === next.id);
     if (index === -1) existing.push(next);

@@ -17,6 +17,7 @@ import {
   buildScenarioBoard,
   copyScenario,
   DEFAULT_PREFILL_NOTE,
+  COMPARISON_CAP,
   healthChecks,
   heroSentence,
   phraseAfterName,
@@ -166,8 +167,11 @@ describe("场景页与沙盘导入", () => {
   });
 
   it("最多对比 3 个，复制出来的场景先留在对比外", () => {
+    expect(COMPARISON_CAP).toBe(3);
     const presets = presetScenarios();
-    expect(setCompared(presets, "bs", true).error).toBe("最多对比 3 个场景");
+    const blocked = setCompared(presets, "bs", true);
+    expect(blocked.error).toBe("最多对比 3 个场景");
+    expect(blocked.definitions).toEqual(presets);
     const copy = copyScenario(presets, "jj", "copy-1");
     expect(copy?.name).toBe("副本 · 激进 · AI 加速");
     expect(copy?.compared).toBe(false);

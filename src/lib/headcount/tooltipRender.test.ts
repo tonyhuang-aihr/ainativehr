@@ -73,7 +73,12 @@ describe("每个角色页面上的 ⓘ 都按悬停表原文渲染", () => {
   const hrbpOverview = buildScopeOverview(result, DEPT.prod1, "hrbp", false);
 
   const demo = sandboxImportCandidates(2).find((item) => item.id === "prod1-demo")!;
-  const demoBoard = buildScenarioBoard(result, [...presets, { ...demo, compared: true }], demo.id, DEFAULT_PREFILL_NOTE);
+  const demoBoard = buildScenarioBoard(
+    result,
+    [...presets.map((item) => (item.id === "jj" ? { ...item, compared: false } : item)), { ...demo, compared: true }],
+    demo.id,
+    DEFAULT_PREFILL_NOTE,
+  );
   const rendered = {
     od: [
       ...labels(createElement(ScopeOverviewBoard, { overview: odOverview })),

@@ -5,7 +5,7 @@ import { DepartmentDailyRows } from "@/components/headcount/department-daily-row
 import { InfoMark } from "@/components/headcount/info-mark";
 import { COMPARE_SCROLL_HINT, HRBP_SCENARIO_TOTAL_NOTE, ROUNDING_EQUATION_NOTE, SCENARIO_TOTAL_NOTE, TIMELINE_CHANGE_NOTE } from "@/lib/headcount/copy";
 import type { ScenarioDefinition } from "@/lib/headcount/scenario";
-import type { ScenarioBoard } from "@/lib/headcount/scenarioView";
+import { COMPARISON_CAP, COMPARISON_CAP_ERROR, type ScenarioBoard } from "@/lib/headcount/scenarioView";
 
 const WRITE_ACTION = "/headcount/scenarios/write";
 
@@ -42,6 +42,7 @@ export function ScenarioBoardView({
   sandboxRestore?: { userId: string; scopeKey: string; plans: ScenarioDefinition[]; authoritative: boolean } | null;
   sandboxOffers?: SandboxOffer[];
 }) {
+  const atComparisonCap = board.scenarios.filter((item) => item.compared).length >= COMPARISON_CAP;
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -348,7 +349,7 @@ export function ScenarioBoardView({
               <WriteForm intent="toggle">
                 <input name="id" type="hidden" value={item.id} />
                 {item.compared ? null : <input name="compared" type="hidden" value="on" />}
-                <button className="rounded-lg px-2 py-1 text-primary" type="submit">
+                <button className="rounded-lg px-2 py-1 text-primary" disabled={!item.compared && atComparisonCap} title={!item.compared && atComparisonCap ? COMPARISON_CAP_ERROR : undefined} type="submit">
                   {item.compared ? "移出对比" : "加入对比"}
                 </button>
               </WriteForm>

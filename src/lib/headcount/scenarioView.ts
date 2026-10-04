@@ -9,6 +9,9 @@ import { DEMO_AI_RATIO } from "@/lib/headcount/sample";
 import { costRootId, defaultAssumptions, evaluateBaseline, evaluateScenario, quarterChangeDetails, scenarioCutSeverance, type ScenarioAssumptions, type ScenarioDefinition, type ScenarioResult } from "@/lib/headcount/scenario";
 
 export const DEFAULT_PREFILL_NOTE = "没有配置模型，使用默认值：离职率 8%，招聘周期 60 天，调薪率 0%，AI 替代比例沿用沙盘拆解。N+1 默认不计入。";
+/** 基线之外最多对比这么多个场景。单部门方案也占一个名额。 */
+export const COMPARISON_CAP = 3;
+export const COMPARISON_CAP_ERROR = "最多对比 3 个场景";
 export const TIMELINE_EFFECTIVE_CAPTION = "按季初生效";
 export const INCOMPLETE_RATIO_NOTE = "沙盘尚未拆解人 : AI。只标记数据不完整，不按 Agent 个数推算。";
 export const MODEL_PREFILL_NOTE = "已配置模型。用模型预填时只发送脱敏后的部门汇总，不足 5 人的部门不带人数和金额。";
@@ -234,7 +237,7 @@ function ratioWords(definition: ScenarioDefinition, companyWide: boolean): strin
   return `人 : AI 为 ${displayedRatio(definition, companyWide)}`;
 }
 
-export function heroSentence(result: PlanResult, compared: ScenarioResult[], options?: { budgetYuan?: number; basis?: "total" | "daily"; budgetName?: string; companyWide?: boolean }): string {
+export function heroSentence(result: PlanResult, compared: ScenarioResult[], options?: { budgetYuan?: number; basis?: "total" | "daily"; budgetName?: string; companyWide?: boolean; fullCompanyWording?: boolean }): string {
   const budgetYuan = options?.budgetYuan ?? result.plan.companyBudget;
   const budgetName = options?.budgetName ?? "预算总包";
   const amountOf = (item: ScenarioResult) => (options?.basis === "daily" ? item.dailyYuan : item.totalYuan);
@@ -261,7 +264,8 @@ export function heroSentence(result: PlanResult, compared: ScenarioResult[], opt
     if (gap.over) bits.push(phraseAfterName(item.definition.name, `超${budgetName} ${gap.amount} 万`));
     else bits.push(`${phraseAfterName(item.definition.name, gap.text)} 万，${ratioWords(item.definition, companyWide)}`);
   }
-  return `对比的 ${compared.length} 个场景中，${bits.join("；")}。`;
+  const kind = options?.fullCompanyWording ? "全公司场景" : "场景";
+  return `对比的 ${compared.length} 个${kind}中，${bits.join("；")}。`;
 }
 
 function healthFootnote(compared: ScenarioResult[]): string | null {
@@ -294,7 +298,7 @@ export function copyScenario(definitions: ScenarioDefinition[], sourceId: string
     id,
     name: `副本 · ${source.name}`,
     source: "copy",
-    compared: comparedCount < 3,
+    compared: comparedCount < COMPARISON_CAP,
     hires: [...source.hires],
     agents: [...source.agents],
     cuts: [...source.cuts],
@@ -304,9 +308,8 @@ export function copyScenario(definitions: ScenarioDefinition[], sourceId: string
 }
 
 export function setCompared(definitions: ScenarioDefinition[], id: string, compared: boolean): { definitions: ScenarioDefinition[]; error: string | null } {
-  const target = definitions.find((item) => item.id === id);
-  const others = definitions.filter((item) => item.compared && item.id !== id && !partialBuName(item)).length;
-  if (compared && !partialBuName(target ?? {}) && others >= 3) return { definitions, error: "最多对比 3 个场景" };
+  const others = definitions.filter((item) => item.compared && item.id !== id).length;
+  if (compared && others >= COMPARISON_CAP) return { definitions, error: COMPARISON_CAP_ERROR };
   return { definitions: definitions.map((item) => (item.id === id ? { ...item, compared } : item)), error: null };
 }
 
@@ -346,7 +349,20 @@ export function buildScenarioBoard(result: PlanResult, definitions: ScenarioDefi
   const ranked = compared.filter((item) => !(company && partialBuName(item.definition)));
   const lowest = [...ranked].sort((left, right) => amountOf(left) - amountOf(right))[0] ?? baseline;
   const within = ranked.filter((item) => roundToHalfWan(amountOf(item)) <= roundToHalfWan(budgetYuan)).length;
-  const health = compared.map((item) => healthRow(result, item, company ? undefined : { budgetYuan, basis: "daily", article: "scope" }));
+  const health = compared.map((item) => {
+    const partial = company ? partialBuName(item.definition) : null;
+    if (!partial) return healthRow(result, item, company ? undefined : { budgetYuan, basis: "daily", article: "scope" });
+    const department = result.plan.departments.find((entry) => entry.name === partial);
+    const buBudget = department ? (result.plan.budgets[department.id] ?? 0) : budgetYuan;
+    const bu = businessScenarioResult(result, item.definition, department?.id ?? scopeRoot);
+    const row = healthRow(result, bu, { budgetYuan: buBudget, basis: "daily", article: "scope" });
+    return {
+      ...row,
+      id: item.definition.id,
+      name: item.definition.name,
+      cells: row.cells.map((cell) => (cell.title === "人 : AI" ? { ...cell, text: `仅${partial}`, tone: "ok" as const } : cell)),
+    };
+  });
   const hints = health.flatMap((row) => row.cells).filter((cell) => cell.tone === "warn" || cell.tone === "compliance");
   const compliance = hints.filter((cell) => cell.tone === "compliance").length;
   const names = compared.map((item) => item.definition.name);
@@ -391,7 +407,14 @@ export function buildScenarioBoard(result: PlanResult, definitions: ScenarioDefi
       ...parts,
     };
   });
-  const hero = heroSentence(result, ranked, company ? { companyWide: true } : { budgetYuan, basis: "daily", budgetName: "部门预算", companyWide: false });
+  const includesSingleDepartment = company && compared.some((item) => partialBuName(item.definition));
+  const hero = heroSentence(
+    result,
+    ranked,
+    company
+      ? { companyWide: true, fullCompanyWording: includesSingleDepartment }
+      : { budgetYuan, basis: "daily", budgetName: "部门预算", companyWide: false },
+  );
   const cut = focus.definition.cuts[0];
   const cutSummary = cut
     ? focus.definition.cuts
@@ -409,7 +432,7 @@ export function buildScenarioBoard(result: PlanResult, definitions: ScenarioDefi
     percent: `${((roundToHalfWan(amountOf(lowest)) / roundToHalfWan(budgetYuan)) * 100).toFixed(1)}%`,
     usage: budgetYuan ? (roundToHalfWan(amountOf(lowest)) / roundToHalfWan(budgetYuan)) * 100 : 0,
     stepSelect: `基线 + ${compared.length} 个场景：${names.join("、") || "还没有"}`,
-    stepSelectNote: `${leftOut.join(" · ") || "对比里的场景都已选上"} · 最多对比 3 个`,
+    stepSelectNote: `${leftOut.join(" · ") || "对比里的场景都已选上"} · ${COMPARISON_CAP_ERROR}`,
     stepAssume: `${focus.definition.name}：离职率 ${ratePercent(assumptions.attritionRate)}% · 招聘周期 ${assumptions.hiringCycleDays} 天`,
     stepAssumeNote: `${labels.join(" · ") || "这一场景没有按季增减"} · ${pending ? `另有 ${pending} 项假设待定` : "假设都已填写"}`,
     stepCheck: `${within} / ${ranked.length} 个场景在预算内 · 最低：${lowest.definition.name}`,

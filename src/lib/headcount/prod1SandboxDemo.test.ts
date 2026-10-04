@@ -298,9 +298,9 @@ describe("沙盘示例 · 产品研发一部的核对数字", () => {
       "Q2 场景新增 2 个 Agent（含基线变动共 19→24）",
     ]);
     expect(odBoard.timelineLabelNotes[1]).toBe(nofillLabelNote(2, 0));
-    expect(health(odBoard, "超预算")).toBe("正常");
+    expect(health(odBoard, "超预算")).toBe("超 31.5");
     expect(health(odBoard, "管理幅度")).toBe("—");
-    expect(health(odBoard, "人 : AI")).toBe("正常");
+    expect(health(odBoard, "人 : AI")).toBe("仅产品研发一部");
     expect(health(odBoard, "第 41 条")).toBe("正常");
     const html = renderToStaticMarkup(createElement(ScenarioBoardView, { board: odBoard }));
     expect(html).toContain(">一次性<");
@@ -317,28 +317,66 @@ describe("沙盘示例 · 产品研发一部的核对数字", () => {
     expect(odBoard.lowestName).not.toBe(PROD1_SANDBOX_DEMO_NAME);
   });
 
-  it("加进公司对比后不参与成本最低，方案 A 和顶部结论保持原样", () => {
-    const before = buildScenarioBoard(result, presetScenarios(), "fa", DEFAULT_PREFILL_NOTE);
-    const added = setCompared([...presetScenarios(), companyPlan], companyPlan.id, true);
-    expect(added.error).toBeNull();
-    const after = buildScenarioBoard(result, added.definitions, "fa", DEFAULT_PREFILL_NOTE);
-    expect(after.hero).toBe(before.hero);
-    expect(after.stepCheck).toBe(before.stepCheck);
-    expect(before.stepCheck).toBe("2 / 3 个场景在预算内 · 最低：沙盘方案 A · 拆组前");
-    expect(after.hero).toContain("沙盘方案 A · 拆组前成本最低（15,945.0 万）");
-    expect(after.hero).not.toContain(PROD1_SANDBOX_DEMO_NAME);
-    expect(after.lowestName).toBe("沙盘方案 A · 拆组前");
-    expect(after.lowestTotal).toBe(before.lowestTotal);
-    expect(after.columns.find((column) => column.id === "fa")).toMatchObject({ subtitle: "成本最低", lowest: true });
-    const demo = after.columns.find((column) => column.id === PROD1_SANDBOX_DEMO_ID);
+  it("最多对比 3 个；基准、方案 A 和一部示例按全公司场景写结论，体检跟着所选场景", () => {
+    const waiting = { ...companyPlan, compared: false };
+    const full = [...presetScenarios(), waiting];
+    const blocked = setCompared(full, companyPlan.id, true);
+    expect(blocked.error).toBe("最多对比 3 个场景");
+    expect(blocked.definitions).toBe(full);
+    expect(blocked.definitions.find((item) => item.id === PROD1_SANDBOX_DEMO_ID)?.compared).toBe(false);
+    const denied = executeScenarioCommand(full, visibleScenarioCatalog(full, companyScope), companyScope, {
+      type: "toggle",
+      id: PROD1_SANDBOX_DEMO_ID,
+      compared: true,
+    });
+    expect(denied.ok).toBe(false);
+    if (!denied.ok) expect(denied.notice).toBe("最多对比 3 个场景");
+    const cappedHtml = renderToStaticMarkup(createElement(ScenarioBoardView, { board: buildScenarioBoard(result, full, "fa", DEFAULT_PREFILL_NOTE) }));
+    const adds = [...cappedHtml.matchAll(/<button([^>]*)>加入对比<\/button>/g)];
+    expect(adds.length).toBeGreaterThan(0);
+    expect(adds.every((match) => match[1].includes("disabled"))).toBe(true);
+    expect([...cappedHtml.matchAll(/<button([^>]*)>移出对比<\/button>/g)].every((match) => !match[1].includes("disabled"))).toBe(true);
+
+    const room = setCompared(full, "jj", false);
+    expect(room.error).toBeNull();
+    const roomHtml = renderToStaticMarkup(createElement(ScenarioBoardView, { board: buildScenarioBoard(result, room.definitions, "fa", DEFAULT_PREFILL_NOTE) }));
+    expect([...roomHtml.matchAll(/<button([^>]*)>加入对比<\/button>/g)].some((match) => !match[1].includes("disabled"))).toBe(true);
+    const opened = setCompared(room.definitions, companyPlan.id, true);
+    expect(opened.error).toBeNull();
+    expect(opened.definitions.filter((item) => item.compared)).toHaveLength(3);
+
+    const alone = buildScenarioBoard(
+      result,
+      presetScenarios().map((item) => ({ ...item, compared: item.id === "jz" || item.id === "fa" })),
+      "fa",
+      DEFAULT_PREFILL_NOTE,
+    );
+    const mixed = buildScenarioBoard(result, opened.definitions, "fa", DEFAULT_PREFILL_NOTE);
+    expect(alone.hero.startsWith("对比的 2 个场景中")).toBe(true);
+    expect(alone.hero).not.toContain("全公司场景");
+    expect(mixed.hero).toBe(alone.hero.replace("对比的 2 个场景中", "对比的 2 个全公司场景中"));
+    expect(mixed.stepCheck).toBe("1 / 2 个场景在预算内 · 最低：沙盘方案 A · 拆组前");
+    expect(mixed.lowestName).toBe("沙盘方案 A · 拆组前");
+    const planA = mixed.columns.find((column) => column.id === "fa");
+    const demo = mixed.columns.find((column) => column.id === PROD1_SANDBOX_DEMO_ID);
+    expect(planA).toMatchObject({ total: "15,945.0", subtitle: "成本最低", lowest: true });
     expect(demo).toMatchObject({
+      total: "15,874.5",
+      gap: "结余 125.5",
       subtitle: "仅产品研发一部",
       lowest: false,
       ratio: "70 : 30 · 仅产品研发一部",
       subtitleNote: "单部门方案：只含产品研发一部的变动，其他部门按基线和默认假设计算，不参与『成本最低』比较；人 : AI 只代表产品研发一部已拆解的岗位。",
     });
     expect(demo?.subtitle).not.toContain("成本最低");
-    const html = renderToStaticMarkup(createElement(ScenarioBoardView, { board: after }));
+    expect(mixed.health.map((row) => row.name)).toEqual(["基准", "沙盘方案 A · 拆组前", PROD1_SANDBOX_DEMO_NAME]);
+    const cell = (name: string, title: string) => mixed.health.find((row) => row.name === name)?.cells.find((item) => item.title === title)?.text;
+    expect(cell(PROD1_SANDBOX_DEMO_NAME, "超预算")).toBe("超 31.5");
+    expect(cell(PROD1_SANDBOX_DEMO_NAME, "管理幅度")).toBe("—");
+    expect(cell(PROD1_SANDBOX_DEMO_NAME, "人 : AI")).toBe("仅产品研发一部");
+    expect(cell("基准", "超预算")).toBe("超 98.5");
+    expect(cell("沙盘方案 A · 拆组前", "管理幅度")).toBe("12 > 8");
+    const html = renderToStaticMarkup(createElement(ScenarioBoardView, { board: mixed }));
     const subtitleAt = html.indexOf("仅产品研发一部");
     const noteAt = html.indexOf("单部门方案：只含产品研发一部的变动");
     expect(subtitleAt).toBeGreaterThan(-1);
@@ -347,14 +385,14 @@ describe("沙盘示例 · 产品研发一部的核对数字", () => {
 
   it("公司口径的预算内计数只含公司方案，单部门方案不占分母", () => {
     const companyWide = (ids: string[]) => presetScenarios().map((item) => ({ ...item, compared: ids.includes(item.id) }));
+    const pair = buildScenarioBoard(result, companyWide(["fa", "jj"]), "fa", DEFAULT_PREFILL_NOTE);
     const withinTwo = buildScenarioBoard(result, [...companyWide(["fa", "jj"]), { ...companyPlan, compared: true }], "fa", DEFAULT_PREFILL_NOTE);
-    expect(withinTwo.columns.filter((column) => column.id !== "jx").map((column) => column.name)).toEqual(["激进 · AI 加速", "沙盘方案 A · 拆组前", PROD1_SANDBOX_DEMO_NAME]);
+    expect(withinTwo.columns.filter((column) => column.id !== "jx")).toHaveLength(3);
     expect(withinTwo.stepCheck).toBe("2 / 2 个场景在预算内 · 最低：沙盘方案 A · 拆组前");
+    expect(withinTwo.hero).toBe(pair.hero.replace("对比的 2 个场景中", "对比的 2 个全公司场景中"));
     expect(withinTwo.columns.find((column) => column.id === "fa")).toMatchObject({ subtitle: "成本最低", lowest: true });
-    expect(withinTwo.hero).not.toContain(PROD1_SANDBOX_DEMO_NAME);
     const oneOver = buildScenarioBoard(result, [...companyWide(["fa", "jz"]), { ...companyPlan, compared: true }], "fa", DEFAULT_PREFILL_NOTE);
     expect(oneOver.stepCheck).toBe("1 / 2 个场景在预算内 · 最低：沙盘方案 A · 拆组前");
-    expect(oneOver.stepCheck).not.toContain("/ 3 ");
   });
 
   it("出缺不补并进离职未补位，范围外的部门仍然整份拒绝", () => {

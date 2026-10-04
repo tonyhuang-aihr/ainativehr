@@ -8,7 +8,7 @@ import {
   type ScenarioDefinition,
 } from "@/lib/headcount/scenario";
 import { scenarioFitsScope } from "@/lib/headcount/scopeGuard";
-import { copyScenario, quarterDate, setCompared } from "@/lib/headcount/scenarioView";
+import { COMPARISON_CAP, COMPARISON_CAP_ERROR, copyScenario, quarterDate, setCompared } from "@/lib/headcount/scenarioView";
 
 const LOCKED_IDS = new Set(["jz", "jj", "bs", "fa", "jx"]);
 
@@ -115,7 +115,7 @@ export function executeScenarioCommand(
       id: command.id,
       name,
       source: "copy",
-      compared: visible.filter((item) => item.compared).length < 3,
+      compared: visible.filter((item) => item.compared).length < COMPARISON_CAP,
       assumptions: { ...seed.assumptions },
       assumptionOrigin: "od",
       hires: [],
@@ -209,8 +209,10 @@ export function executeScenarioCommand(
     const imported = scopeSandboxImport(command.definition, scope, command.id);
     if (!imported) return refuse("无权查看");
     const others = visible.filter((item) => item.compared && item.id !== imported.id).length;
-    const next = { ...imported, compared: others >= 3 ? false : imported.compared };
-    return accept(catalog, next, scope, next.id, `已导入${next.name}。${next.structureNote ?? ""} 人 : AI ${next.ratio}。花名册没有写入。`);
+    const capped = imported.compared && others >= COMPARISON_CAP;
+    const next = { ...imported, compared: capped ? false : imported.compared };
+    const capNote = capped ? `${COMPARISON_CAP_ERROR}。` : "";
+    return accept(catalog, next, scope, next.id, `已导入${next.name}。${capNote}${next.structureNote ?? ""} 人 : AI ${next.ratio}。花名册没有写入。`);
   }
 
   const current = visible.find((item) => item.id === command.id);
