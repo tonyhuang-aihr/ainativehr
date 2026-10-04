@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Badge } from "@/components/ui";
 import { SandboxLocalRestore } from "@/components/headcount/sandbox-restore";
 import { ScenarioFileField } from "@/components/headcount/scenario-file-field";
 import { DepartmentDailyRows } from "@/components/headcount/department-daily-rows";
@@ -91,11 +92,11 @@ export function ScenarioBoardView({
 
       <section className="grid gap-3 lg:grid-cols-3">
         <Step n="1" title="选场景" body={board.stepSelect} note={board.stepSelectNote} />
-        <Step n="2" title="调假设" body={board.stepAssume} note={board.stepAssumeNote} />
+        <Step n="2" title="调假设" body={board.stepAssume} note={board.stepAssumeNote} aside={board.editingOutsideNote} />
         <Step n="3" title="看对比 / 体检" body={board.stepCheck} note={board.stepCheckNote} current />
       </section>
 
-      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="grid items-start gap-4">
       <section id="scenario-compare" className="overflow-hidden rounded-2xl border border-line bg-white">
         <div className="flex items-center gap-2 px-4 py-3 text-sm">
           <b>场景对比</b>
@@ -154,14 +155,17 @@ export function ScenarioBoardView({
         </div>
       </section>
       <aside id="health-checks" className="min-w-0 overflow-hidden rounded-2xl border border-line bg-white">
-        <h2 className="px-4 py-3 text-sm font-semibold">体检 · {board.health.length} 个场景 · {board.health[0]?.cells.length ?? 0} 项</h2>
-        <div className="overflow-x-auto border-t border-line">
-          <table className="w-full min-w-[640px] border-separate border-spacing-0 whitespace-nowrap text-sm">
+        <h2 className="flex flex-wrap items-center gap-2 px-4 py-3 text-sm font-semibold">
+          <span>体检 · {board.health.length} 个场景 · {board.health[0]?.cells.length ?? 0} 项</span>
+          {board.healthHintCount > 0 ? <Badge tone="warn">{board.healthHintCount} 条提示</Badge> : null}
+        </h2>
+        <div className="overflow-x-auto border-t border-line xl:overflow-visible">
+          <table className="w-full min-w-[640px] border-separate border-spacing-0 whitespace-nowrap text-sm xl:w-max xl:min-w-0 xl:whitespace-normal">
             <thead>
               <tr className="text-left text-muted">
-                <th className={`border-b border-line px-3 py-2 font-medium ${sticky}`} />
+                <th className={`border-b border-line px-3 py-2 font-medium xl:w-24 ${sticky}`} />
                 {board.health.map((row) => (
-                  <th key={row.id} className="border-b border-line px-3 py-2 font-medium">
+                  <th key={row.id} className="border-b border-line px-3 py-2 font-medium align-top leading-5 xl:w-40 xl:max-w-40 xl:whitespace-normal">
                     {healthShort(row.name)}
                   </th>
                 ))}
@@ -170,11 +174,11 @@ export function ScenarioBoardView({
             <tbody>
               {board.health[0]?.cells.map((cell, index) => (
                 <tr key={cell.title}>
-                  <td className={`border-b border-line px-3 py-2 text-muted ${sticky}`}>{cell.title}</td>
+                  <td className={`border-b border-line px-3 py-2 text-muted xl:w-24 xl:whitespace-nowrap ${sticky}`}>{cell.title}</td>
                   {board.health.map((row) => {
                     const item = row.cells[index];
                     return (
-                      <td key={row.id} className={`border-b border-line px-3 py-2 ${item?.tone === "warn" ? "text-[#DC2626]" : ""} ${item?.tone === "compliance" ? "text-[#92400E]" : ""} ${item?.tone === "muted" ? "text-muted" : ""}`}>
+                      <td key={row.id} className={`border-b border-line px-3 py-2 align-top leading-5 xl:w-40 xl:max-w-40 xl:whitespace-normal ${item?.tone === "warn" ? "text-[#DC2626]" : ""} ${item?.tone === "compliance" ? "text-[#92400E]" : ""} ${item?.tone === "muted" ? "text-muted" : ""}`}>
                         {item?.text}
                       </td>
                     );
@@ -437,12 +441,13 @@ export function ScenarioBoardView({
   );
 }
 
-function Step({ n, title, body, note, current }: { n: string; title: string; body: string; note: string; current?: boolean }) {
+function Step({ n, title, body, note, current, aside }: { n: string; title: string; body: string; note: string; current?: boolean; aside?: string | null }) {
   return (
     <article className={`rounded-2xl border bg-white p-4 ${current ? "border-[#A5B4FC]" : "border-line"}`}>
-      <h2 className="flex items-center gap-2 text-sm font-semibold">
+      <h2 className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-semibold">
         <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs ${current ? "bg-primary text-white" : "bg-primarySoft text-primary"}`}>{n}</span>
         {title}
+        {aside ? <span className="text-xs font-normal text-muted">{aside}</span> : null}
       </h2>
       <p className="mt-3 text-sm">{body}</p>
       <p className="mt-2 text-xs text-muted">{note}</p>

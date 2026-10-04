@@ -73,6 +73,10 @@ export type ScenarioBoard = {
   stepAssumeNote: string;
   stepCheck: string;
   stepCheckNote: string;
+  /** 正在编辑的场景不在当前对比里时的灰色提示。在对比中则为空。 */
+  editingOutsideNote: string | null;
+  /** 与第 3 步「体检 N 条提示」同一个 N：体检格里 tone 为 warn 或 compliance 的个数。 */
+  healthHintCount: number;
   columns: CompareColumn[];
   healthName: string;
   health: HealthRow[];
@@ -476,6 +480,8 @@ export function buildScenarioBoard(result: PlanResult, definitions: ScenarioDefi
     stepAssumeNote: focusEvents ?? `${labels.join(" · ") || "这一场景没有按季增减"} · ${pending ? `另有 ${pending} 项假设待定` : "假设都已填写"}`,
     stepCheck: `${within} / ${ranked.length} 个场景在预算内 · 最低：${lowest.definition.name}`,
     stepCheckNote: compliance > 0 ? `体检 ${hints.length} 条提示，${compliance} 条涉及合规` : `体检 ${hints.length} 条提示`,
+    editingOutsideNote: compared.some((item) => item.definition.id === focus.definition.id) ? null : `正在编辑：${focus.definition.name}（未在对比中）`,
+    healthHintCount: hints.length,
     columns,
     healthName: "对比场景",
     health,

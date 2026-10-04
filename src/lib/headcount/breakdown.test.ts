@@ -13,6 +13,7 @@ import {
   vacancyQuarterSavings,
 } from "@/lib/headcount/buCost";
 import { DepartmentDailyRows } from "@/components/headcount/department-daily-rows";
+import { ScenarioBoardView } from "@/components/headcount/scenario-board";
 import { SCOPE_TOTAL_NOTE, TOOLTIPS, UNATTRIBUTED_AGENT_NOTE } from "@/lib/headcount/copy";
 import { loadTooltipFile } from "@/lib/headcount/tooltipFile";
 import { computePlan, deptStat } from "@/lib/headcount/engine";
@@ -167,6 +168,20 @@ describe("部门持续成本和未归属 Agent", () => {
     expect(dailyRow).toContain("≈ 15,810.0");
     expect(dailyRow).not.toContain("15,810.0≈");
     expect(dailyRow).toContain(ROUNDING_GAP_NOTE);
+    const roundingMarks = (html: string) => {
+      const marks = html.match(/≈/g)?.length ?? 0;
+      const notes = html.split(`aria-label="${ROUNDING_GAP_NOTE}"`).length - 1;
+      return { marks, notes };
+    };
+    const page = renderToStaticMarkup(createElement(ScenarioBoardView, { board: conservative }));
+    const comparedMarks = roundingMarks(page);
+    expect(comparedMarks.marks).toBeGreaterThan(0);
+    expect(comparedMarks.notes).toBe(comparedMarks.marks);
+    const plain = renderToStaticMarkup(createElement(ScenarioBoardView, { board }));
+    const defaultMarks = roundingMarks(plain);
+    expect(plain).toContain("≈ 16,095.5");
+    expect(plain).toContain("≈ 16,098.5");
+    expect(defaultMarks.notes).toBe(defaultMarks.marks);
   });
 });
 

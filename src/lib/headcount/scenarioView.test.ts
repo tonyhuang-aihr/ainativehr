@@ -1,4 +1,7 @@
+import { createElement } from "react";
 import { describe, expect, it } from "vitest";
+import { renderToStaticMarkup } from "react-dom/server";
+import { ScenarioBoardView } from "@/components/headcount/scenario-board";
 import { can, type HeadcountUser } from "@/lib/headcount/authz";
 import { createMemoryDb } from "@/lib/headcount/db/client";
 import { loadScenarioDefinitions, saveScenarioDefinition } from "@/lib/headcount/db/scenarios";
@@ -76,14 +79,53 @@ describe("场景页与沙盘导入", () => {
     expect(board.assumptionSummary).toContain("N+1 不计入");
     expect(board.stepCheck).toBe("2 / 3 个场景在预算内 · 最低：沙盘方案 A · 拆组前");
     expect(board.stepCheckNote).toBe("体检 4 条提示，1 条涉及合规");
+    expect(board.healthHintCount).toBe(4);
+    expect(board.health.flatMap((row) => row.cells).filter((cell) => cell.tone === "warn" || cell.tone === "compliance")).toHaveLength(board.healthHintCount);
+    expect(board.editingOutsideNote).toBeNull();
     expect(board.stepSelectNote).toBe("「保守」未加入对比 · 最多对比 3 个");
     expect(board.stepAssume).toBe("激进 · AI 加速：离职率 8% · 招聘周期 60 天");
+    expect(board.timelineTitle).toBe("时间轴 · 激进 · AI 加速");
     expect(board.healthFootnote).toBe("数据组管理幅度 12，超过建议值 8（沙盘方案 A · 拆组前）；最新版「方案 A」已拆成 6 + 6，导入后通过。基准、激进无结构调整，记「—」。人 : AI 未拆解只提示数据不全，不估算。第 41 条仅作提醒，请与法务确认是否需要报告。");
     expect(board.assumptionSummary).toContain("· 2 项待定");
     expect(board.nofillSummary).toBeNull();
     const blob = JSON.stringify(board);
     expect(blob).not.toMatch(/钱二|赵一|68750|每人|employeeNo/);
     expect(scenarioCutTextHasPerPerson(blob)).toBe(false);
+    const html = renderToStaticMarkup(createElement(ScenarioBoardView, { board }));
+    const health = html.slice(html.indexOf('id="health-checks"'));
+    expect(health.startsWith('id="health-checks"')).toBe(true);
+    expect(health).toContain("体检 · 3 个场景 · 4 项");
+    expect(health).toContain(">4 条提示<");
+    expect(health).toContain("xl:overflow-visible");
+    expect(health).toContain("xl:w-max");
+    expect(health).toContain("xl:whitespace-normal");
+    expect(health).toContain("xl:max-w-40");
+    expect(html).not.toContain("360px");
+    expect(html).not.toContain("未在对比中");
+    const assume = html.slice(html.indexOf("调假设"), html.indexOf("看对比 / 体检"));
+    expect(assume).not.toContain("正在编辑：");
+  });
+
+  it("正在编辑的场景不在对比里时，调假设标题旁有灰色提示，时间轴仍跟这个场景", () => {
+    const outside = buildScenarioBoard(result, presetScenarios(), "bs", DEFAULT_PREFILL_NOTE);
+    expect(outside.editingOutsideNote).toBe("正在编辑：保守（未在对比中）");
+    expect(outside.stepAssume).toBe("保守：离职率 8% · 招聘周期 90 天");
+    expect(outside.timelineTitle).toBe("时间轴 · 保守");
+    expect(outside.columns.map((column) => column.name)).toEqual(["基线", "基准", "激进 · AI 加速", "沙盘方案 A · 拆组前"]);
+    const removed = presetScenarios().map((item) => (item.id === "jj" ? { ...item, compared: false } : item.id === "bs" ? { ...item, compared: true } : item));
+    const stillEditing = buildScenarioBoard(result, removed, "jj", DEFAULT_PREFILL_NOTE);
+    expect(stillEditing.editingOutsideNote).toBe("正在编辑：激进 · AI 加速（未在对比中）");
+    expect(stillEditing.stepAssume).toBe("激进 · AI 加速：离职率 8% · 招聘周期 60 天");
+    expect(stillEditing.timelineTitle).toBe("时间轴 · 激进 · AI 加速");
+    expect(stillEditing.columns.map((column) => column.name)).toEqual(["基线", "基准", "保守", "沙盘方案 A · 拆组前"]);
+    const html = renderToStaticMarkup(createElement(ScenarioBoardView, { board: outside }));
+    const assume = html.slice(html.indexOf(">调假设<"), html.indexOf("看对比 / 体检"));
+    expect(assume).toContain("正在编辑：保守（未在对比中）");
+    expect(assume).toContain("text-muted");
+    const quiet = renderToStaticMarkup(createElement(ScenarioBoardView, { board }));
+    expect(quiet.slice(quiet.indexOf(">调假设<"), quiet.indexOf("看对比 / 体检"))).not.toContain("正在编辑：");
+    const cleared = renderToStaticMarkup(createElement(ScenarioBoardView, { board: { ...board, healthHintCount: 0 } }));
+    expect(cleared.slice(cleared.indexOf('id="health-checks"'), cleared.indexOf("超预算"))).not.toContain("条提示");
   });
 
   it("四个场景的时间轴标签与核对清单逐字一致", () => {

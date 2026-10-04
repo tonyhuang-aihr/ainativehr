@@ -363,6 +363,7 @@ describe("沙盘示例 · 产品研发一部的核对数字", () => {
     expect(mixed.stepAssumeNote).toBe("Q2 出缺不补 2 人 · Q2 场景新增 2 个 Agent");
     expect(mixed.stepCheck).toBe("1 / 2 个场景在预算内 · 最低：沙盘方案 A · 拆组前");
     expect(mixed.stepCheckNote).toBe("体检 3 条提示");
+    expect(mixed.healthHintCount).toBe(3);
     expect(mixed.columns.map((column) => column.total)).toEqual(["16,095.5", "16,098.5", "15,945.0", "15,874.5"]);
     expect(mixed.columns.map((column) => column.gap)).toEqual(["超 95.5", "超 98.5", "结余 55.0", "结余 125.5"]);
     expect(mixed.columns.map((column) => column.people)).toEqual([490, 490, 480, 478]);
@@ -401,7 +402,14 @@ describe("沙盘示例 · 产品研发一部的核对数字", () => {
     expect(mixed.assumptionSummary).toBe("离职率 8% · 招聘周期 60 天 · N+1 不计入");
     expect(mixed.nofillSummary).toBe("产品研发一部 · P5 · 2 人 · 2027-04-01 起 · 不算减员，无经济补偿");
     const html = renderToStaticMarkup(createElement(ScenarioBoardView, { board: mixed }));
-    expect(html).toContain("体检 · 3 个场景 · 4 项");
+    const health = html.slice(html.indexOf('id="health-checks"'));
+    expect(health).toContain("体检 · 3 个场景 · 4 项");
+    expect(health).toContain(">3 条提示<");
+    expect(health).toContain(">方案 A 拆组前<");
+    expect(health).toContain(">沙盘示例<");
+    expect(health).toContain("70 : 30 · 仅产品研发一部");
+    expect(health).toContain("xl:max-w-40");
+    expect(html).not.toContain("360px");
     expect(html).toContain(">方案 A 拆组前<");
     expect(html).toContain(">沙盘示例<");
     expect(html).toContain(">出缺不补<");
