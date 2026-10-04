@@ -20,7 +20,8 @@ import {
   type Prod1SandboxDemoInput,
 } from "@/lib/headcount/prod1SandboxDemo";
 import { DEPT, samplePlan } from "@/lib/headcount/sample";
-import { evaluateBaseline, evaluateScenario, presetScenarios } from "@/lib/headcount/scenario";
+import { scenarioFitsScope } from "@/lib/headcount/scopeGuard";
+import { evaluateBaseline, evaluateScenario, nofillLabelNote, presetScenarios, quarterChangeDetails } from "@/lib/headcount/scenario";
 import { buildScenarioBoard, DEFAULT_PREFILL_NOTE } from "@/lib/headcount/scenarioView";
 import { executeScenarioCommand, importableSandboxPlans, visibleScenarioCatalog, type WriteScope } from "@/lib/headcount/scenarioWrites";
 
@@ -46,6 +47,7 @@ const plumbingFixture: Prod1SandboxDemoInput = {
   agents: [{ name: "测试用 Agent", count: 1, monthlyYuan: 1000, oneOffYuan: 100_000, effectiveQuarter: 2 }],
   cuts: [],
   hires: [],
+  nofill: [],
   ratio: "未拆解",
 };
 
@@ -55,15 +57,30 @@ function zeroOneOff(input: Prod1SandboxDemoInput): Prod1SandboxDemoInput {
   return { ...input, agents: input.agents.map((agent) => ({ ...agent, oneOffYuan: 0 })) };
 }
 
-describe("产品研发一部沙盘示例先不进列表", () => {
-  it("正式数据仍是空的，占位夹具不会被发布", () => {
-    expect(PROD1_SANDBOX_DEMO_LISTED).toBe(false);
-    expect(PROD1_SANDBOX_DEMO).toBeNull();
+describe("产品研发一部沙盘示例", () => {
+  it("正式数据在林和黄的导入列表里，不在公司预设对比里", () => {
+    expect(PROD1_SANDBOX_DEMO_LISTED).toBe(true);
+    expect(PROD1_SANDBOX_DEMO?.ratio).toBe("70 : 30");
     expect(PROD1_SANDBOX_DEMO_PLACEHOLDER.agents.every((agent) => agent.monthlyYuan === 0 && agent.oneOffYuan === 0)).toBe(true);
-    expect(sandboxImportCandidates(2).map((item) => item.id)).toEqual(["fa"]);
-    expect(sandboxImportCandidates(2).some((item) => item.name === PROD1_SANDBOX_DEMO_NAME)).toBe(false);
+    expect(sandboxImportCandidates(2).map((item) => item.id)).toEqual(["fa", PROD1_SANDBOX_DEMO_ID]);
     expect(presetScenarios().map((item) => item.id)).toEqual(["jz", "jj", "bs", "fa"]);
-    expect(presetScenarios().some((item) => item.id === PROD1_SANDBOX_DEMO_ID)).toBe(false);
+    const live = sandboxImportCandidates(2).find((item) => item.id === PROD1_SANDBOX_DEMO_ID)!;
+    expect(live.compared).toBe(false);
+    expect(live.agents[0]).toMatchObject({ name: "测试用例生成 Agent", count: 2, monthly: 2_000, oneOff: 20_000, departmentName: "产品研发一部" });
+    expect(live.nofill).toEqual([{ departmentName: "产品研发一部", grade: "P5", count: 2, effectiveDate: "2027-04-01" }]);
+    expect(live.cuts).toEqual([]);
+    expect(live.hires).toEqual([]);
+    expect(live.ratioNote).toBe("来自沙盘示例拆解（一部 · 研发经理 E21103 团队 · 测试开发工程师岗位）");
+    expect(live.buRatio).toEqual({ 产品研发一部: "70 : 30" });
+    expect(live.assumptions).toMatchObject({ attritionRate: 0.08, hiringCycleDays: 60 });
+    const outside = names.filter((name) => name !== "产品研发一部");
+    const notes = `${live.structureNote ?? ""}${live.ratioNote}${PROD1_SANDBOX_DEMO_CAPTION}`;
+    expect(outside.filter((name) => notes.includes(name))).toEqual([]);
+    expect(importableSandboxPlans(sandboxImportCandidates(2), linScope).map((item) => item.name)).toEqual([PROD1_SANDBOX_DEMO_NAME]);
+    expect(importableSandboxPlans(sandboxImportCandidates(2), companyScope).map((item) => item.id)).toEqual(["fa", PROD1_SANDBOX_DEMO_ID]);
+    expect(importableSandboxPlans(sandboxImportCandidates(2), platScope)).toEqual([]);
+    expect(importableSandboxPlans(sandboxImportCandidates(2), infraScope)).toEqual([]);
+    expect(sandboxOfferCopy(live).caption).toBe(PROD1_SANDBOX_DEMO_CAPTION);
   });
 
   it("未导入时，公司和部门的锁定数字不变", () => {
@@ -207,5 +224,108 @@ describe("一部示例接上之后只给林和 OD 导入", () => {
     }
     expect(can({ id: "lin", role: "hrbp", departmentIds: [DEPT.prod1] }, "viewScenarios")).toBe(true);
     expect(can({ id: "huang", role: "od", departmentIds: [] }, "viewScenarios")).toBe(true);
+  });
+});
+
+describe("沙盘示例 · 产品研发一部的核对数字", () => {
+  const companyPlan = sandboxImportCandidates(2).find((item) => item.id === PROD1_SANDBOX_DEMO_ID)!;
+  const linPlan = importableSandboxPlans([companyPlan], linScope)[0]!;
+  const linOptions = { mode: "business" as const, rootId: DEPT.prod1, departmentNames: ["产品研发一部"] };
+  const linBoard = buildScenarioBoard(result, [{ ...linPlan, compared: true }], linPlan.id, DEFAULT_PREFILL_NOTE, linOptions);
+  const odBoard = buildScenarioBoard(result, [{ ...companyPlan, compared: true }], companyPlan.id, DEFAULT_PREFILL_NOTE);
+
+  function health(board: typeof linBoard, title: string): string | undefined {
+    return board.health[0]?.cells.find((cell) => cell.title === title)?.text;
+  }
+
+  it("林导入后只看日常成本，对照 4,725.0", () => {
+    const column = linBoard.columns.find((item) => item.id === linPlan.id);
+    expect(linBoard.budget).toBe("4,725.0");
+    expect(linBoard.showOneOff).toBe(false);
+    expect(column).toMatchObject({ total: "4,756.5", daily: "4,756.5", gap: "超 31.5", ratio: "70 : 30", yearApprox: true });
+    expect(linBoard.timelineRows.map((row) => row.total)).toEqual(["1,180.5", "1,185.5", "1,195.0", "1,195.0"]);
+    expect(linBoard.timelineLabels).toEqual([
+      "Q1 离职未补位 3 人（含基线变动共 150→148）",
+      "Q2 离职未补位 2 人（含基线变动共 148→146）",
+      "Q2 场景新增 2 个 Agent（含基线变动共 4→6）",
+    ]);
+    expect(linBoard.timelineLabelNotes[0]).toBeNull();
+    expect(linBoard.timelineLabelNotes[1]).toBe(nofillLabelNote(2, 0));
+    expect(linBoard.timelineLabelNotes[1]).not.toContain("其余");
+    expect(linBoard.timelineLabelNotes[2]).toBeNull();
+    expect(health(linBoard, "超预算")).toBe("超 31.5");
+    expect(health(linBoard, "管理幅度")).toBe("—");
+    expect(health(linBoard, "人 : AI")).toBe("正常");
+    expect(health(linBoard, "第 41 条")).toBe("正常");
+    const html = renderToStaticMarkup(createElement(ScenarioBoardView, { board: linBoard }));
+    expect(html).not.toContain(">一次性<");
+    expect(html).toContain("≈ 4,756.5");
+    expect(html).toContain("各项分别取整到 0.5 万，合计按未取整金额加总后再取整，可能差 0.5 万。");
+    expect(html).toContain("标签分四类：离职未补位、场景增员、场景减员、场景新增或下线 Agent");
+  });
+
+  it("黄导入后按公司口径，一次性费用算进总成本", () => {
+    const column = odBoard.columns.find((item) => item.id === PROD1_SANDBOX_DEMO_ID);
+    expect(odBoard.showOneOff).toBe(true);
+    expect(odBoard.budget).toBe("16,000.0");
+    expect(column).toMatchObject({
+      total: "15,874.5",
+      daily: "15,848.0",
+      oneOff: "26.5",
+      gap: "结余 125.5",
+      ratio: "70 : 30 · 仅产品研发一部",
+      subtitle: "成本最低 · 仅产品研发一部",
+      yearApprox: true,
+    });
+    expect(column?.dailyParts?.map((part) => `${part.name} ${part.text}`)).toEqual([
+      "研发中心直属 140.0",
+      "产品研发一部 4,756.5",
+      "产品研发二部 4,139.0",
+      "平台部 2,056.5",
+      "质量与交付部 2,547.0",
+      "数据智能部 2,209.0",
+    ]);
+    expect(column?.unattributed).toBe("0.0");
+    expect(column?.approx).toBe(false);
+    expect(odBoard.timelineRows.map((row) => row.total)).toEqual(["3,937.0", "3,953.0", "3,992.0", "3,992.0"]);
+    expect(odBoard.timelineLabels).toEqual([
+      "Q1 离职未补位 10 人（含基线变动共 486→479）",
+      "Q2 离职未补位 2 人（含基线变动共 479→478）",
+      "Q2 场景新增 2 个 Agent（含基线变动共 19→24）",
+    ]);
+    expect(odBoard.timelineLabelNotes[1]).toBe(nofillLabelNote(2, 0));
+    expect(health(odBoard, "超预算")).toBe("正常");
+    expect(health(odBoard, "管理幅度")).toBe("—");
+    expect(health(odBoard, "人 : AI")).toBe("正常");
+    expect(health(odBoard, "第 41 条")).toBe("正常");
+    const html = renderToStaticMarkup(createElement(ScenarioBoardView, { board: odBoard }));
+    expect(html).toContain(">一次性<");
+    expect(html).toContain("≈ 15,874.5");
+
+    const besideConservative = buildScenarioBoard(
+      result,
+      [...presetScenarios().map((item) => ({ ...item, compared: item.id === "bs" })), { ...companyPlan, compared: true }],
+      companyPlan.id,
+      DEFAULT_PREFILL_NOTE,
+    );
+    expect(besideConservative.columns.find((item) => item.id === PROD1_SANDBOX_DEMO_ID)?.subtitle).toBe("仅产品研发一部");
+  });
+
+  it("出缺不补并进离职未补位，范围外的部门仍然整份拒绝", () => {
+    expect(scenarioFitsScope(linPlan, linScope.allowed, linScope.names, false)).toBe(true);
+    const q1 = {
+      ...companyPlan,
+      nofill: [{ departmentName: "产品研发一部", grade: "P5", count: 1, effectiveDate: "2027-01-01" }],
+    };
+    const scenario = businessScenarioResult(result, q1, DEPT.prod1);
+    const baseline = evaluateBaseline(result, DEPT.prod1);
+    const details = quarterChangeDetails(baseline, scenario, { people: 150, agents: 4 });
+    const q1Label = details.find((label) => label.text.startsWith("Q1 离职未补位"));
+    expect(q1Label?.text.startsWith("Q1 离职未补位 4 人")).toBe(true);
+    expect(q1Label?.note).toBe(nofillLabelNote(1, 3));
+    expect(q1Label?.note).toContain("其余 3 人按离职率估算。");
+    const leaked = { ...companyPlan, nofill: [{ departmentName: "数据智能部", grade: "P5", count: 1, effectiveDate: "2027-04-01" }] };
+    expect(importableSandboxPlans([leaked], linScope)).toEqual([]);
+    expect(evaluateScenario(result, companyPlan).definition.cuts).toEqual([]);
   });
 });

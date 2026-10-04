@@ -6,7 +6,7 @@ import { TIMELINE_CHANGE_NOTE, UNATTRIBUTED_AGENT_NOTE } from "@/lib/headcount/c
 import { baselineDailyBreakdown, businessScenarioResult, scenarioDailyBreakdown } from "@/lib/headcount/buCost";
 import { formatWan, roundingGapWan, roundToHalfWan } from "@/lib/headcount/money";
 import { DEMO_AI_RATIO } from "@/lib/headcount/sample";
-import { costRootId, defaultAssumptions, evaluateBaseline, evaluateScenario, quarterChangeLabels, scenarioCutSeverance, type ScenarioAssumptions, type ScenarioDefinition, type ScenarioResult } from "@/lib/headcount/scenario";
+import { costRootId, defaultAssumptions, evaluateBaseline, evaluateScenario, quarterChangeDetails, scenarioCutSeverance, type ScenarioAssumptions, type ScenarioDefinition, type ScenarioResult } from "@/lib/headcount/scenario";
 
 export const DEFAULT_PREFILL_NOTE = "没有配置模型，使用默认值：离职率 8%，招聘周期 60 天，调薪率 0%，AI 替代比例沿用沙盘拆解。N+1 默认不计入。";
 export const TIMELINE_EFFECTIVE_CAPTION = "按季初生效";
@@ -33,6 +33,8 @@ export type CompareColumn = {
   ratio: string;
   daily: string;
   oneOff: string;
+  /** 四个季度各自取整后，与全年差 0.5 万时为 true。 */
+  yearApprox: boolean;
   lowest: boolean;
   usage: number;
   /** 公司口径展开行。事业部和负责人没有这组格子。 */
@@ -56,6 +58,7 @@ export type ScenarioBoard = {
   hero: string;
   lowestName: string;
   lowestTotal: string;
+  lowestYearApprox: boolean;
   budget: string;
   percent: string;
   usage: number;
@@ -74,7 +77,10 @@ export type ScenarioBoard = {
   timelineCaption: string;
   timelineChangeNote: string;
   timelineSummary: string;
+  timelineCostSummary: string;
   timelineLabels: string[];
+  /** 与 timelineLabels 对齐。只有含出缺不补的「离职未补位」有悬停。 */
+  timelineLabelNotes: (string | null)[];
   timelineRows: TimelineRow[];
   assumptionSummary: string;
   assumptionForm: { attrition: string; cycle: string; raise: string; ai: string; noticePay: boolean };
@@ -174,9 +180,7 @@ export function healthRow(result: PlanResult, scenario: ScenarioResult, options?
     gap > 0 ? { title: "超预算", text: `超 ${formatWan(gap * 10_000)}`, tone: "warn" } : { title: "超预算", text: "正常", tone: "ok" },
     definition.spanAlert
       ? { title: "管理幅度", text: `${definition.spanAlert.span} > ${definition.spanAlert.limit}`, tone: "warn" }
-      : definition.structureNote
-        ? { title: "管理幅度", text: "正常", tone: "ok" }
-        : { title: "管理幅度", text: "—", tone: "muted" },
+      : { title: "管理幅度", text: "—", tone: "muted" },
     definition.ratio === "未拆解" ? { title: "人 : AI", text: "未拆解", tone: "warn" } : { title: "人 : AI", text: "正常", tone: "ok" },
     article ? { title: "第 41 条", text: article, tone: "compliance" } : { title: "第 41 条", text: "正常", tone: "ok" },
   ];
@@ -206,7 +210,23 @@ export function phraseAfterName(name: string, rest: string): string {
   return space ? `${name} ${rest}` : `${name}${rest}`;
 }
 
-export function heroSentence(result: PlanResult, compared: ScenarioResult[], options?: { budgetYuan?: number; basis?: "total" | "daily"; budgetName?: string }): string {
+export function displayedRatio(definition: ScenarioDefinition, companyWide: boolean): string {
+  const entries = Object.entries(definition.buRatio ?? {});
+  if (companyWide && entries.length === 1) return `${entries[0][1]} · 仅${entries[0][0]}`;
+  return definition.ratio;
+}
+
+export function partialBuName(definition: ScenarioDefinition): string | null {
+  const entries = Object.entries(definition.buRatio ?? {});
+  return entries.length === 1 ? entries[0][0] : null;
+}
+
+function ratioWords(definition: ScenarioDefinition, companyWide: boolean): string {
+  if (definition.ratio === "未拆解") return "人 : AI 未拆解";
+  return `人 : AI 为 ${displayedRatio(definition, companyWide)}`;
+}
+
+export function heroSentence(result: PlanResult, compared: ScenarioResult[], options?: { budgetYuan?: number; basis?: "total" | "daily"; budgetName?: string; companyWide?: boolean }): string {
   const budgetYuan = options?.budgetYuan ?? result.plan.companyBudget;
   const budgetName = options?.budgetName ?? "预算总包";
   const amountOf = (item: ScenarioResult) => (options?.basis === "daily" ? item.dailyYuan : item.totalYuan);
@@ -215,7 +235,8 @@ export function heroSentence(result: PlanResult, compared: ScenarioResult[], opt
   const lowest = ranked[0];
   if (!lowest) return "还没有加入对比的场景。";
   const lowestGap = gapLabel(amountOf(lowest), budgetYuan);
-  const lowestRatio = lowest.definition.ratio === "未拆解" ? "人 : AI 未拆解" : `人 : AI 为 ${lowest.definition.ratio}`;
+  const companyWide = options?.companyWide !== false;
+  const lowestRatio = ratioWords(lowest.definition, companyWide);
   const span = lowest.definition.spanAlert ? `，但${lowest.definition.spanAlert.department}管理幅度 ${lowest.definition.spanAlert.span} 超过建议值 ${lowest.definition.spanAlert.limit}` : "";
   const bits = [`${phraseAfterName(lowest.definition.name, "成本最低")}（${formatWan(amountOf(lowest))} 万），比${budgetName}${lowestGap.text} 万，${lowestRatio}${span}`];
   const rest = ranked.filter((item) => item.definition.id !== lowest.definition.id);
@@ -225,12 +246,12 @@ export function heroSentence(result: PlanResult, compared: ScenarioResult[], opt
     if (cutCount > 0) {
       const severance = item.definition.cuts.reduce((total, cut) => total + scenarioCutSeverance(result, cut, item.definition.assumptions.noticePay), 0);
       const quarter = quarterOf(year, item.definition.cuts[0].effectiveDate);
-      const ratio = item.definition.ratio === "未拆解" ? "人 : AI 未拆解" : `人 : AI 为 ${item.definition.ratio}`;
+      const ratio = ratioWords(item.definition, companyWide);
       bits.push(`${phraseAfterName(item.definition.name, gap.text)} 万，但要在 Q${quarter} 减员 ${cutCount} 人、产生 ${formatWan(severance)} 万经济补偿，${ratio}`);
       continue;
     }
     if (gap.over) bits.push(phraseAfterName(item.definition.name, `超${budgetName} ${gap.amount} 万`));
-    else bits.push(`${phraseAfterName(item.definition.name, gap.text)} 万，人 : AI 为 ${item.definition.ratio}`);
+    else bits.push(`${phraseAfterName(item.definition.name, gap.text)} 万，${ratioWords(item.definition, companyWide)}`);
   }
   return `对比的 ${compared.length} 个场景中，${bits.join("；")}。`;
 }
@@ -260,7 +281,18 @@ export function copyScenario(definitions: ScenarioDefinition[], sourceId: string
   const source = definitions.find((item) => item.id === sourceId);
   if (!source) return null;
   const comparedCount = definitions.filter((item) => item.compared).length;
-  return { ...source, id, name: `副本 · ${source.name}`, source: "copy", compared: comparedCount < 3, hires: [...source.hires], agents: [...source.agents], cuts: [...source.cuts], extraAgentOneOff: [...source.extraAgentOneOff] };
+  return {
+    ...source,
+    id,
+    name: `副本 · ${source.name}`,
+    source: "copy",
+    compared: comparedCount < 3,
+    hires: [...source.hires],
+    agents: [...source.agents],
+    cuts: [...source.cuts],
+    nofill: [...(source.nofill ?? [])],
+    extraAgentOneOff: [...source.extraAgentOneOff],
+  };
 }
 
 export function setCompared(definitions: ScenarioDefinition[], id: string, compared: boolean): { definitions: ScenarioDefinition[]; error: string | null } {
@@ -310,7 +342,8 @@ export function buildScenarioBoard(result: PlanResult, definitions: ScenarioDefi
   const names = compared.map((item) => item.definition.name);
   const leftOut = definitions.filter((definition) => !definition.compared).map((definition) => `「${definition.name}」未加入对比`);
   const opening = deptStat(result, company ? rootId(result) : scopeRoot);
-  const labels = quarterChangeLabels(baseline, focus, { people: opening.onBoard, agents: opening.agentInUse });
+  const labelDetails = quarterChangeDetails(baseline, focus, { people: opening.onBoard, agents: opening.agentInUse });
+  const labels = labelDetails.map((label) => label.text);
   const pending = pendingCount(focus.definition.assumptions);
   const assumptions = focus.definition.assumptions;
   const sandbox = definitions.find((definition) => definition.source === "sandbox");
@@ -323,7 +356,11 @@ export function buildScenarioBoard(result: PlanResult, definitions: ScenarioDefi
     else if (item.definition.id === focus.definition.id) subtitle = "正在编辑";
     else if (item.definition.source === "sandbox") subtitle = "来自沙盘";
     else if (item.definition.source === "copy") subtitle = "副本";
+    const partial = company ? partialBuName(item.definition) : null;
+    if (partial) subtitle = lowestColumn ? `成本最低 · 仅${partial}` : `仅${partial}`;
     const parts = columnParts(result, item, company);
+    const shownQuarters = item.quarters.map((quarter) => (company ? quarter.total : quarter.labor + quarter.agent));
+    const yearApprox = roundingGapWan(roundToHalfWan(amountOf(item)), shownQuarters.map((value) => roundToHalfWan(value))) !== 0;
     return {
       id: item.definition.id,
       name: item.definition.name,
@@ -333,16 +370,17 @@ export function buildScenarioBoard(result: PlanResult, definitions: ScenarioDefi
       over: gap.over,
       people: item.yearEndPeople,
       agents: item.yearEndAgents,
-      ratio: item.definition.ratio,
+      ratio: displayedRatio(item.definition, company),
       daily: formatWan(item.dailyYuan),
       oneOff: formatWan(item.oneOffYuan),
+      yearApprox,
       lowest: lowestColumn,
       usage: budgetYuan ? Math.min(100, (roundToHalfWan(amountOf(item)) / roundToHalfWan(budgetYuan)) * 100) : 0,
       ...parts,
     };
   });
   const heroCompared = compared.length ? compared : [focus];
-  const hero = heroSentence(result, heroCompared, company ? undefined : { budgetYuan, basis: "daily", budgetName: "部门预算" });
+  const hero = heroSentence(result, heroCompared, company ? { companyWide: true } : { budgetYuan, basis: "daily", budgetName: "部门预算", companyWide: false });
   const cut = focus.definition.cuts[0];
   const cutSummary = cut
     ? focus.definition.cuts
@@ -355,6 +393,7 @@ export function buildScenarioBoard(result: PlanResult, definitions: ScenarioDefi
     hero,
     lowestName: lowest.definition.name,
     lowestTotal: formatWan(amountOf(lowest)),
+    lowestYearApprox: columns.find((column) => column.lowest)?.yearApprox ?? false,
     budget: formatWan(budgetYuan),
     percent: `${((roundToHalfWan(amountOf(lowest)) / roundToHalfWan(budgetYuan)) * 100).toFixed(1)}%`,
     usage: budgetYuan ? (roundToHalfWan(amountOf(lowest)) / roundToHalfWan(budgetYuan)) * 100 : 0,
@@ -373,7 +412,9 @@ export function buildScenarioBoard(result: PlanResult, definitions: ScenarioDefi
     timelineCaption: TIMELINE_EFFECTIVE_CAPTION,
     timelineChangeNote: TIMELINE_CHANGE_NOTE,
     timelineSummary: `${focus.quarters.map((quarter, index) => `Q${index + 1} ${formatWan(shownQuarter(quarter))}`).join(" · ")} 万${labels.length ? ` · ${labels.join(" · ")}` : ""}`,
+    timelineCostSummary: `${focus.quarters.map((quarter, index) => `Q${index + 1} ${formatWan(shownQuarter(quarter))}`).join(" · ")} 万`,
     timelineLabels: labels,
+    timelineLabelNotes: labelDetails.map((label) => label.note),
     timelineRows: focus.quarters.map((quarter, index) => ({
       quarter: `Q${index + 1}`,
       people: quarter.headcount,

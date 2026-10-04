@@ -3,7 +3,7 @@ import { SandboxLocalRestore } from "@/components/headcount/sandbox-restore";
 import { ScenarioFileField } from "@/components/headcount/scenario-file-field";
 import { DepartmentDailyRows } from "@/components/headcount/department-daily-rows";
 import { InfoMark } from "@/components/headcount/info-mark";
-import { COMPARE_SCROLL_HINT, HRBP_SCENARIO_TOTAL_NOTE, SCENARIO_TOTAL_NOTE, TIMELINE_CHANGE_NOTE } from "@/lib/headcount/copy";
+import { COMPARE_SCROLL_HINT, HRBP_SCENARIO_TOTAL_NOTE, ROUNDING_EQUATION_NOTE, SCENARIO_TOTAL_NOTE, TIMELINE_CHANGE_NOTE } from "@/lib/headcount/copy";
 import type { ScenarioDefinition } from "@/lib/headcount/scenario";
 import type { ScenarioBoard } from "@/lib/headcount/scenarioView";
 
@@ -70,7 +70,9 @@ export function ScenarioBoardView({
         <div className="border-line lg:border-l lg:pl-6">
           <p className="text-sm text-muted">成本最低 · {board.lowestName}</p>
           <p className="mt-1 text-4xl font-semibold tracking-tight text-primary">
+            {board.lowestYearApprox ? "≈ " : null}
             {board.lowestTotal}
+            {board.lowestYearApprox ? <InfoMark note={ROUNDING_EQUATION_NOTE} /> : null}
             <span className="ml-1 text-base font-normal text-muted">万</span>
           </p>
           <div className="mt-4 h-2 rounded-full bg-[#EEF0F3]">
@@ -119,7 +121,10 @@ export function ScenarioBoardView({
                 <td className={`px-4 py-3 text-left ${sticky}`}>{board.totalLabel}</td>
                 {board.columns.map((column) => (
                   <td key={column.id} className={`px-4 py-3 ${column.lowest ? "bg-[#FAFAFF]" : ""}`}>
-                    <div className={`text-lg font-semibold ${column.lowest ? "text-primary" : ""}`}>{column.total}</div>
+                    <div className={`text-lg font-semibold ${column.lowest ? "text-primary" : ""}`}>
+                      {column.yearApprox ? `≈ ${column.total}` : column.total}
+                      {column.yearApprox ? <InfoMark note={ROUNDING_EQUATION_NOTE} /> : null}
+                    </div>
                   </td>
                 ))}
               </tr>
@@ -184,7 +189,19 @@ export function ScenarioBoardView({
           <summary className="list-none cursor-pointer px-4 py-3 text-sm [&::-webkit-details-marker]:hidden">
             <span className="flex flex-wrap items-center gap-3">
               <b>{board.timelineTitle}</b>
-              <span className="text-muted">{board.timelineSummary}</span>
+              <span className="text-muted">
+                {board.timelineCostSummary}
+                {board.timelineLabels.map((label, index) => {
+                  const note = board.timelineLabelNotes[index];
+                  return (
+                    <span key={`${label}-${index}`}>
+                      {" · "}
+                      {label}
+                      {note ? <InfoMark note={note} /> : null}
+                    </span>
+                  );
+                })}
+              </span>
             </span>
             <span className="mt-1 block text-xs text-muted">
               {board.timelineCaption}

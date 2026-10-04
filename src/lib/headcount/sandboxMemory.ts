@@ -151,6 +151,12 @@ function canonicalDefinition(definition: ScenarioDefinition): string {
       tenureYears: cut.tenureYears,
       groupSize: cut.groupSize,
     })),
+    nofill: (definition.nofill ?? []).map((vacancy) => ({
+      departmentName: vacancy.departmentName,
+      grade: vacancy.grade,
+      count: vacancy.count,
+      effectiveDate: vacancy.effectiveDate,
+    })),
     ratio: definition.ratio,
     ratioNote: definition.ratioNote,
     structureNote: definition.structureNote,

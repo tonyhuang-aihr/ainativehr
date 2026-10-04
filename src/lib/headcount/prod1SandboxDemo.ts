@@ -11,15 +11,17 @@ export const PROD1_SANDBOX_DEMO_NAME = "沙盘示例 · 产品研发一部";
  */
 export const PROD1_SANDBOX_DEMO_ID = "prod1-demo";
 
-/** 导入按钮旁的说明。必须看得出这是示例，不是已核对的正式方案。 */
+/** 导入按钮旁的说明。HR AI-OD 定稿，用来标明这是演示数据。 */
 export const PROD1_SANDBOX_DEMO_CAPTION =
-  "示例数据 · 均为虚构。这不是最终方案，角色拆解和金额以 HR AI-OD 后续提供的为准。";
+  "示例数据，组、岗位任务和 Agent 方案均为虚构，只用于演示「导入沙盘」，不代表真实组织调整。";
 
-/**
- * 正式数据到齐并核对之前保持 false。
- * 只改这一处不会发布占位金额：还要同时填上 PROD1_SANDBOX_DEMO。
- */
-export const PROD1_SANDBOX_DEMO_LISTED = false;
+/** 正式数据已写入。导入列表会带上这一份。 */
+export const PROD1_SANDBOX_DEMO_LISTED = true;
+
+export const PROD1_SANDBOX_DEMO_RATIO = "70 : 30";
+
+export const PROD1_SANDBOX_DEMO_RATIO_NOTE =
+  "来自沙盘示例拆解（一部 · 研发经理 E21103 团队 · 测试开发工程师岗位）";
 
 /** 成本事件一律记在这个部门。一部里的小组（例如测试组）不是部门节点。 */
 export const PROD1_SANDBOX_DEMO_DEPARTMENT = "产品研发一部";
@@ -62,10 +64,13 @@ export type Prod1SandboxHire = {
   effectiveQuarter: 1 | 2 | 3 | 4;
 };
 
-/**
- * 待填的正式沙盘示例。字段到齐后整对象替换这里的 null，再把 PROD1_SANDBOX_DEMO_LISTED 改为 true。
- * 保持 null：占位夹具里的数字不会进入导入列表，也不会被当成最终金额。
- */
+export type Prod1SandboxNofill = {
+  grade: string;
+  count: number;
+  effectiveQuarter: 1 | 2 | 3 | 4;
+};
+
+/** 正式沙盘示例。占位夹具不进导入列表。 */
 export type Prod1SandboxDemoInput = {
   /** 一部内部的小组名称，例如测试组。不要写成其他部门的名字。 */
   groupName: string;
@@ -73,11 +78,43 @@ export type Prod1SandboxDemoInput = {
   agents: Prod1SandboxAgent[];
   cuts: Prod1SandboxCut[];
   hires: Prod1SandboxHire[];
+  /** 出缺不补。不是减员，不产生经济补偿。 */
+  nofill: Prod1SandboxNofill[];
   /** 人 : AI。还没拆解就写「未拆解」。 */
   ratio: string;
+  ratioNote?: string;
+  /** 小组和岗位说明。不写成其他部门的名字，也不当作组织调整。 */
+  notes?: string;
 };
 
-export const PROD1_SANDBOX_DEMO: Prod1SandboxDemoInput | null = null;
+export const PROD1_SANDBOX_DEMO: Prod1SandboxDemoInput = {
+  groupName: "研发经理 E21103 团队",
+  roles: [
+    { title: "测试开发工程师", grade: "P7", headcount: 1, replacedByAgent: 0 },
+    { title: "测试开发工程师", grade: "P6", headcount: 4, replacedByAgent: 0 },
+    { title: "测试开发工程师", grade: "P5", headcount: 2, replacedByAgent: 0 },
+    { title: "测试开发工程师", grade: "P4", headcount: 1, replacedByAgent: 0 },
+    { title: "前端工程师", grade: "未分职级", headcount: 8, replacedByAgent: 0 },
+    { title: "后端工程师", grade: "未分职级", headcount: 7, replacedByAgent: 0 },
+    { title: "研发经理", grade: "M3", headcount: 1, replacedByAgent: 0 },
+  ],
+  agents: [
+    {
+      name: "测试用例生成 Agent",
+      count: 2,
+      monthlyYuan: 2_000,
+      oneOffYuan: 20_000,
+      effectiveQuarter: 2,
+    },
+  ],
+  cuts: [],
+  hires: [],
+  nofill: [{ grade: "P5", count: 2, effectiveQuarter: 2 }],
+  ratio: PROD1_SANDBOX_DEMO_RATIO,
+  ratioNote: PROD1_SANDBOX_DEMO_RATIO_NOTE,
+  notes:
+    "小组：研发经理 E21103 团队（负责人 示例21103，24 人）。测试开发工程师 8 人（P7 1 · P6 4 · P5 2 · P4 1）已拆解，Agent 承担其中一部分工作，2 个 P5 岗位从 Q2 起出缺不补。前端工程师 8 人、后端工程师 7 人、研发经理 1 人（M3）保留，未拆解。",
+};
 
 /**
  * 形状占位，方便把 HR AI-OD 的表对到字段上。
@@ -97,6 +134,7 @@ export const PROD1_SANDBOX_DEMO_PLACEHOLDER: Prod1SandboxDemoInput = {
   ],
   cuts: [],
   hires: [],
+  nofill: [],
   ratio: "未拆解",
 };
 
@@ -113,11 +151,9 @@ export function definitionFromProd1SandboxDemo(input: Prod1SandboxDemoInput): Sc
   const roleLines = input.roles.map(
     (role) => `${role.title} ${role.grade} ${role.headcount} 人，其中 ${role.replacedByAgent} 人由 Agent 替代`,
   );
-  const structureNote = [
-    PROD1_SANDBOX_DEMO_CAPTION,
-    `小组：${input.groupName}。`,
-    roleLines.length ? `${roleLines.join("；")}。` : "角色拆解待 HR AI-OD 提供。",
-  ].join("");
+  const structureNote =
+    input.notes ??
+    [PROD1_SANDBOX_DEMO_CAPTION, `小组：${input.groupName}。`, roleLines.length ? `${roleLines.join("；")}。` : "角色拆解待 HR AI-OD 提供。"].join("");
   return {
     id: PROD1_SANDBOX_DEMO_ID,
     name: PROD1_SANDBOX_DEMO_NAME,
@@ -149,8 +185,15 @@ export function definitionFromProd1SandboxDemo(input: Prod1SandboxDemoInput): Sc
       tenureYears: cut.tenureYears,
       groupSize: cut.groupSize,
     })),
+    nofill: (input.nofill ?? []).map((vacancy) => ({
+      departmentName: PROD1_SANDBOX_DEMO_DEPARTMENT,
+      grade: vacancy.grade,
+      count: vacancy.count,
+      effectiveDate: quarterDate(vacancy.effectiveQuarter),
+    })),
+    buRatio: input.ratio === "未拆解" ? undefined : { [PROD1_SANDBOX_DEMO_DEPARTMENT]: input.ratio },
     ratio: input.ratio,
-    ratioNote: input.ratio === "未拆解" ? "沙盘尚未拆解" : "示例数据，待 HR AI-OD 核对",
+    ratioNote: input.ratioNote ?? (input.ratio === "未拆解" ? "沙盘尚未拆解" : "示例数据，待 HR AI-OD 核对"),
     structureNote,
     spanAlert: null,
   };

@@ -1,4 +1,4 @@
-import { quarterBounds, quarterIndex, yearDays, yearEnd, overlapDays, parseIsoDate } from "@/lib/headcount/calendar";
+import { formatIsoDate, quarterBounds, quarterIndex, yearDays, yearEnd, overlapDays, parseIsoDate } from "@/lib/headcount/calendar";
 import { deptStat, subtreeIds, type PlanResult } from "@/lib/headcount/engine";
 import { formatWan, roundToHalfWan } from "@/lib/headcount/money";
 import { exclusiveServiceEnd, SCENARIO_NOTICE_PAY_DEFAULT } from "@/lib/headcount/policies";
@@ -38,6 +38,14 @@ export type ScenarioCut = {
   groupSize: number;
 };
 
+/** 出缺不补：岗位空出后不再补人。不是增员，也不是减员。 */
+export type ScenarioNofill = {
+  departmentName: string;
+  grade: string;
+  count: number;
+  effectiveDate: string;
+};
+
 export type ScenarioAssumptions = {
   attritionRate: number;
   hiringCycleDays: number;
@@ -58,6 +66,13 @@ export type ScenarioDefinition = {
   agents: ScenarioAgentChange[];
   extraAgentOneOff: { effectiveDate: string; amount: number }[];
   cuts: ScenarioCut[];
+  /** 缺了就空着。没有这个字段的旧场景按空列表。 */
+  nofill?: ScenarioNofill[];
+  /**
+   * 只拆开了部分部门时的人 : AI。公司对比要标明「仅某部门」。
+   * 没写时，人 : AI 就是整份方案的比例。
+   */
+  buRatio?: Record<string, string>;
   ratio: string;
   ratioNote: string;
   structureNote: string | null;
@@ -80,6 +95,8 @@ export type QuarterFlow = {
   cuts: number;
   agentsAdded: number;
   agentsRemoved: number;
+  /** 这一季新计入离职未补位的出缺不补人数。已经加进 attrition。 */
+  nofill: number;
 };
 
 export type ScenarioResult = {
@@ -209,7 +226,7 @@ export function costRootId(result: PlanResult): string {
 }
 
 function emptyFlows(): QuarterFlow[] {
-  return [0, 1, 2, 3].map(() => ({ attrition: 0, hires: 0, cuts: 0, agentsAdded: 0, agentsRemoved: 0 }));
+  return [0, 1, 2, 3].map(() => ({ attrition: 0, hires: 0, cuts: 0, agentsAdded: 0, agentsRemoved: 0, nofill: 0 }));
 }
 
 function baselineQuarters(result: PlanResult, rootId: string): { labor: number[]; agent: number[]; severance: number[]; agentOneOff: number[]; headcount: number[]; agents: number[] } {
@@ -365,6 +382,19 @@ export function evaluateScenario(result: PlanResult, definition: ScenarioDefinit
     }
   }
 
+  for (const vacancy of definition.nofill ?? []) {
+    if (!personHere(vacancy.departmentName) || vacancy.count === 0) continue;
+    const index = quarterIndex(year, parseIsoDate(vacancy.effectiveDate));
+    if (index < 0 || index > 3) continue;
+    const started = formatIsoDate(bounds[index][0]);
+    const annual = (result.plan.gradeAnnual[vacancy.grade] ?? 0) * vacancy.count;
+    labor = add(labor, scale(qsplit(year, annual, started), -1));
+    const when = bounds[index][0];
+    headcount = headcount.map((count, later) => (when < bounds[later][1] ? count - vacancy.count : count));
+    flows[index].nofill += vacancy.count;
+    flows[index].attrition += vacancy.count;
+  }
+
   for (const cut of definition.cuts) {
     if (!personHere(cut.departmentName)) continue;
     const annual = (result.plan.gradeAnnual[cut.grade] ?? 0) * cut.count;
@@ -457,6 +487,7 @@ export function evaluateBaseline(result: PlanResult, rootId = costRootId(result)
 export function normalizeScenarioDefinition(definition: ScenarioDefinition): ScenarioDefinition {
   return {
     ...definition,
+    nofill: definition.nofill ?? [],
     agents: definition.agents.map((agent) => ({
       ...agent,
       departmentName:
@@ -477,36 +508,54 @@ export function gapWan(totalYuan: number, budgetYuan: number): number {
   return Number((roundToHalfWan(totalYuan) - roundToHalfWan(budgetYuan)).toFixed(1));
 }
 
+export type QuarterChangeLabel = { text: string; note: string | null };
+
+/** 只挂在含出缺不补的「离职未补位」标签上。其余标签没有悬停。 */
+export function nofillLabelNote(nofill: number, rest: number): string | null {
+  if (nofill <= 0) return null;
+  const lead = `含场景出缺不补 ${nofill} 人：岗位空出后不再补人，从该季第一天起按职级扣减；不算增员或减员，不产生经济补偿。`;
+  return rest > 0 ? `${lead}其余 ${rest} 人按离职率估算。` : lead;
+}
+
 /** 类别来自事件来源。同一季有两条人员标签时，人数括号只挂在最后一条。 */
-export function quarterChangeLabels(
+export function quarterChangeDetails(
   baseline: ScenarioResult,
   scenario: ScenarioResult,
   opening: { people: number; agents: number },
-): string[] {
-  const labels: string[] = [];
+): QuarterChangeLabel[] {
+  const labels: QuarterChangeLabel[] = [];
   for (let index = 0; index < 4; index += 1) {
     const quarter = index + 1;
     const flow = scenario.flows[index];
     const base = baseline.flows[index];
-    const peopleBits: string[] = [];
+    const peopleBits: { text: string; note: string | null }[] = [];
     const attrition = flow.attrition - base.attrition;
     const hires = flow.hires - base.hires;
     const cuts = flow.cuts - base.cuts;
-    if (attrition > 0) peopleBits.push(`离职未补位 ${attrition} 人`);
-    if (hires > 0) peopleBits.push(`场景增员 ${hires} 人`);
-    if (cuts > 0) peopleBits.push(`场景减员 ${cuts} 人`);
+    const nofill = (flow.nofill ?? 0) - (base.nofill ?? 0);
+    if (attrition > 0) peopleBits.push({ text: `离职未补位 ${attrition} 人`, note: nofillLabelNote(nofill, attrition - nofill) });
+    if (hires > 0) peopleBits.push({ text: `场景增员 ${hires} 人`, note: null });
+    if (cuts > 0) peopleBits.push({ text: `场景减员 ${cuts} 人`, note: null });
     const peopleFrom = index === 0 ? opening.people : scenario.quarters[index - 1].headcount;
     const peopleTo = scenario.quarters[index].headcount;
     peopleBits.forEach((bit, bitIndex) => {
       const paren = bitIndex === peopleBits.length - 1 ? `（含基线变动共 ${peopleFrom}→${peopleTo}）` : "";
-      labels.push(`Q${quarter} ${bit}${paren}`);
+      labels.push({ text: `Q${quarter} ${bit.text}${paren}`, note: bit.note });
     });
     const agentsFrom = index === 0 ? opening.agents : scenario.quarters[index - 1].agents;
     const agentsTo = scenario.quarters[index].agents;
     const added = flow.agentsAdded - base.agentsAdded;
     const removed = flow.agentsRemoved - base.agentsRemoved;
-    if (added > 0) labels.push(`Q${quarter} 场景新增 ${added} 个 Agent（含基线变动共 ${agentsFrom}→${agentsTo}）`);
-    if (removed > 0) labels.push(`Q${quarter} 下线 ${removed} 个 Agent（含基线变动共 ${agentsFrom}→${agentsTo}）`);
+    if (added > 0) labels.push({ text: `Q${quarter} 场景新增 ${added} 个 Agent（含基线变动共 ${agentsFrom}→${agentsTo}）`, note: null });
+    if (removed > 0) labels.push({ text: `Q${quarter} 下线 ${removed} 个 Agent（含基线变动共 ${agentsFrom}→${agentsTo}）`, note: null });
   }
   return labels;
+}
+
+export function quarterChangeLabels(
+  baseline: ScenarioResult,
+  scenario: ScenarioResult,
+  opening: { people: number; agents: number },
+): string[] {
+  return quarterChangeDetails(baseline, scenario, opening).map((label) => label.text);
 }

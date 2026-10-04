@@ -109,9 +109,10 @@ describe("未知场景 404，范围外 403", () => {
     expect(html).toContain("bu-prod1-jz");
     expect(html).not.toContain("16,095.5");
     expect(html).toContain("场景总成本 = 日常成本（人工 + Agent 席位、算力）。一次性费用（经济补偿、Agent 实施和培训费）由 HR 和 OD 统一管理，不计入。");
-    expect(html).toContain("没有可导入的沙盘示例。只能载入范围完全落在本事业部内的方案。");
+    expect(html).toContain("载入沙盘示例 · 产品研发一部");
+    expect(html).toContain("示例数据，组、岗位任务和 Agent 方案均为虚构，只用于演示「导入沙盘」，不代表真实组织调整。");
+    expect(html).not.toContain("没有可导入的沙盘示例。只能载入范围完全落在本事业部内的方案。");
     expect(html).not.toContain("载入沙盘示例方案 A");
-    expect(html).not.toContain("沙盘示例 · 产品研发一部");
     expect(html).not.toContain("应用分析小组并入数据组");
     expect(html).not.toContain(">一次性<");
     expect(html).toContain('action="/headcount/scenarios/write"');
@@ -127,7 +128,8 @@ describe("未知场景 404，范围外 403", () => {
     expect(html).toContain(">一次性<");
     expect(html).toContain("载入沙盘示例方案 A");
     expect(html).toContain("应用分析小组并入数据组");
-    expect(html).not.toContain("沙盘示例 · 产品研发一部");
+    expect(html).toContain("载入沙盘示例 · 产品研发一部");
+    expect(html).toContain("示例数据，组、岗位任务和 Agent 方案均为虚构，只用于演示「导入沙盘」，不代表真实组织调整。");
     expect(html).not.toContain("没有可导入的沙盘示例");
     expect(html).toContain('method="post"');
   }, 120_000);

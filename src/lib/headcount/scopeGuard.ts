@@ -64,6 +64,7 @@ export function scenarioFitsScope(
   const outside = (name: string) => !allowedNames.has(name);
   if (definition.hires.some((hire) => outside(hire.departmentName))) return false;
   if (definition.cuts.some((cut) => outside(cut.departmentName))) return false;
+  if ((definition.nofill ?? []).some((vacancy) => outside(vacancy.departmentName))) return false;
   if (definition.agents.some((agent) => agent.departmentName == null || outside(agent.departmentName))) return false;
   if (definition.spanAlert && outside(definition.spanAlert.department)) return false;
   if (definition.structureNote && departmentNames.some((name) => outside(name) && definition.structureNote!.includes(name))) return false;
