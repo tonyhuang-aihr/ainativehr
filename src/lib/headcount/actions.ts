@@ -11,8 +11,8 @@ import { loadPlan } from "@/lib/headcount/db/queries";
 import { computePlan } from "@/lib/headcount/engine";
 import { askHeadcountModel, modelConfigured } from "@/lib/headcount/modelClient";
 import { parseScenarioFile } from "@/lib/data/scenarioFile";
-import { buildRdCenterWorkspace } from "@/lib/demo/rdCenter";
 import { scenarioFromSandbox } from "@/lib/headcount/sandboxImport";
+import { sandboxImportCandidates } from "@/lib/headcount/prod1SandboxDemo";
 import { normalizeScenarioDefinition, type ScenarioDefinition } from "@/lib/headcount/scenario";
 import { assumptionUnits, resolvePrefill } from "@/lib/headcount/scenarioView";
 import { commitScenarioMemory, openScenarioMemory } from "@/lib/headcount/scenarioMemoryStore";
@@ -378,7 +378,7 @@ export async function importSampleSandboxAction(formData: FormData) {
   const memory = await openScenarioMemory(user);
   const scope = writeScopeOf(memory);
   const sampleId = String(formData.get("sampleId") ?? "");
-  const offers = importableSandboxPlans([scenarioFromSandbox(buildRdCenterWorkspace(), quarterValue(formData.get("quarter")))], scope);
+  const offers = importableSandboxPlans(sandboxImportCandidates(quarterValue(formData.get("quarter"))), scope);
   const chosen = offers.find((item) => item.id === sampleId);
   if (!chosen) scenarioNotice("无权查看");
   await runScenarioCommand({ type: "import", definition: chosen, id: chosen.id }, "导入沙盘方案");

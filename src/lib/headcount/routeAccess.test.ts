@@ -45,6 +45,7 @@ const lin = { id: "lin", name: "林", role: "hrbp" as const, departmentIds: [DEP
 const huang = { id: "huang", name: "黄", role: "od" as const, departmentIds: [] as string[] };
 const zhao = { id: "zhao", name: "赵一", role: "leader" as const, departmentIds: [DEPT.plat] };
 const qian = { id: "qian", name: "钱二", role: "leader" as const, departmentIds: [DEPT.infra] };
+const fan = { id: "fan", name: "范四十", role: "leader" as const, departmentIds: [DEPT.prod1] };
 
 function statusOf(error: unknown): number {
   const digest = typeof error === "object" && error && "digest" in error ? String((error as { digest?: string }).digest ?? "") : "";
@@ -110,6 +111,7 @@ describe("未知场景 404，范围外 403", () => {
     expect(html).toContain("场景总成本 = 日常成本（人工 + Agent 席位、算力）。一次性费用（经济补偿、Agent 实施和培训费）由 HR 和 OD 统一管理，不计入。");
     expect(html).toContain("没有可导入的沙盘示例。只能载入范围完全落在本事业部内的方案。");
     expect(html).not.toContain("载入沙盘示例方案 A");
+    expect(html).not.toContain("沙盘示例 · 产品研发一部");
     expect(html).not.toContain("应用分析小组并入数据组");
     expect(html).not.toContain(">一次性<");
     expect(html).toContain('action="/headcount/scenarios/write"');
@@ -125,6 +127,7 @@ describe("未知场景 404，范围外 403", () => {
     expect(html).toContain(">一次性<");
     expect(html).toContain("载入沙盘示例方案 A");
     expect(html).toContain("应用分析小组并入数据组");
+    expect(html).not.toContain("沙盘示例 · 产品研发一部");
     expect(html).not.toContain("没有可导入的沙盘示例");
     expect(html).toContain('method="post"');
   }, 120_000);
@@ -160,6 +163,10 @@ describe("未知场景 404，范围外 403", () => {
     await expectStatus(() => BaselineDepartmentPage({ params: Promise.resolve({ deptId: DEPT.prod1 }), searchParams: Promise.resolve({}) }), 403);
     await expectStatus(() => BaselineDepartmentPage({ params: Promise.resolve({ deptId: DEPT.plat }), searchParams: Promise.resolve({}) }), 403);
     await expectStatus(() => ScenariosPage({ searchParams: Promise.resolve({}) }), 403);
+
+    session.user = fan;
+    await expectStatus(() => ScenariosPage({ searchParams: Promise.resolve({}) }), 403);
+    await expectStatus(() => ScenariosPage({ searchParams: Promise.resolve({ focus: "prod1-demo" }) }), 403);
   }, 120_000);
 
   it("未知部门对黄和林都是 404，真实的范围外部门仍是 403", async () => {
