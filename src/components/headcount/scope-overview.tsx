@@ -1,4 +1,6 @@
+import { InfoMark } from "@/components/headcount/info-mark";
 import { RoundingMark } from "@/components/headcount/rounding-mark";
+import { YEAR_FORECAST_LEADER, YEAR_FORECAST_OD } from "@/lib/headcount/copy";
 import { conclusionSourceLabel, type ScopeOverview } from "@/lib/headcount/overview";
 import Link from "next/link";
 
@@ -14,7 +16,6 @@ export function ScopeOverviewBoard({ overview }: { overview: ScopeOverview }) {
       <section className="rounded-3xl border border-line bg-white p-6 shadow-card">
         <p className="text-xs text-primary">{conclusionSourceLabel(overview.conclusionOrigin)}</p>
         <p className="mt-3 text-lg leading-8">{overview.conclusion}</p>
-        <p className="mt-3 text-sm text-muted">{overview.note}</p>
         {overview.rangeNote ? <p className="mt-2 text-sm text-[#92400E]">{overview.rangeNote}</p> : null}
       </section>
       <section className="grid gap-3 md:grid-cols-5">
@@ -54,7 +55,6 @@ export function ScopeOverviewBoard({ overview }: { overview: ScopeOverview }) {
       <section className="overflow-x-auto rounded-2xl border border-line bg-white">
         <div className="border-b border-line px-4 py-3">
           <h2 className="font-medium">部门列表</h2>
-          <p className="text-sm text-muted">全年预计 = 人工 + Agent，不含一次性 · 万元</p>
         </div>
         <table className="w-full min-w-[960px] text-sm">
           <thead>
@@ -66,7 +66,10 @@ export function ScopeOverviewBoard({ overview }: { overview: ScopeOverview }) {
               <th>在途</th>
               <th>空缺</th>
               <th>Agent</th>
-              <th>全年预计</th>
+              <th>
+                全年预计
+                <InfoMark note={overview.audience === "od" ? YEAR_FORECAST_OD : YEAR_FORECAST_LEADER} />
+              </th>
               <th>部门预算</th>
               <th>差额</th>
               <th>状态</th>
@@ -81,7 +84,10 @@ export function ScopeOverviewBoard({ overview }: { overview: ScopeOverview }) {
                 <td>{row.quota}</td>
                 <td>{row.onBoard}</td>
                 <td>{row.inTransit}</td>
-                <td>{row.vacancy}</td>
+                <td>
+                  {row.vacancy}
+                  {row.overstaff ? <span className="ml-1 rounded bg-[#FEE2E2] px-1.5 py-0.5 text-xs text-[#B91C1C]">{row.overstaff}</span> : null}
+                </td>
                 <td>{row.agents}</td>
                 <td>{row.annual}</td>
                 <td>{row.budget ?? "未设置"}</td>
@@ -94,19 +100,6 @@ export function ScopeOverviewBoard({ overview }: { overview: ScopeOverview }) {
                 </td>
               </tr>
             ))}
-            {overview.oneOff ? (
-              <tr className="border-t border-line bg-[#FCFCFD]">
-                <td className="px-3 py-2">一次性费用</td>
-                {overview.audience === "leader" ? <td /> : null}
-                <td colSpan={5} className="text-muted">
-                  HR / OD 统一管理，不摊到部门
-                </td>
-                <td>{overview.oneOff.amount}</td>
-                <td>{overview.oneOff.budget}</td>
-                <td>{overview.oneOff.gap}</td>
-                <td colSpan={2} />
-              </tr>
-            ) : null}
             {overview.total ? (
               <tr className="border-t border-line bg-[#F9FAFB] font-medium">
                 <td className="px-3 py-2">{overview.total.label}</td>

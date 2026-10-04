@@ -292,7 +292,10 @@ describe("决策预填与场景往返", () => {
 describe("P3、P4、P6 口径一致", () => {
   const workspace = buildRdCenterWorkspace("2026-10-02T00:00:00.000Z");
   const baseline = baselineScenario(workspace);
-  const plan = activeScenario(workspace);
+  const current = activeScenario(workspace);
+  const prior = current.revisions?.find((item) => item.name === "方案 A · 拆组前");
+  if (!prior) throw new Error("缺少方案 A · 拆组前");
+  const plan = { ...current, snapshot: prior.snapshot };
   const size = (people: Person[], name: string) => {
     const department = plan.snapshot.departments.find((item) => item.name === name) ?? baseline.snapshot.departments.find((item) => item.name === name);
     return department ? peopleInDepartment(people, department.path).length : -1;
@@ -359,6 +362,14 @@ describe("P3、P4、P6 口径一致", () => {
     expect(prefill.expectedEffect).toContain("数据组的管理幅度变为 12");
     expect(prefill.expectedEffect).toContain("建议上限 8");
     expect(prefill.expectedEffect).not.toContain("平台部");
+    expect(current.savedAt! > prior.savedAt).toBe(true);
+    expect(directReports(current.snapshot, "p-jiang")).toHaveLength(6);
+    const metric = current.snapshot.departments.find((item) => item.name === "指标组");
+    expect(metric?.headId).toEqual(expect.any(String));
+    expect(directReports(current.snapshot, metric?.headId ?? "")).toHaveLength(6);
+    expect(newlyWideSpans(baseline.snapshot, current.snapshot, DEFAULT_SETTINGS.thresholds.spanWide)).toEqual([]);
+    expect(size(current.snapshot.people, "数据智能部")).toBe(71);
+    expect(size(current.snapshot.people, "产品研发一部")).toBe(144);
     const prompt = buildDecisionPrefillMessages({ changes, moves, spans, reviewDate: "2027-04-02", secrets: [] })
       .map((turn) => turn.content)
       .join("\n");

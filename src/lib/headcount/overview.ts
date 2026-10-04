@@ -1,7 +1,9 @@
+import { ONE_OFF_CARD_LABEL } from "@/lib/headcount/copy";
 import { conclusionFacts, templateConclusion } from "@/lib/headcount/conclusion";
 import { deptStat, subtreeIds, type PlanResult } from "@/lib/headcount/engine";
 import { formatSignedWan, formatWan, roundToHalfWan, roundingGapNote, roundingGapWan, yearBand } from "@/lib/headcount/money";
 import { DEMO_AI_RATIO } from "@/lib/headcount/sample";
+import { presentVacancy, vacancyPhrase } from "@/lib/headcount/vacancy";
 
 const SMALL = 5;
 
@@ -23,6 +25,7 @@ export type OverviewDepartment = {
   onBoard: number;
   inTransit: number;
   vacancy: number;
+  overstaff: string | null;
   agents: string;
   annual: string;
   budget: string | null;
@@ -220,6 +223,7 @@ export function buildScopeOverview(result: PlanResult, rootId: string, audience:
   const rows = children
     .map((department) => {
       const child = deptStat(result, department.id);
+      const shownVacancy = presentVacancy(child.vacancy);
       const budget = result.plan.budgets[department.id] ?? null;
       const gap = budget == null ? null : gapWan(child.yearDailyYuan, budget);
       const annual = ranges ? yearBand(child.yearDailyYuan) : formatWan(child.yearDailyYuan);
@@ -230,7 +234,8 @@ export function buildScopeOverview(result: PlanResult, rootId: string, audience:
         quota: child.quotaFormal,
         onBoard: child.onBoard,
         inTransit: child.inTransit,
-        vacancy: child.vacancy,
+        vacancy: shownVacancy.slots,
+        overstaff: shownVacancy.over,
         agents: `${child.agentInUse} / ${child.quotaAgent}`,
         annual,
         budget: budget == null ? null : formatWan(budget),
@@ -264,7 +269,7 @@ export function buildScopeOverview(result: PlanResult, rootId: string, audience:
     {
       label: "编制与人员",
       value: `${stat.quotaFormal}`,
-      sub: `在岗 ${stat.onBoard} · 在途 ${stat.inTransit} · 空缺 ${stat.vacancy}`,
+      sub: `在岗 ${stat.onBoard} · 在途 ${stat.inTransit} · ${vacancyPhrase(stat.vacancy)}`,
     },
     {
       label: "Agent",
@@ -280,7 +285,7 @@ export function buildScopeOverview(result: PlanResult, rootId: string, audience:
   ];
   if (company) {
     cards.push({
-      label: "一次性 vs 预留",
+      label: ONE_OFF_CARD_LABEL,
       value: formatWan(stat.yearOneOffYuan),
       sub: oneOffBudget == null ? "未设置预留" : `预留 ${formatWan(oneOffBudget)} 万`,
     });
@@ -312,7 +317,7 @@ export function buildScopeOverview(result: PlanResult, rootId: string, audience:
     year: result.plan.year,
     conclusion,
     conclusionOrigin: "template",
-    note: "不含一次性费用（经济补偿、Agent 实施 / 培训），由 HR 和 OD 统一管理，不摊到部门",
+    note: "",
     rangeNote,
     cards,
     alerts,
@@ -324,6 +329,7 @@ export function buildScopeOverview(result: PlanResult, rootId: string, audience:
       onBoard: row.onBoard,
       inTransit: row.inTransit,
       vacancy: row.vacancy,
+      overstaff: row.overstaff,
       agents: row.agents,
       annual: row.annual,
       budget: row.budget,

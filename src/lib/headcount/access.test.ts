@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildClosure, can, visibleDepartmentIds, type HeadcountUser } from "@/lib/headcount/authz";
 import { buildLeaderView, forbiddenLeaderPaths } from "@/lib/headcount/leaderView";
+import { defaultDetailQuery } from "@/lib/headcount/rosterPage";
 import { leaderColumnsAreSafe } from "@/lib/headcount/leaderQuery";
 import { passwordIssue, nextLock, LOCK_THRESHOLD } from "@/lib/headcount/password";
 import { logExpired, MIN_LOG_RETENTION_DAYS } from "@/lib/headcount/retention";
@@ -81,12 +82,21 @@ describe("负责人接口没有补偿和一次性费用", () => {
     for (const word of ["compMark", "补偿标记", "oneOff", "one_off", "N+1", "协商解除", "离职类型", "hireDate"]) {
       expect(blob).not.toContain(word);
     }
-    expect(view.movements.some((row) => row.typeLabel === "离职 · 2027-02-28")).toBe(true);
-    expect(view.movements.some((row) => row.typeLabel === "离职 · 2027-03-31")).toBe(true);
+    const leaving = buildLeaderView(computePlan(plan), DEPT.plat, {
+      exact: false,
+      detail: { ...defaultDetailQuery(), peopleStatuses: ["待离职"], peopleSize: 50 },
+    });
+    expect(leaving.people.rows.some((row) => row.status === "待离职" && row.effectiveDate === "2027-02-28")).toBe(true);
+    expect(leaving.people.rows.some((row) => row.status === "待离职" && row.effectiveDate === "2027-03-31")).toBe(true);
+    expect(leaving.people.rows[0]?.yearCost).toMatch(/–|—/);
     expect(view.conclusion.text).toContain("2,075.5");
-    expect(view.groups[0]?.rows[0]?.year).toMatch(/–|—/);
-    const exact = buildLeaderView(computePlan(plan), DEPT.plat, { exact: true });
-    expect(exact.groups.flatMap((group) => group.rows).every((row) => !row.year.includes("–"))).toBe(true);
+    expect(view.conclusion.text).toContain("超出部门预算 25.5 万");
+    expect(view.people.rows).toHaveLength(Math.min(10, view.people.total));
+    const exact = buildLeaderView(computePlan(plan), DEPT.plat, {
+      exact: true,
+      detail: { ...defaultDetailQuery(), peopleStatuses: ["待离职"], peopleSize: 50 },
+    });
+    expect(exact.people.rows.every((row) => !row.yearCost.includes("–"))).toBe(true);
   });
 });
 

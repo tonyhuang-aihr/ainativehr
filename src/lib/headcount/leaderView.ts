@@ -1,8 +1,9 @@
 import { conclusionFacts, directChildFacts, templateConclusion, type ConclusionFacts } from "@/lib/headcount/conclusion";
-import { deptStat, formalPeople, subtreeIds, type MovementImpact, type PersonRow, type PlanResult } from "@/lib/headcount/engine";
+import { deptStat, subtreeIds, type PlanResult } from "@/lib/headcount/engine";
 import { formatSignedWan, formatWan, quarterBand, roundToHalfWan, roundingGapNote, roundingGapWan, yearBand } from "@/lib/headcount/money";
+import { collectAgentLines, collectPersonLines, defaultDetailQuery, pageAgents, pagePeople, type DetailQuery, type PagedAgents, type PagedPeople } from "@/lib/headcount/rosterPage";
 import { DEMO_AI_RATIO } from "@/lib/headcount/sample";
-import { sortByReporting } from "@/lib/headcount/sortPeople";
+import { presentVacancy } from "@/lib/headcount/vacancy";
 
 export type LeaderView = {
   departmentId: string;
@@ -36,55 +37,16 @@ export type LeaderView = {
   };
   quarters: { label: string; labor: string; agent: string; total: string }[];
   quarterSummary: string;
-  movements: {
-    name: string;
-    title: string;
-    grade: string;
-    route: string;
-    typeLabel: string;
-    quarter: string;
-    year: string;
-  }[];
-  groups: {
-    name: string;
-    onBoard: number;
-    incoming: number;
-    quarters: string[];
-    year: string;
-    rows: { name: string; title: string; grade: string; employmentType: string; status: string; quarters: string[]; year: string; formula: string }[];
-  }[];
-  agents: { name: string; agentType: string; instances: number; status: string; quarters: string[]; year: string }[];
-  others: { type: string; count: number; year: string }[];
-  peopleSummary: string;
-  agentSummary: string;
+  people: PagedPeople;
+  agentsPage: PagedAgents;
+  openSection: "people" | "agents" | null;
+  listBase: string;
   options: { id: string; name: string }[];
   drivers: { detail: string; label: string }[];
   maskCosts: boolean;
   backHref: string | null;
   aiRatio: string;
 };
-
-function money(exact: boolean, yuan: number, days = 1, annual = false): string {
-  if (!exact) return annual ? yearBand(yuan) : quarterBand(yuan, days);
-  if (yuan === 0 || days <= 0) return "—";
-  return formatWan(yuan);
-}
-
-function typeLabel(movement: MovementImpact): string {
-  if (movement.kind === "离职") return `离职 · ${movement.effectiveDate}`;
-  if (movement.kind === "转出") return `转出 · ${movement.effectiveDate}`;
-  if (movement.kind === "转入") return `转入 · ${movement.effectiveDate}`;
-  if (movement.kind === "入职") return `入职 · ${movement.effectiveDate}`;
-  return `${movement.kind} · ${movement.effectiveDate}`;
-}
-
-function personStatus(person: PersonRow): string {
-  if (person.status === "待离职" && person.effectiveDate) return `待离职 · ${person.effectiveDate.slice(5)}`;
-  if (person.status === "待转出" && person.effectiveDate) return `待转出 · ${person.effectiveDate.slice(5)}`;
-  if (person.status === "待入职" && person.effectiveDate) return `待入职 · ${person.effectiveDate.slice(5)}`;
-  if (person.status === "待转入" && person.effectiveDate) return `待转入 · ${person.effectiveDate.slice(5)}`;
-  return "在岗";
-}
 
 function shownMoney(mask: boolean, yuan: number, signed = false): string {
   if (mask) return yearBand(yuan);
@@ -171,52 +133,31 @@ function driverLines(facts: ConclusionFacts, mask: boolean): { detail: string; l
 export function buildLeaderView(
   result: PlanResult,
   departmentId: string,
-  options: { exact: boolean; maskCosts?: boolean; backHref?: string | null; conclusionText?: string; conclusionOrigin?: LeaderView["conclusion"]["origin"] },
+  options: {
+    exact: boolean;
+    maskCosts?: boolean;
+    backHref?: string | null;
+    listBase?: string;
+    detail?: DetailQuery;
+    conclusionText?: string;
+    conclusionOrigin?: LeaderView["conclusion"]["origin"];
+  },
 ): LeaderView {
   const facts = conclusionFacts(result, departmentId);
   const stat = deptStat(result, departmentId);
   const ids = subtreeIds(result.plan, departmentId);
-  const names = new Map(result.plan.departments.map((department) => [department.id, department.name]));
   const exact = options.exact;
   const mask = Boolean(options.maskCosts);
   const annualWan = roundToHalfWan(facts.annualYuan);
   const budgetWan = facts.budgetYuan == null ? null : roundToHalfWan(facts.budgetYuan);
   const gap = budgetWan == null ? null : Number((annualWan - budgetWan).toFixed(1));
   const over = result.plan.departments.filter((department) => department.parentId === departmentId && deptStat(result, department.id).vacancy < 0);
-  const overText = over.map((department) => `${department.name}超编 ${Math.abs(deptStat(result, department.id).vacancy)} 人`).join("、");
-  const quotaLine = `编制 ${facts.quotaPeople} 人、${facts.quotaAgents} 个 Agent${overText ? ` · ${overText}` : ""}`;
-  const moves = result.movements.filter((movement) => ids.has(movement.departmentId));
-  const people = formalPeople(result, ids);
-  const childDepartments = result.plan.departments.filter((department) => department.parentId === departmentId);
-  const listed = childDepartments.length > 0 ? childDepartments : result.plan.departments.filter((department) => department.id === departmentId);
-  const groups = listed
-    .map((department) => {
-      const memberIds = subtreeIds(result.plan, department.id);
-      const rows = sortByReporting(people.filter((person) => memberIds.has(person.departmentId)));
-      const childStat = deptStat(result, department.id);
-      const hideExact = mask || (childDepartments.length > 0 && mask);
-      const quarters = [0, 1, 2, 3].map((index) => childStat.quarterFormal[index] + childStat.quarterOther[index] + childStat.quarterAgent[index]);
-      return {
-        name: department.name,
-        onBoard: rows.filter((person) => person.status === "在岗" || person.status === "待离职" || person.status === "待转出").length,
-        incoming: rows.filter((person) => person.status === "待入职" || person.status === "待转入").length,
-        quarters: quarters.map((value, index) => (hideExact ? quarterBand(value, childStat.quarterFormal[index] || value ? 1 : 0) : value === 0 ? "—" : formatWan(value))),
-        year: hideExact ? yearBand(childStat.yearDailyYuan) : formatWan(childStat.yearDailyYuan),
-        rows: rows.map((person) => ({
-          name: person.name,
-          title: person.title,
-          grade: person.grade,
-          employmentType: person.employmentType,
-          status: personStatus(person),
-          quarters: person.quarters.map((value, index) => money(exact, value, person.days[index])),
-          year: money(exact, person.annual, 1, true),
-          formula: `${person.grade} · 按天折算 ${person.days.reduce((total, day) => total + day, 0)} 天 / ${result.plan.year === 2027 ? 365 : 365}`,
-        })),
-      };
-    })
-    .filter((group) => group.rows.length > 0);
-  const agentRows = result.agents.filter((agent) => ids.has(agent.departmentId));
-  const otherCounts = stat.other;
+  const overText = over.map((department) => `${department.name}${presentVacancy(deptStat(result, department.id).vacancy).over}`).join("、");
+  const ownVacancy = presentVacancy(stat.vacancy);
+  const quotaLine = `编制 ${facts.quotaPeople} 人、${facts.quotaAgents} 个 Agent · ${ownVacancy.over ? `空缺 0 · ${ownVacancy.over}` : `空缺 ${ownVacancy.slots}`}${overText ? ` · ${overText}` : ""}`;
+  const detail = options.detail ?? defaultDetailQuery();
+  const peoplePage = pagePeople(collectPersonLines(result, departmentId), detail, { exact: exact && !mask, preciseSummary: !mask });
+  const agentsPage = pageAgents(collectAgentLines(result, departmentId), detail, { exact: exact && !mask });
   const childFacts = directChildFacts(result, departmentId);
   const equation = mask ? { equation: null, roundingNote: null } : yearEndEquation(facts);
   return {
@@ -279,44 +220,16 @@ export function buildLeaderView(
     quarterSummary: mask
       ? "季度成本按区间显示 · 人工 + Agent"
       : facts.quartersYuan.map((value, index) => `Q${index + 1} ${formatWan(value)}`).join(" · ") + " 万 · 人工 + Agent",
-    movements: [...moves]
-      .sort((left, right) => left.effectiveDate.localeCompare(right.effectiveDate))
-      .map((movement) => ({
-        name: movement.name,
-        title: movement.title,
-        grade: movement.grade,
-        route: routeOf(movement, names),
-        typeLabel: typeLabel(movement),
-        quarter: money(exact, movement.quarters[0] ?? 0, movement.quarters[0] ? 1 : 0),
-        year: money(exact, movement.annual, movement.annual ? 1 : 0, true),
-      })),
-    groups,
-    agents: agentRows.map((agent) => ({
-      name: agent.name,
-      agentType: agent.agentType,
-      instances: agent.instances,
-      status: agent.status,
-      quarters: agent.quarters.map((value) => (mask ? quarterBand(value, value ? 1 : 0) : value === 0 ? "—" : formatWan(value))),
-      year: mask ? yearBand(agent.annual) : formatWan(agent.annual),
-    })),
-    others: (["外包", "实习", "顾问"] as const)
-      .filter((type) => otherCounts[type] > 0)
-      .map((type) => ({ type, count: otherCounts[type], year: "按单价计入人工" })),
-    peopleSummary: `${people.length} 人（在岗 ${facts.headcount} · 待入职或转入 ${facts.joins}）· 按汇报关系 · 成本为${exact ? "精确估算" : "区间"}`,
-    agentSummary: `Agent ${new Set(agentRows.map((agent) => agent.name)).size} 类 ${facts.agents} 个 · 外包 ${otherCounts.外包} · 实习 ${otherCounts.实习} · 顾问 ${otherCounts.顾问}`,
+    people: peoplePage,
+    agentsPage,
+    openSection: detail.open,
+    listBase: options.listBase ?? `/headcount/leader?dept=${departmentId}`,
     options: result.plan.departments.filter((department) => ids.has(department.id)).map((department) => ({ id: department.id, name: department.name })),
     drivers: driverLines(facts, mask),
     maskCosts: mask,
     backHref: options.backHref ?? null,
     aiRatio: DEMO_AI_RATIO[departmentId] ?? "未拆解",
   };
-}
-
-function routeOf(movement: MovementImpact, names: Map<string, string>): string {
-  const here = names.get(movement.departmentId) ?? movement.departmentId;
-  if (movement.fromDepartmentId) return `${names.get(movement.fromDepartmentId) ?? movement.fromDepartmentId} → ${here}`;
-  if (movement.toDepartmentId) return `${here} → ${names.get(movement.toDepartmentId) ?? movement.toDepartmentId}`;
-  return here;
 }
 
 function basisLines(facts: ConclusionFacts): string[] {

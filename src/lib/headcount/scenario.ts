@@ -378,3 +378,34 @@ export function moneyWan(yuan: number): string {
 export function gapWan(totalYuan: number, budgetYuan: number): number {
   return Number((roundToHalfWan(totalYuan) - roundToHalfWan(budgetYuan)).toFixed(1));
 }
+
+/** 括号外是场景相对基线的差额，括号里是该场景季末人数的实际变化。都从季度序列里算。 */
+export function quarterChangeLabels(
+  baseline: ScenarioResult,
+  scenario: ScenarioResult,
+  opening: { people: number; agents: number },
+): string[] {
+  const labels: string[] = [];
+  for (let index = 0; index < 4; index += 1) {
+    const quarter = index + 1;
+    const agentsFrom = index === 0 ? opening.agents : scenario.quarters[index - 1].agents;
+    const agentsTo = scenario.quarters[index].agents;
+    const baseAgentsFrom = index === 0 ? opening.agents : baseline.quarters[index - 1].agents;
+    const baseAgentsTo = baseline.quarters[index].agents;
+    const agentDelta = agentsTo - agentsFrom - (baseAgentsTo - baseAgentsFrom);
+    if (agentDelta !== 0) {
+      const verb = agentDelta > 0 ? `场景新增 ${agentDelta} 个 Agent` : `场景减少 ${Math.abs(agentDelta)} 个 Agent`;
+      labels.push(`Q${quarter} ${verb}（含基线变动共 ${agentsFrom}→${agentsTo}）`);
+    }
+    const peopleFrom = index === 0 ? opening.people : scenario.quarters[index - 1].headcount;
+    const peopleTo = scenario.quarters[index].headcount;
+    const basePeopleFrom = index === 0 ? opening.people : baseline.quarters[index - 1].headcount;
+    const basePeopleTo = baseline.quarters[index].headcount;
+    const peopleDelta = peopleTo - peopleFrom - (basePeopleTo - basePeopleFrom);
+    if (peopleDelta !== 0) {
+      const verb = peopleDelta > 0 ? `场景增员 ${peopleDelta} 人` : `场景减员 ${Math.abs(peopleDelta)} 人`;
+      labels.push(`Q${quarter} ${verb}（含基线变动共 ${peopleFrom}→${peopleTo}）`);
+    }
+  }
+  return labels;
+}

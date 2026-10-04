@@ -3,7 +3,7 @@ import { computePlan, deptStat } from "@/lib/headcount/engine";
 import { formatWan, ROUNDING_GAP_NOTE } from "@/lib/headcount/money";
 import { SCENARIO_NOTICE_PAY_DEFAULT } from "@/lib/headcount/policies";
 import { DEPT, samplePlan } from "@/lib/headcount/sample";
-import { evaluateBaseline, evaluateScenario, presetScenarios, scenarioCutSeverance } from "@/lib/headcount/scenario";
+import { evaluateBaseline, evaluateScenario, presetScenarios, quarterChangeLabels, scenarioCutSeverance } from "@/lib/headcount/scenario";
 
 const result = computePlan(samplePlan());
 
@@ -18,6 +18,7 @@ describe("场景按设计师口径折算", () => {
     expect(aggressive.quarters.map((quarter) => formatWan(quarter.total))).toEqual(["3,937.0", "4,009.0", "4,040.5", "3,985.5"]);
     expect(aggressive.yearEndPeople).toBe(474);
     expect(aggressive.yearEndAgents).toBe(33);
+    expect(aggressive.quarters.map((quarter) => quarter.agents)).toEqual([19, 34, 33, 33]);
     expect(aggressive.definition.assumptions.noticePay).toBe(false);
     expect(SCENARIO_NOTICE_PAY_DEFAULT).toBe(false);
     const cut = aggressive.definition.cuts[0];
@@ -34,6 +35,14 @@ describe("场景按设计师口径折算", () => {
     expect(formatWan(baseline.oneOffYuan)).toBe("24.5");
     expect(baseline.yearEndPeople).toBe(490);
     expect(baseline.yearEndAgents).toBe(21);
+    expect(baseline.quarters.map((quarter) => quarter.agents)).toEqual([19, 22, 21, 21]);
+    expect(presets.jz.quarters.map((quarter) => quarter.agents)).toEqual([19, 26, 25, 25]);
+    expect(presets.fa.quarters.map((quarter) => quarter.agents)).toEqual([19, 28, 27, 27]);
+    const opening = { people: deptStat(result, DEPT.center).onBoard, agents: deptStat(result, DEPT.center).agentInUse };
+    expect(opening).toEqual({ people: deptStat(result, DEPT.center).onBoard, agents: 15 });
+    const labels = quarterChangeLabels(baseline, presets.jj, opening);
+    expect(labels).toContain("Q2 场景新增 12 个 Agent（含基线变动共 19→34）");
+    expect(labels.some((label) => label.startsWith("Q3 场景减员 8 人（含基线变动共 "))).toBe(true);
     expect(formatWan(presets.jz.totalYuan)).toBe("16,098.5");
     expect(formatWan(presets.jz.dailyYuan)).toBe("16,070.0");
     expect(formatWan(presets.jz.oneOffYuan)).toBe("28.5");

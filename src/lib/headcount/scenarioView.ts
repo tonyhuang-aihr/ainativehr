@@ -2,18 +2,20 @@ import type { ChatTurn } from "@/lib/ai/desensitize";
 import { quarterIndex, parseIsoDate } from "@/lib/headcount/calendar";
 import { conclusionFacts, directChildFacts, modelUnits, type ModelUnit } from "@/lib/headcount/conclusion";
 import { deptStat, type PlanResult } from "@/lib/headcount/engine";
+import { TIMELINE_CHANGE_NOTE } from "@/lib/headcount/copy";
 import { formatWan, roundToHalfWan } from "@/lib/headcount/money";
-import { defaultAssumptions, evaluateBaseline, evaluateScenario, scenarioCutSeverance, type ScenarioAssumptions, type ScenarioDefinition, type ScenarioResult } from "@/lib/headcount/scenario";
-import { DEFAULT_SETTINGS } from "@/lib/model/types";
+import { defaultAssumptions, evaluateBaseline, evaluateScenario, quarterChangeLabels, scenarioCutSeverance, type ScenarioAssumptions, type ScenarioDefinition, type ScenarioResult } from "@/lib/headcount/scenario";
 
 export const DEFAULT_PREFILL_NOTE = "没有配置模型，使用默认值：离职率 8%，招聘周期 60 天，调薪率 0%，AI 替代比例沿用沙盘拆解。N+1 默认不计入。";
 export const TIMELINE_EFFECTIVE_CAPTION = "按季初生效";
 export const INCOMPLETE_RATIO_NOTE = "沙盘尚未拆解人 : AI。只标记数据不完整，不按 Agent 个数推算。";
 export const MODEL_PREFILL_NOTE = "已配置模型。用模型预填时只发送脱敏后的部门汇总，不足 5 人的部门不带人数和金额。";
 
-const SPAN_LIMIT = DEFAULT_SETTINGS.thresholds.spanWide;
-const LINE_SPAN_MAX = 40;
 const QUARTER_DATE = ["2027-01-01", "2027-04-01", "2027-07-01", "2027-10-01"] as const;
+
+export type HealthCell = { title: string; text: string; tone: "ok" | "warn" | "muted" | "compliance" };
+
+export type HealthRow = { id: string; name: string; cells: HealthCell[] };
 
 export type HealthCheck = { title: string; body: string; compliance: boolean };
 
@@ -59,10 +61,13 @@ export type ScenarioBoard = {
   stepCheckNote: string;
   columns: CompareColumn[];
   healthName: string;
-  health: HealthCheck[];
+  health: HealthRow[];
+  incompleteRatioNote: string | null;
   timelineTitle: string;
   timelineCaption: string;
+  timelineChangeNote: string;
   timelineSummary: string;
+  timelineLabels: string[];
   timelineRows: TimelineRow[];
   assumptionSummary: string;
   assumptionForm: { attrition: string; cycle: string; raise: string; ai: string; noticePay: boolean };
@@ -132,92 +137,45 @@ function rootId(result: PlanResult): string {
   return result.plan.departments.find((department) => !department.parentId)?.id ?? "rd";
 }
 
-function percentText(count: number, base: number): string {
-  if (!base) return "0.0";
-  return ((count / base) * 100).toFixed(1);
-}
-
 function quarterOf(year: number, iso: string): number {
   return quarterIndex(year, parseIsoDate(iso)) + 1;
 }
 
-export function rosterSpanHints(result: PlanResult): { department: string; span: number; limit: number }[] {
-  const counts = new Map<string, number>();
-  for (const person of result.people) {
-    if (!person.managerId || person.managerId === person.id) continue;
-    counts.set(person.managerId, (counts.get(person.managerId) ?? 0) + 1);
+function articleText(year: number, definition: ScenarioDefinition): string | null {
+  if (!definition.cuts.length) return null;
+  const byQuarter = new Map<number, number>();
+  for (const cut of definition.cuts) {
+    const quarter = quarterOf(year, cut.effectiveDate);
+    byQuarter.set(quarter, (byQuarter.get(quarter) ?? 0) + cut.count);
   }
-  const best = new Map<string, number>();
-  const names = new Map(result.plan.departments.map((department) => [department.id, department.name]));
-  for (const person of result.people) {
-    const span = counts.get(person.id) ?? 0;
-    if (span <= SPAN_LIMIT) continue;
-    const department = names.get(person.departmentId);
-    if (!department) continue;
-    best.set(department, Math.max(best.get(department) ?? 0, span));
-  }
-  return [...best.entries()]
-    .map(([department, span]) => ({ department, span, limit: SPAN_LIMIT }))
-    .sort((left, right) => right.span - left.span || left.department.localeCompare(right.department, "zh"));
+  return [...byQuarter.entries()].map(([quarter, people]) => `Q${quarter} 减员 ${people} 人`).join("、");
 }
 
-function spanBody(result: PlanResult, definition: ScenarioDefinition): string {
-  if (definition.spanAlert) {
-    const alert = definition.spanAlert;
-    return `${alert.department} ${alert.span}，超过建议上限 ${alert.limit}。只写部门，不写负责人。`;
-  }
-  const spans = rosterSpanHints(result);
-  const line = spans.filter((item) => item.span <= LINE_SPAN_MAX);
-  const bulk = spans.length - line.length;
-  const named = line.map((item) => `${item.department} ${item.span}`).join("、");
-  const head = named ? `${named}，超过建议上限 ${SPAN_LIMIT}。只写部门，不写负责人。` : `有部门超过建议上限 ${SPAN_LIMIT}。只写部门，不写负责人。`;
-  return bulk ? `${head}另有 ${bulk} 个部门在示例里整组建制挂在负责人名下，不逐条展开。` : head;
+export function healthRow(result: PlanResult, scenario: ScenarioResult): HealthRow {
+  const gap = roundToHalfWan(scenario.totalYuan) - roundToHalfWan(result.plan.companyBudget);
+  const definition = scenario.definition;
+  const article = articleText(result.plan.year, definition);
+  const cells: HealthCell[] = [
+    gap > 0 ? { title: "超预算", text: `超 ${formatWan(gap * 10_000)}`, tone: "warn" } : { title: "超预算", text: "通过", tone: "ok" },
+    definition.spanAlert
+      ? { title: "管理幅度", text: `${definition.spanAlert.span} > ${definition.spanAlert.limit}`, tone: "warn" }
+      : definition.structureNote
+        ? { title: "管理幅度", text: "通过", tone: "ok" }
+        : { title: "管理幅度", text: "—", tone: "muted" },
+    definition.ratio === "未拆解" ? { title: "人 : AI", text: "未拆解", tone: "warn" } : { title: "人 : AI", text: "通过", tone: "ok" },
+    article ? { title: "第 41 条", text: article, tone: "compliance" } : { title: "第 41 条", text: "—", tone: "muted" },
+  ];
+  return { id: definition.id, name: definition.name, cells };
 }
 
 export function healthChecks(result: PlanResult, scenario: ScenarioResult): HealthCheck[] {
-  const checks: HealthCheck[] = [];
-  const year = result.plan.year;
-  const definition = scenario.definition;
-  const onBoard = deptStat(result, rootId(result)).onBoard;
-  if (definition.cuts.length) {
-    const byQuarter = new Map<number, number>();
-    for (const cut of definition.cuts) {
-      const quarter = quarterOf(year, cut.effectiveDate);
-      byQuarter.set(quarter, (byQuarter.get(quarter) ?? 0) + cut.count);
-    }
-    const count = definition.cuts.reduce((total, cut) => total + cut.count, 0);
-    const where = [...byQuarter.entries()].map(([quarter, people]) => `Q${quarter} 减员 ${people} 人`).join("、");
-    checks.push({
-      title: "《劳动合同法》第 41 条",
-      body: `${where}，约占职工总数 ${percentText(count, onBoard)}%。仅作提醒，请与法务确认是否需要报告。`,
-      compliance: true,
-    });
-  }
-  if (definition.ratio === "未拆解") {
-    checks.push({ title: "人 : AI 未拆解", body: INCOMPLETE_RATIO_NOTE, compliance: false });
-  }
-  const reserve = result.plan.oneOffBudget;
-  if (reserve != null && scenario.oneOffYuan > reserve) {
-    const room = roundToHalfWan(result.plan.companyBudget - reserve) - roundToHalfWan(scenario.dailyYuan);
-    const totalGap = roundToHalfWan(result.plan.companyBudget) - roundToHalfWan(scenario.totalYuan);
-    const roomText = `${room >= 0 ? "结余" : "超"} ${formatWan(Math.abs(room) * 10_000)}`;
-    const totalText = `${totalGap >= 0 ? "仍结余" : "超"} ${formatWan(Math.abs(totalGap) * 10_000)}`;
-    checks.push({
-      title: "一次性费用超出预留",
-      body: `一次性 ${formatWan(scenario.oneOffYuan)} 万，超出预留 ${formatWan(reserve)} 万（示例）；部门持续成本${roomText} 万，合计${totalText} 万。`,
-      compliance: false,
-    });
-  } else if (roundToHalfWan(scenario.totalYuan) > roundToHalfWan(result.plan.companyBudget)) {
-    const gap = roundToHalfWan(scenario.totalYuan) - roundToHalfWan(result.plan.companyBudget);
-    checks.push({ title: "超预算", body: `全年 ${formatWan(scenario.totalYuan)} 万，超预算总包 ${formatWan(gap * 10_000)} 万。`, compliance: false });
-  }
-  if (roundToHalfWan(scenario.totalYuan) > roundToHalfWan(result.plan.companyBudget) && reserve != null && scenario.oneOffYuan > reserve) {
-    const gap = roundToHalfWan(scenario.totalYuan) - roundToHalfWan(result.plan.companyBudget);
-    checks.push({ title: "超预算", body: `全年超预算总包 ${formatWan(gap * 10_000)} 万。`, compliance: false });
-  }
-  const spans = definition.spanAlert ? [definition.spanAlert] : rosterSpanHints(result);
-  if (spans.length) checks.push({ title: "管理幅度", body: spanBody(result, definition), compliance: false });
-  return checks;
+  return healthRow(result, scenario).cells
+    .filter((cell) => cell.tone === "warn" || cell.tone === "compliance")
+    .map((cell) => ({
+      title: cell.title === "第 41 条" ? "《劳动合同法》第 41 条" : cell.title,
+      body: cell.text,
+      compliance: cell.tone === "compliance",
+    }));
 }
 
 function gapLabel(totalYuan: number, budgetYuan: number): { over: boolean; text: string; amount: string } {
@@ -235,7 +193,7 @@ export function heroSentence(result: PlanResult, compared: ScenarioResult[]): st
   if (!lowest) return "还没有加入对比的场景。";
   const lowestGap = gapLabel(lowest.totalYuan, budgetYuan);
   const lowestRatio = lowest.definition.ratio === "未拆解" ? "人 : AI 未拆解" : `人 : AI 为 ${lowest.definition.ratio}`;
-  const bits = [`${lowest.definition.name}成本最低（${formatWan(lowest.totalYuan)} 万），比预算总包${lowestGap.text} 万，${lowestRatio}`];
+  const bits = [`${lowest.definition.name} 成本最低（${formatWan(lowest.totalYuan)} 万），比预算总包${lowestGap.text} 万，${lowestRatio}`];
   const rest = ranked.filter((item) => item.definition.id !== lowest.definition.id);
   for (const item of rest) {
     const gap = gapLabel(item.totalYuan, budgetYuan);
@@ -251,18 +209,6 @@ export function heroSentence(result: PlanResult, compared: ScenarioResult[]): st
     else bits.push(`${item.definition.name}${gap.text} 万，人 : AI 为 ${item.definition.ratio}`);
   }
   return `对比的 ${compared.length} 个场景中，${bits.join("；")}。`;
-}
-
-function eventSummary(year: number, definition: ScenarioDefinition): string {
-  const agents = new Map<number, number>();
-  const cuts = new Map<number, number>();
-  for (const agent of definition.agents) agents.set(quarterOf(year, agent.effectiveDate), (agents.get(quarterOf(year, agent.effectiveDate)) ?? 0) + agent.count);
-  for (const cut of definition.cuts) cuts.set(quarterOf(year, cut.effectiveDate), (cuts.get(quarterOf(year, cut.effectiveDate)) ?? 0) + cut.count);
-  const events = [
-    ...[...agents.entries()].filter((entry) => entry[1] > 0).map(([quarter, count]) => `Q${quarter} +${count} Agent`),
-    ...[...cuts.entries()].filter((entry) => entry[1] > 0).map(([quarter, count]) => `Q${quarter} 减员 ${count} 人`),
-  ];
-  return events.join(" · ");
 }
 
 function pendingCount(assumptions: ScenarioAssumptions): number {
@@ -296,11 +242,13 @@ export function buildScenarioBoard(result: PlanResult, definitions: ScenarioDefi
   const compared = definitions.filter((definition) => definition.compared).map((definition) => evaluated.get(definition.id)!);
   const lowest = [...compared].sort((left, right) => left.totalYuan - right.totalYuan)[0] ?? baseline;
   const within = compared.filter((item) => roundToHalfWan(item.totalYuan) <= roundToHalfWan(budgetYuan)).length;
-  const health = healthChecks(result, focus);
-  const compliance = health.filter((item) => item.compliance).length;
+  const health = [baseline, ...compared].map((item) => healthRow(result, item));
+  const hints = health.flatMap((row) => row.cells).filter((cell) => cell.tone === "warn" || cell.tone === "compliance");
+  const compliance = hints.filter((cell) => cell.tone === "compliance").length;
   const names = compared.map((item) => item.definition.name);
   const leftOut = definitions.filter((definition) => !definition.compared).map((definition) => `「${definition.name}」未加入对比`);
-  const events = eventSummary(year, focus.definition);
+  const opening = deptStat(result, rootId(result));
+  const labels = quarterChangeLabels(baseline, focus, { people: opening.onBoard, agents: opening.agentInUse });
   const pending = pendingCount(focus.definition.assumptions);
   const assumptions = focus.definition.assumptions;
   const sandbox = definitions.find((definition) => definition.source === "sandbox");
@@ -348,15 +296,18 @@ export function buildScenarioBoard(result: PlanResult, definitions: ScenarioDefi
     stepSelect: `基线 + ${compared.length} 个场景：${names.join("、") || "还没有"}`,
     stepSelectNote: `${leftOut.join(" · ") || "对比里的场景都已选上"} · 最多对比 3 个`,
     stepAssume: `${focus.definition.name}：离职率 ${ratePercent(assumptions.attritionRate)}% · 招聘周期 ${assumptions.hiringCycleDays} 天`,
-    stepAssumeNote: `${events || "这一场景没有按季增减"} · ${pending ? `另有 ${pending} 项假设待定` : "假设都已填写"}`,
+    stepAssumeNote: `${labels.join(" · ") || "这一场景没有按季增减"} · ${pending ? `另有 ${pending} 项假设待定` : "假设都已填写"}`,
     stepCheck: `${within} / ${compared.length} 个场景在预算内 · 最低：${lowest.definition.name}`,
-    stepCheckNote: `体检 ${health.length} 条提示，${compliance} 条涉及合规`,
+    stepCheckNote: `体检 ${hints.length} 条提示，${compliance} 条涉及合规`,
     columns,
-    healthName: `${focus.definition.name} · ${health.length} 条`,
+    healthName: "对比场景",
     health,
+    incompleteRatioNote: health.some((row) => row.cells.some((cell) => cell.text === "未拆解")) ? INCOMPLETE_RATIO_NOTE : null,
     timelineTitle: `时间轴 · ${focus.definition.name}`,
     timelineCaption: TIMELINE_EFFECTIVE_CAPTION,
-    timelineSummary: `${focus.quarters.map((quarter, index) => `Q${index + 1} ${formatWan(quarter.total)}`).join(" · ")} 万${events ? ` · ${events}` : ""}`,
+    timelineChangeNote: TIMELINE_CHANGE_NOTE,
+    timelineSummary: `${focus.quarters.map((quarter, index) => `Q${index + 1} ${formatWan(quarter.total)}`).join(" · ")} 万${labels.length ? ` · ${labels.join(" · ")}` : ""}`,
+    timelineLabels: labels,
     timelineRows: focus.quarters.map((quarter, index) => ({
       quarter: `Q${index + 1}`,
       people: quarter.headcount,

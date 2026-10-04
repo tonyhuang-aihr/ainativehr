@@ -10,6 +10,7 @@ import { recordAccess, saveConclusion } from "@/lib/headcount/db/mutate";
 import { loadCachedConclusion, loadClosure, loadDepartments, loadPlan, loadSettings } from "@/lib/headcount/db/queries";
 import { computePlan } from "@/lib/headcount/engine";
 import { buildLeaderView, type LeaderView } from "@/lib/headcount/leaderView";
+import type { DetailQuery } from "@/lib/headcount/rosterPage";
 
 export type SessionUser = HeadcountUser & { name: string };
 
@@ -44,7 +45,7 @@ export async function scopeFor(user: HeadcountUser) {
 
 export type LeaderScreen = { kind: "overview"; overview: ScopeOverview } | { kind: "detail"; view: LeaderView };
 
-export async function openLeader(user: SessionUser, requestedId?: string): Promise<LeaderScreen> {
+export async function openLeader(user: SessionUser, requestedId?: string, detail?: DetailQuery): Promise<LeaderScreen> {
   if (!can(user, "viewLeader") && !can(user, "viewBusiness")) throw new Error("无权查看");
   if (user.role === "sys_admin") throw new Error("无权查看");
   const { db, departments, visible } = await scopeFor(user);
@@ -86,6 +87,8 @@ export async function openLeader(user: SessionUser, requestedId?: string): Promi
     exact: settings.exactForLeaders && !mask,
     maskCosts: mask,
     backHref: back,
+    listBase: `/headcount/leader?dept=${departmentId}`,
+    detail,
     conclusionText: chosen.text || undefined,
     conclusionOrigin: chosen.origin,
   });
@@ -107,7 +110,7 @@ export async function openBaseline(user: HeadcountUser) {
   return { overview, asOf: plan.asOf, year: plan.year };
 }
 
-export async function openDepartment(user: HeadcountUser, departmentId: string) {
+export async function openDepartment(user: HeadcountUser, departmentId: string, detail?: DetailQuery) {
   if (!can(user, "viewBusiness") || user.role === "leader") throw new Error("无权查看底座");
   const { db, visible, departments } = await scopeFor(user);
   if (!visible.includes(departmentId)) throw new Error("部门不在授权范围");
@@ -125,7 +128,15 @@ export async function openDepartment(user: HeadcountUser, departmentId: string) 
     cached: null,
     complete: null,
   });
-  const view = buildLeaderView(result, departmentId, { exact: true, maskCosts: false, backHref: "/headcount/baseline", conclusionText: chosen.text, conclusionOrigin: chosen.origin });
+  const view = buildLeaderView(result, departmentId, {
+    exact: true,
+    maskCosts: false,
+    backHref: "/headcount/baseline",
+    listBase: `/headcount/baseline/${departmentId}`,
+    detail,
+    conclusionText: chosen.text,
+    conclusionOrigin: chosen.origin,
+  });
   view.options = visible
     .map((id) => departments.find((department) => department.id === id))
     .filter((department): department is NonNullable<typeof department> => Boolean(department))

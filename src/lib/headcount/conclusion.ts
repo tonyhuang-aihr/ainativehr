@@ -141,7 +141,7 @@ export function templateConclusion(facts: ConclusionFacts): string {
   let budgetClause = "未设置部门预算";
   if (budgetWan != null) {
     const gap = annualWan - budgetWan;
-    budgetClause = gap > 0 ? `超出部门预算 ${formatWan(gap * 10_000)}` : gap < 0 ? `低于部门预算 ${formatWan(Math.abs(gap) * 10_000)}` : "与部门预算持平";
+    budgetClause = gap > 0 ? `超出部门预算 ${formatWan(gap * 10_000)} 万` : gap < 0 ? `低于部门预算 ${formatWan(Math.abs(gap) * 10_000)} 万` : "与部门预算持平";
   }
   const within = budgetWan == null ? "的成本见右侧" : currentWan <= budgetWan ? "在预算内" : "已超出预算";
   const reason = budgetWan != null && annualWan > budgetWan ? "超出来自" : "变化来自";

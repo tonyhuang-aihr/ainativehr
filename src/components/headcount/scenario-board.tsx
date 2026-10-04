@@ -7,13 +7,15 @@ import {
   saveAssumptionsAction,
   toggleScenarioAction,
 } from "@/lib/headcount/actions";
+import { ScenarioFileField } from "@/components/headcount/scenario-file-field";
+import { COMPARE_SCROLL_HINT } from "@/lib/headcount/copy";
 import type { ScenarioBoard } from "@/lib/headcount/scenarioView";
 
 const field = "w-full rounded-xl border border-line px-3 py-2";
 
+const sticky = "sticky left-0 z-10 bg-white shadow-[1px_0_0_#E6E8EC]";
+
 export function ScenarioBoardView({ board, notice }: { board: ScenarioBoard; notice?: string }) {
-  const visibleHealth = board.health.slice(0, 3);
-  const extraHealth = board.health.slice(3);
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -55,81 +57,103 @@ export function ScenarioBoardView({ board, notice }: { board: ScenarioBoard; not
         <Step n="3" title="看对比 / 体检" body={board.stepCheck} note={board.stepCheckNote} current />
       </section>
 
-      <section className="grid items-start gap-4 xl:grid-cols-[1fr_320px]">
-        <div id="scenario-compare" className="overflow-hidden rounded-2xl border border-line bg-white">
-          <div className="flex items-center gap-2 px-4 py-3 text-sm">
-            <b>场景对比</b>
-            <span className="text-muted">全年 · 万元</span>
-            <a className="ml-auto text-primary" href="#scenario-timeline">
-              按季度看
-            </a>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] border-collapse text-sm">
-              <thead>
-                <tr className="border-y border-line text-right">
-                  <th className="px-4 py-3 text-left font-medium text-muted" />
-                  {board.columns.map((column) => (
-                    <th key={column.id} className={`px-4 py-3 font-medium ${column.lowest ? "bg-[#FAFAFF] text-primary" : ""}`}>
-                      <div className="text-ink">{column.name}</div>
-                      <div className="text-xs font-normal text-muted">{column.subtitle}</div>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-b border-line text-right">
-                  <td className="px-4 py-3 text-left">全年总成本</td>
-                  {board.columns.map((column) => (
-                    <td key={column.id} className={`px-4 py-3 ${column.lowest ? "bg-[#FAFAFF]" : ""}`}>
-                      <div className={`text-lg font-semibold ${column.lowest ? "text-primary" : ""}`}>{column.total}</div>
+      <section id="scenario-compare" className="overflow-hidden rounded-2xl border border-line bg-white">
+        <div className="flex items-center gap-2 px-4 py-3 text-sm">
+          <b>场景对比</b>
+          <span className="text-muted">全年 · 万元</span>
+          <a className="ml-auto text-primary" href="#scenario-timeline">
+            按季度看
+          </a>
+        </div>
+        <p className="px-4 pb-2 text-xs text-muted">{COMPARE_SCROLL_HINT}</p>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[720px] border-collapse text-sm">
+            <thead>
+              <tr className="border-y border-line text-right">
+                <th className={`px-4 py-3 text-left font-medium text-muted ${sticky}`} />
+                {board.columns.map((column) => (
+                  <th key={column.id} className={`px-4 py-3 font-medium ${column.lowest ? "bg-[#FAFAFF] text-primary" : ""}`}>
+                    <div className="text-ink">{column.name}</div>
+                    <div className="text-xs font-normal text-muted">{column.subtitle}</div>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-b border-line text-right">
+                <td className={`px-4 py-3 text-left ${sticky}`}>全年总成本</td>
+                {board.columns.map((column) => (
+                  <td key={column.id} className={`px-4 py-3 ${column.lowest ? "bg-[#FAFAFF]" : ""}`}>
+                    <div className={`text-lg font-semibold ${column.lowest ? "text-primary" : ""}`}>{column.total}</div>
+                  </td>
+                ))}
+              </tr>
+              <Metric label={`对比预算总包 ${board.budget}`} values={board.columns.map((column) => ({ id: column.id, text: column.gap, warn: column.over, lowest: column.lowest }))} />
+              <Metric label="期末正式人数" values={board.columns.map((column) => ({ id: column.id, text: String(column.people), lowest: column.lowest }))} />
+              <Metric label="期末 Agent 数" values={board.columns.map((column) => ({ id: column.id, text: String(column.agents), lowest: column.lowest }))} />
+              <Metric label="人 : AI 按工时" values={board.columns.map((column) => ({ id: column.id, text: column.ratio, muted: column.ratio === "未拆解", lowest: column.lowest }))} />
+              <tr>
+                <td className={`bg-[#FCFCFD] px-4 py-2 text-xs text-muted ${sticky}`} colSpan={1}>
+                  构成
+                </td>
+                <td className="bg-[#FCFCFD]" colSpan={board.columns.length} />
+              </tr>
+              <Metric label="部门持续成本 人工 + Agent" values={board.columns.map((column) => ({ id: column.id, text: column.daily, lowest: column.lowest }))} />
+              <Metric label="一次性 HR / OD 统一管理" values={board.columns.map((column) => ({ id: column.id, text: column.oneOff, lowest: column.lowest }))} />
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="health-checks" className="overflow-hidden rounded-2xl border border-line bg-white">
+        <h2 className="px-4 py-3 text-sm font-semibold">体检 · {board.healthName}</h2>
+        <div className="overflow-x-auto border-t border-line">
+          <table className="w-full min-w-[640px] border-collapse text-sm">
+            <thead>
+              <tr className="text-left text-muted">
+                <th className="px-4 py-2 font-medium">场景</th>
+                {board.health[0]?.cells.map((cell) => (
+                  <th key={cell.title} className="px-4 py-2 font-medium">
+                    {cell.title}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {board.health.map((row) => (
+                <tr key={row.id} className="border-t border-line">
+                  <td className="px-4 py-2">{row.name}</td>
+                  {row.cells.map((cell) => (
+                    <td key={cell.title} className={`px-4 py-2 ${cell.tone === "warn" ? "text-[#DC2626]" : ""} ${cell.tone === "compliance" ? "text-[#92400E]" : ""} ${cell.tone === "muted" ? "text-muted" : ""}`}>
+                      {cell.text}
                     </td>
                   ))}
                 </tr>
-                <Metric label={`对比预算总包 ${board.budget}`} values={board.columns.map((column) => ({ id: column.id, text: column.gap, warn: column.over, lowest: column.lowest }))} />
-                <Metric label="期末正式人数" values={board.columns.map((column) => ({ id: column.id, text: String(column.people), lowest: column.lowest }))} />
-                <Metric label="期末 Agent 数" values={board.columns.map((column) => ({ id: column.id, text: String(column.agents), lowest: column.lowest }))} />
-                <Metric label="人 : AI 按工时" values={board.columns.map((column) => ({ id: column.id, text: column.ratio, muted: column.ratio === "未拆解", lowest: column.lowest }))} />
-                <tr>
-                  <td className="bg-[#FCFCFD] px-4 py-2 text-xs text-muted" colSpan={board.columns.length + 1}>
-                    构成
-                  </td>
-                </tr>
-                <Metric label="部门持续成本 人工 + Agent" values={board.columns.map((column) => ({ id: column.id, text: column.daily, lowest: column.lowest }))} />
-                <Metric label="一次性 HR / OD 统一管理" values={board.columns.map((column) => ({ id: column.id, text: column.oneOff, lowest: column.lowest }))} />
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </table>
         </div>
-
-        <aside id="health-checks" className="rounded-2xl border border-line bg-white p-4">
-          <h2 className="text-sm font-semibold">体检 · {board.healthName}</h2>
-          <div className="mt-3 space-y-3">
-            {visibleHealth.map((item) => (
-              <HealthCard key={item.title} title={item.title} body={item.body} compliance={item.compliance} />
-            ))}
-          </div>
-          {extraHealth.length ? (
-            <details className="mt-3">
-              <summary className="cursor-pointer text-sm text-primary">查看全部 {board.health.length} 条</summary>
-              <div className="mt-3 space-y-3">
-                {extraHealth.map((item) => (
-                  <HealthCard key={item.title} title={item.title} body={item.body} compliance={item.compliance} />
-                ))}
-              </div>
-            </details>
-          ) : null}
-        </aside>
+        {board.incompleteRatioNote ? <p className="border-t border-line px-4 py-3 text-sm text-muted">{board.incompleteRatioNote}</p> : null}
       </section>
 
       <section id="scenario-timeline" className="overflow-hidden rounded-2xl border border-line bg-white">
         <details open>
-          <summary className="cursor-pointer px-4 py-3 text-sm">
+          <summary className="list-none cursor-pointer px-4 py-3 text-sm [&::-webkit-details-marker]:hidden">
             <span className="flex flex-wrap items-center gap-3">
               <b>{board.timelineTitle}</b>
               <span className="text-muted">{board.timelineSummary}</span>
             </span>
             <span className="mt-1 block text-xs text-muted">{board.timelineCaption}</span>
+            {board.timelineLabels.length ? (
+              <span className="mt-2 block text-sm text-ink">
+                {board.timelineLabels.map((label) => (
+                  <span key={label} className="mr-3 inline-block">
+                    {label}
+                  </span>
+                ))}
+              </span>
+            ) : null}
+            <span className="mt-1 block text-xs text-muted">{board.timelineChangeNote}</span>
           </summary>
           <div className="overflow-x-auto border-t border-line">
             <table className="w-full min-w-[680px] border-collapse text-sm">
@@ -294,7 +318,7 @@ export function ScenarioBoardView({ board, notice }: { board: ScenarioBoard; not
           </div>
         ) : null}
         <form action={importSandboxFileAction} className="mt-3 flex flex-wrap items-center gap-3">
-          <input accept="application/json,.json" name="file" type="file" />
+          <ScenarioFileField />
           <select className="rounded-xl border border-line px-3 py-2" name="quarter" defaultValue="2">
             <option value="1">Q1 生效</option>
             <option value="2">Q2 生效</option>
@@ -335,7 +359,7 @@ function Step({ n, title, body, note, current }: { n: string; title: string; bod
 function Metric({ label, values }: { label: string; values: { id: string; text: string; warn?: boolean; muted?: boolean; lowest?: boolean }[] }) {
   return (
     <tr className="border-b border-line text-right">
-      <td className="px-4 py-2 text-left text-muted">{label}</td>
+      <td className={`px-4 py-2 text-left text-muted ${sticky}`}>{label}</td>
       {values.map((value) => (
         <td key={value.id} className={`px-4 py-2 ${value.lowest ? "bg-[#FAFAFF]" : ""} ${value.warn ? "text-[#DC2626]" : ""} ${value.muted ? "text-muted" : ""}`}>
           {value.text}
@@ -345,11 +369,3 @@ function Metric({ label, values }: { label: string; values: { id: string; text: 
   );
 }
 
-function HealthCard({ title, body, compliance }: { title: string; body: string; compliance: boolean }) {
-  return (
-    <article data-health={compliance ? "art41" : undefined}>
-      <h3 className="text-sm font-medium">{title}</h3>
-      <p className="mt-1 text-sm leading-6 text-muted">{body}</p>
-    </article>
-  );
-}
