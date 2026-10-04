@@ -3,18 +3,20 @@ import { buildClosure, visibleDepartmentIds } from "@/lib/headcount/authz";
 import { computePlan, deptStat } from "@/lib/headcount/engine";
 import { buildLeaderView } from "@/lib/headcount/leaderView";
 import { roundToHalfWan } from "@/lib/headcount/money";
-import { buildScopeOverview, collectAlerts, maskPageCosts, pageKind, scopeHasSmallGroup } from "@/lib/headcount/overview";
-import { annualFromMonthlyRate, exclusiveServiceEnd, offerIsAccepted, offerIsPending, agentChangeConfirmed, SAMPLE_FOLLOWS_DESIGNER_END } from "@/lib/headcount/policies";
+import { parseBudgetBatch, parseQuotaBatch } from "@/lib/headcount/configBatch";
+import { buildScopeOverview, collectAlerts, conclusionSourceLabel, maskPageCosts, pageKind, scopeHasSmallGroup } from "@/lib/headcount/overview";
+import { DEPARTURE_COUNTS_THROUGH_LAST_WORKING_DAY, RAMP_UP_AFFECTS_COST, SCENARIO_NOTICE_PAY_DEFAULT, annualFromMonthlyRate, exclusiveServiceEnd, offerIsAccepted, offerIsPending, agentChangeConfirmed } from "@/lib/headcount/policies";
 import { DEPT, DEMO_ACCOUNTS, OTHER_MONTHLY, samplePlan } from "@/lib/headcount/sample";
 
 const result = computePlan(samplePlan());
 
-describe("v3 数字仍对齐设计师脚本", () => {
-  it("公司、平台部、产品研发一部和基础架构组的取整没有因代通知金改口而移动", () => {
-    expect(roundToHalfWan(deptStat(result, DEPT.center).yearTotalYuan)).toBe(16095);
+describe("含最后工作日之后的取整", () => {
+  it("公司合计和产品研发一部跨过 0.5 万，平台部和基础架构组的日常没有跨过", () => {
+    expect(roundToHalfWan(deptStat(result, DEPT.center).yearTotalYuan)).toBe(16095.5);
+    expect(roundToHalfWan(deptStat(result, DEPT.center).yearDailyYuan)).toBe(16071);
     expect(roundToHalfWan(deptStat(result, DEPT.center).yearOneOffYuan)).toBe(24.5);
     expect(roundToHalfWan(deptStat(result, DEPT.plat).yearDailyYuan)).toBe(2075.5);
-    expect(roundToHalfWan(deptStat(result, DEPT.prod1).yearDailyYuan)).toBe(4845);
+    expect(roundToHalfWan(deptStat(result, DEPT.prod1).yearDailyYuan)).toBe(4845.5);
     expect(roundToHalfWan(deptStat(result, DEPT.infra).yearDailyYuan)).toBe(1110.5);
     expect(roundToHalfWan(deptStat(result, DEPT.infra).currentYuan)).toBe(1102);
     expect(result.plan.movements.some((movement) => movement.compMark === "N+1")).toBe(false);
@@ -32,11 +34,22 @@ describe("OD 总览告警和部门页", () => {
       "在途集中 平台部",
     ]);
     const overview = buildScopeOverview(result, DEPT.center, "od", false);
-    expect(overview.cards.find((card) => card.label.startsWith("全年"))?.value).toBe("16,095.0");
-    expect(overview.departments.map((row) => row.gap)).toEqual(["+120.0", "+25.5", "−5.0", "−11.5", "−13.5", "−15.0"]);
+    expect(overview.cards.find((card) => card.label.startsWith("全年"))?.value).toBe("16,095.5");
+    expect(overview.departments.map((row) => row.gap)).toEqual(["+120.5", "+25.5", "−5.0", "−11.5", "−13.5", "−15.0"]);
     expect(overview.oneOff).toMatchObject({ amount: "24.5", budget: "30.0", gap: "−5.5" });
-    expect(overview.conclusion).toContain("95.0");
+    expect(overview.conclusion).toContain("95.5");
     expect(JSON.stringify(overview)).not.toContain("1,110.5");
+  });
+});
+
+describe("负责人总览的结论来源", () => {
+  it("没有模型时标明模板，不写 AI 生成", () => {
+    const overview = buildScopeOverview(result, DEPT.plat, "leader", true);
+    expect(overview.conclusionOrigin).toBe("template");
+    expect(conclusionSourceLabel(overview.conclusionOrigin)).toBe("结论来自模板");
+    expect(JSON.stringify(overview)).not.toContain("AI 生成");
+    expect(conclusionSourceLabel("model")).toBe("结论来自模型");
+    expect(buildScopeOverview(result, DEPT.center, "od", false).conclusionOrigin).toBe("template");
   });
 });
 
@@ -95,8 +108,15 @@ describe("负责人按范围进入，小组成本在接口里就是区间", () =
 
 describe("已拍板的默认值", () => {
   it("离职含最后工作日、外包按月单价、未接受的 offer 和未批准的 Agent 不计入", () => {
+    expect(DEPARTURE_COUNTS_THROUGH_LAST_WORKING_DAY).toBe(true);
     expect(exclusiveServiceEnd("2027-02-28")).toBe("2027-03-01");
-    expect(SAMPLE_FOLLOWS_DESIGNER_END).toBe(true);
+    expect(RAMP_UP_AFFECTS_COST).toBe(false);
+    expect(SCENARIO_NOTICE_PAY_DEFAULT).toBe(false);
+    expect(parseBudgetBatch("prod1,47250000\n# 注释\n平台部,20500000")).toEqual([
+      { key: "prod1", amount: 47_250_000 },
+      { key: "平台部", amount: 20_500_000 },
+    ]);
+    expect(parseQuotaBatch("plat,66,10")).toEqual([{ key: "plat", formal: 66, agent: 10 }]);
     expect(annualFromMonthlyRate(OTHER_MONTHLY.外包)).toBe(216_000);
     expect(offerIsPending("已发未接受")).toBe(true);
     expect(offerIsAccepted("已发未接受")).toBe(false);

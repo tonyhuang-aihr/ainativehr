@@ -1,7 +1,9 @@
 import { Button } from "@/components/ui";
 import { Importer } from "@/components/headcount/importer";
-import { budgetAction, cityAction, gradeAction, oneOffBudgetAction, quotaAction } from "@/lib/headcount/actions";
-import { can } from "@/lib/headcount/authz";
+import { bindUserAction, budgetAction, budgetBatchAction, cityAction, gradeAction, oneOffBudgetAction, quotaAction, quotaBatchAction } from "@/lib/headcount/actions";
+import { can, roleLabel } from "@/lib/headcount/authz";
+import { getDb } from "@/lib/headcount/db/client";
+import { listUsers } from "@/lib/headcount/db/queries";
 import { importContext } from "@/lib/headcount/db/present";
 import { currentUser } from "@/lib/headcount/session";
 import { redirect } from "next/navigation";
@@ -14,11 +16,12 @@ export default async function ImportPage({ searchParams }: { searchParams: Promi
   if (!can(user, "import")) redirect("/headcount");
   const query = await searchParams;
   const context = await importContext(user);
+  const bindable = (await listUsers(await getDb())).filter((account) => account.role === "leader" || account.role === "hrbp");
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">导入与配置</h1>
-        <p className="mt-1 text-sm text-muted">部门预算由 OD 按部门手工录入或批量导入。来源系统确定之前，先记在这里。</p>
+        <p className="mt-1 text-sm text-muted">部门预算和编制由 OD 按部门录入，也可以按行批量导入。来源系统确定之前，先记在这里。</p>
         {query.notice ? <p className="mt-3 rounded-xl bg-primarySoft px-3 py-2 text-sm text-primary">{query.notice}</p> : null}
       </div>
       <Importer
@@ -77,6 +80,44 @@ export default async function ImportPage({ searchParams }: { searchParams: Promi
           <input name="amount" inputMode="numeric" placeholder="月均" className="w-full rounded-xl border border-line px-3 py-2" />
           <Button type="submit" variant="secondary">
             保存城市
+          </Button>
+        </form>
+        <form action={budgetBatchAction} className="space-y-2 rounded-2xl border border-line bg-white p-4 text-sm">
+          <h2 className="font-medium">批量导入部门预算</h2>
+          <p className="text-muted">每行：部门 ID 或名称,金额（元）</p>
+          <textarea name="lines" rows={4} placeholder={"prod1,47250000\n平台部,20500000"} className="w-full rounded-xl border border-line px-3 py-2" />
+          <Button type="submit" variant="secondary">
+            导入预算
+          </Button>
+        </form>
+        <form action={quotaBatchAction} className="space-y-2 rounded-2xl border border-line bg-white p-4 text-sm">
+          <h2 className="font-medium">批量导入编制</h2>
+          <p className="text-muted">每行：部门 ID 或名称,正式编制,Agent 编制</p>
+          <textarea name="lines" rows={4} placeholder={"prod1,156,8\n平台部,66,10"} className="w-full rounded-xl border border-line px-3 py-2" />
+          <Button type="submit" variant="secondary">
+            导入编制
+          </Button>
+        </form>
+        <form action={bindUserAction} className="space-y-2 rounded-2xl border border-line bg-white p-4 text-sm md:col-span-2">
+          <h2 className="font-medium">把负责人绑定到部门</h2>
+          <p className="text-muted">只绑定业务负责人和 HRBP。建账号仍在系统管理员的管理页。</p>
+          <select name="userId" className="w-full rounded-xl border border-line px-3 py-2">
+            {bindable.map((account) => (
+              <option key={account.id} value={account.id}>
+                {account.name} · {account.username} · {roleLabel(account.role)}
+              </option>
+            ))}
+          </select>
+          <select name="departmentId" className="w-full rounded-xl border border-line px-3 py-2">
+            <option value="">不绑定部门</option>
+            {context.departmentRows.map((department) => (
+              <option key={department.id} value={department.id}>
+                {department.name}
+              </option>
+            ))}
+          </select>
+          <Button type="submit" variant="secondary">
+            保存绑定
           </Button>
         </form>
         <form action={oneOffBudgetAction} className="space-y-2 rounded-2xl border border-line bg-white p-4 text-sm md:col-span-2">

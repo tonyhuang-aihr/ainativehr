@@ -1,6 +1,6 @@
 /**
- * PRD 第 10 节已拍板的默认值。每一条都收在这里，计算别处只调用函数。
- * 示例成本仍按设计师脚本的右端点（生效日当天不计）折算，见 SAMPLE_FOLLOWS_DESIGNER_END。
+ * PRD v1.0 第 10 节已拍板的默认值。每一条都收在这里，计算别处只调用函数。
+ * 离职成本含最后工作日。示例计算和产品口径一致。
  */
 
 /** 规划年度是自然年，按四个自然季度拆开。 */
@@ -13,12 +13,9 @@ export const PLANNING_CYCLE = "calendar-year-quarters" as const;
 export const DEPARTURE_COUNTS_THROUGH_LAST_WORKING_DAY = true;
 
 /**
- * 设计师脚本把离职生效日当成区间右端点，当天不计入。
- * 含当天大约多 0.49 万元，会带动 0.5 万取整，原型上的 2,075.5 / 16,095.0 就会变。
- * 示例路径因此仍走设计师日历；产品开关打开后用 exclusiveServiceEnd。
+ * 折算区间是左闭右开。成本算到最后工作日，右端点就是次日。
+ * 转出、转入不走这个函数：生效日当天起算在新部门。
  */
-export const SAMPLE_FOLLOWS_DESIGNER_END = true;
-
 export function exclusiveServiceEnd(lastWorkingDay: string, countsThrough = DEPARTURE_COUNTS_THROUGH_LAST_WORKING_DAY): string {
   if (!countsThrough) return lastWorkingDay;
   const [year, month, day] = lastWorkingDay.split("-").map(Number);
@@ -47,3 +44,9 @@ export function offerIsAccepted(status: string): boolean {
 export function agentChangeConfirmed(status: string): boolean {
   return status === "上线已批准" || status === "已确认" || status === "已审批";
 }
+
+/** 新人上手期只留作假设，P0 不改变成本。 */
+export const RAMP_UP_AFFECTS_COST = false;
+
+/** 场景里的 N+1 开关做在场景层，默认关。场景页是第二批。 */
+export const SCENARIO_NOTICE_PAY_DEFAULT = false;

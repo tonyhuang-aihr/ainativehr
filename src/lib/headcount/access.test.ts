@@ -41,9 +41,12 @@ describe("角色与部门树", () => {
     expect(can(hr, "toggleExact")).toBe(true);
     expect(can(hr, "viewCompensation")).toBe(true);
     expect(can(hr, "manageUsers")).toBe(false);
+    expect(can(zhao, "export")).toBe(false);
     expect(can(admin, "viewBusiness")).toBe(false);
+    expect(can(admin, "export")).toBe(false);
     expect(can(admin, "wipe")).toBe(true);
     expect(can(admin, "viewLogs")).toBe(true);
+    expect(can(hr, "viewLogs")).toBe(true);
   });
 
   it("登录失败会锁定，密码要有字母和数字，日志至少留 6 个月", () => {

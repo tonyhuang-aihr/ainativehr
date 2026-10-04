@@ -1,4 +1,4 @@
-import type { ScopeOverview } from "@/lib/headcount/overview";
+import { conclusionSourceLabel, type ScopeOverview } from "@/lib/headcount/overview";
 import Link from "next/link";
 
 const SEVERITY = { 高: "bg-[#FEE2E2] text-[#B91C1C]", 中: "bg-[#FEF3C7] text-[#92400E]", 低: "bg-[#F3F4F6] text-[#4B5563]" };
@@ -11,7 +11,7 @@ export function ScopeOverviewBoard({ overview }: { overview: ScopeOverview }) {
         <h1 className="mt-1 text-2xl font-semibold">{overview.title}</h1>
       </div>
       <section className="rounded-3xl border border-line bg-white p-6 shadow-card">
-        <p className="text-xs text-primary">AI 生成 · 依据可查</p>
+        <p className="text-xs text-primary">{conclusionSourceLabel(overview.conclusionOrigin)}</p>
         <p className="mt-3 text-lg leading-8">{overview.conclusion}</p>
         <p className="mt-3 text-sm text-muted">{overview.note}</p>
         {overview.rangeNote ? <p className="mt-2 text-sm text-[#92400E]">{overview.rangeNote}</p> : null}

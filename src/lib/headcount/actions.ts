@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { signIn, signOut } from "@/auth";
 import { can, type HeadcountRole } from "@/lib/headcount/authz";
+import { parseBudgetBatch, parseQuotaBatch } from "@/lib/headcount/configBatch";
 import { getDb } from "@/lib/headcount/db/client";
 import {
   bindAccount,
@@ -20,6 +21,7 @@ import {
   setQuota,
   wipeOnline,
 } from "@/lib/headcount/db/mutate";
+import { listUsers, loadDepartments } from "@/lib/headcount/db/queries";
 import { isDemo } from "@/lib/headcount/env";
 import { currentUser } from "@/lib/headcount/session";
 
@@ -100,6 +102,50 @@ export async function quotaAction(formData: FormData) {
   notice("/headcount/import", "编制已保存");
 }
 
+function departmentIdOf(departments: { id: string; name: string }[], key: string): string | null {
+  return departments.find((department) => department.id === key || department.name === key)?.id ?? null;
+}
+
+export async function budgetBatchAction(formData: FormData) {
+  const user = await currentUser();
+  if (!user || !can(user, "editConfig")) notice("/headcount/login", "需要登录");
+  let rows;
+  try {
+    rows = parseBudgetBatch(String(formData.get("lines") ?? ""));
+  } catch (error) {
+    notice("/headcount/import", error instanceof Error ? error.message : "无法导入预算");
+  }
+  if (rows.length === 0) notice("/headcount/import", "没有可导入的预算");
+  const db = await getDb();
+  const departments = await loadDepartments(db);
+  for (const row of rows) {
+    const departmentId = departmentIdOf(departments, row.key);
+    if (!departmentId) notice("/headcount/import", `找不到部门 ${row.key}`);
+    await setDepartmentBudget(db, departmentId, row.amount, user.id, user.name);
+  }
+  notice("/headcount/import", `已导入 ${rows.length} 条部门预算`);
+}
+
+export async function quotaBatchAction(formData: FormData) {
+  const user = await currentUser();
+  if (!user || !can(user, "editConfig")) notice("/headcount/login", "需要登录");
+  let rows;
+  try {
+    rows = parseQuotaBatch(String(formData.get("lines") ?? ""));
+  } catch (error) {
+    notice("/headcount/import", error instanceof Error ? error.message : "无法导入编制");
+  }
+  if (rows.length === 0) notice("/headcount/import", "没有可导入的编制");
+  const db = await getDb();
+  const departments = await loadDepartments(db);
+  for (const row of rows) {
+    const departmentId = departmentIdOf(departments, row.key);
+    if (!departmentId) notice("/headcount/import", `找不到部门 ${row.key}`);
+    await setQuota(db, departmentId, row.formal, row.agent, user.id, user.name);
+  }
+  notice("/headcount/import", `已导入 ${rows.length} 条编制`);
+}
+
 export async function oneOffBudgetAction(formData: FormData) {
   const user = await currentUser();
   if (!user || !can(user, "editConfig")) notice("/headcount/login", "需要登录");
@@ -139,9 +185,18 @@ export async function createUserAction(formData: FormData) {
 
 export async function bindUserAction(formData: FormData) {
   const user = await currentUser();
-  if (!user || !can(user, "manageUsers")) notice("/headcount/admin", "只有系统管理员可以改绑定");
-  await bindAccount(await getDb(), String(formData.get("userId") ?? ""), String(formData.get("departmentId") ?? ""), user.id, user.name);
-  notice("/headcount/admin", "部门绑定已更新");
+  const userId = String(formData.get("userId") ?? "");
+  const departmentId = String(formData.get("departmentId") ?? "");
+  const db = await getDb();
+  if (user && can(user, "manageUsers")) {
+    await bindAccount(db, userId, departmentId, user.id, user.name);
+    notice("/headcount/admin", "部门绑定已更新");
+  }
+  if (!user || !can(user, "editConfig")) notice("/headcount/login", "需要登录");
+  const target = (await listUsers(db)).find((account) => account.id === userId);
+  if (!target || (target.role !== "leader" && target.role !== "hrbp")) notice("/headcount/import", "只能绑定业务负责人和 HRBP");
+  await bindAccount(db, userId, departmentId, user.id, user.name);
+  notice("/headcount/import", "部门绑定已更新");
 }
 
 export async function wipeAction() {
@@ -160,7 +215,7 @@ export async function restoreAction() {
 
 export async function purgeLogsAction() {
   const user = await currentUser();
-  if (!user || !can(user, "viewLogs")) notice("/headcount/admin", "只有系统管理员可以清理日志");
+  if (!user || !can(user, "wipe")) notice("/headcount/admin", "只有系统管理员可以清理日志");
   await purgeExpiredLogs(await getDb());
   notice("/headcount/admin", "只删除了超过 6 个月的日志");
 }

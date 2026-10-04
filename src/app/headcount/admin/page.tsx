@@ -150,11 +150,13 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
               ))}
             </ul>
           </div>
-          <form action={purgeLogsAction}>
-            <Button type="submit" variant="secondary">
-              清理已超过 6 个月的日志
-            </Button>
-          </form>
+          {can(user, "wipe") ? (
+            <form action={purgeLogsAction}>
+              <Button type="submit" variant="secondary">
+                清理已超过 6 个月的日志
+              </Button>
+            </form>
+          ) : null}
         </section>
       ) : null}
       {can(user, "export") ? (

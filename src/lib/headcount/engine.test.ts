@@ -6,7 +6,7 @@ import { DEPT, samplePlan } from "@/lib/headcount/sample";
 const result = computePlan(samplePlan());
 const wan = (yuan: number) => roundToHalfWan(yuan);
 
-describe("示例公司与设计稿数字一致", () => {
+describe("示例公司按含最后工作日折算", () => {
   it("编制、在岗、在途按公司去重", () => {
     const center = deptStat(result, DEPT.center);
     expect(center.onBoard).toBe(486);
@@ -29,11 +29,11 @@ describe("示例公司与设计稿数字一致", () => {
   it("公司成本合计", () => {
     const center = deptStat(result, DEPT.center);
     expect(formatWan(center.currentYuan)).toBe("15,896.5");
-    expect(formatWan(center.inFlightQuarterTotal)).toBe("55.0");
-    expect(formatWan(center.inFlightYearTotal)).toBe("198.5");
-    expect(formatWan(center.yearDailyYuan)).toBe("16,070.5");
+    expect(formatWan(center.inFlightQuarterTotal)).toBe("55.5");
+    expect(formatWan(center.inFlightYearTotal)).toBe("199.0");
+    expect(formatWan(center.yearDailyYuan)).toBe("16,071.0");
     expect(formatWan(center.yearOneOffYuan)).toBe("24.5");
-    expect(formatWan(center.yearTotalYuan)).toBe("16,095.0");
+    expect(formatWan(center.yearTotalYuan)).toBe("16,095.5");
   });
 
   it("平台部负责人视图用的日常成本", () => {
@@ -48,7 +48,7 @@ describe("示例公司与设计稿数字一致", () => {
     expect(formatWan(plat.currentYuan)).toBe("2,037.0");
     expect(formatWan(plat.yearDailyYuan)).toBe("2,075.5");
     expect(formatWan(plat.inFlightYearDaily)).toBe("38.5");
-    expect(formatWan(plat.yearTotalYuan)).toBe("2,084.0");
+    expect(formatWan(plat.yearTotalYuan)).toBe("2,084.5");
     expect(formatWan(plat.inFlightYearTotal)).toBe("47.5");
     expect(formatWan(plat.inFlightQuarterTotal)).toBe("17.5");
     const daily = [0, 1, 2, 3].map(
@@ -77,7 +77,7 @@ describe("示例公司与设计稿数字一致", () => {
       expect(formatWan(stat.yearDailyYuan)).toBe(fields.daily);
       expect(formatWan(stat.yearOneOffYuan)).toBe(fields.oneOff);
     };
-    expectDept(DEPT.prod1, { on: 150, transit: 4, cur: "4,791.0", daily: "4,845.0", oneOff: "14.0" });
+    expectDept(DEPT.prod1, { on: 150, transit: 4, cur: "4,791.0", daily: "4,845.5", oneOff: "14.0" });
     expectDept(DEPT.prod2, { on: 131, transit: 2, cur: "4,169.0", daily: "4,196.5", oneOff: "0.0" });
     expectDept(DEPT.qa, { on: 77, transit: 3, cur: "2,547.0", daily: "2,585.0", oneOff: "2.0" });
     expectDept(DEPT.ai, { on: 65, transit: 1, cur: "2,213.0", daily: "2,228.5", oneOff: "0.0" });
@@ -105,6 +105,7 @@ describe("示例公司与设计稿数字一致", () => {
     expect(zhao && yearBand(zhao.annual)).toBe("80–90");
     expect(zhao && zhao.quarters.map((value, index) => quarterBand(value, zhao.days[index]))).toEqual(["17.5–20", "17.5–20", "20–22.5", "20–22.5"]);
     expect(jiang?.status).toBe("待离职");
+    expect(jiang?.days[0]).toBe(31 + 28);
     expect(jiang && quarterBand(jiang.quarters[1], jiang.days[1])).toBe("—");
     expect(jiang && quarterBand(jiang.quarters[0], jiang.days[0])).toBe("2.5–5");
     expect(zhu && zhu.quarters.map((value, index) => quarterBand(value, zhu.days[index]))).toEqual(["5–7.5", "5–7.5", "7.5–10", "7.5–10"]);

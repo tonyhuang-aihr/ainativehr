@@ -8,6 +8,7 @@ import {
   yearEnd,
   yearStart,
 } from "@/lib/headcount/calendar";
+import { exclusiveServiceEnd } from "@/lib/headcount/policies";
 import { estimateSeverance } from "@/lib/headcount/severance";
 import type { AgentSeed, MovementSeed, PersonSeed, PlanInput } from "@/lib/headcount/types";
 
@@ -144,6 +145,12 @@ function annualOf(plan: PlanInput, grade: string): number {
   return plan.gradeAnnual[grade] ?? 0;
 }
 
+/** 离职的右端点含最后工作日。转出生效日当天已经不在原部门。 */
+function serviceExclusiveEnd(movement: MovementSeed): number {
+  if (movement.kind === "离职") return parseIsoDate(exclusiveServiceEnd(movement.effectiveDate));
+  return parseIsoDate(movement.effectiveDate);
+}
+
 export function computePlan(plan: PlanInput): PlanResult {
   const start = yearStart(plan.year);
   const end = yearEnd(plan.year);
@@ -154,7 +161,7 @@ export function computePlan(plan: PlanInput): PlanResult {
   }
   for (const seed of plan.people) {
     const movement = leaving.get(seed.employeeNo);
-    const rowEnd = movement ? parseIsoDate(movement.effectiveDate) : end;
+    const rowEnd = movement ? serviceExclusiveEnd(movement) : end;
     const status = movement ? (movement.kind === "离职" ? "待离职" : "待转出") : "在岗";
     const share = prorate(plan.year, annualOf(plan, seed.grade), start, rowEnd);
     people.push({
@@ -285,7 +292,7 @@ function impactOf(plan: PlanInput, movement: MovementSeed): MovementImpact {
     return row(movement, share.quarters, sum(share.quarters), null);
   }
   if (movement.kind === "离职" || movement.kind === "转出") {
-    const share = prorate(plan.year, annualOf(plan, movement.grade), when, end);
+    const share = prorate(plan.year, annualOf(plan, movement.grade), serviceExclusiveEnd(movement), end);
     const quarters = share.quarters.map((value) => -value) as QuarterAmounts;
     return row(movement, quarters, -sum(share.quarters), null);
   }

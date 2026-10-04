@@ -34,6 +34,14 @@ export type OverviewDepartment = {
 
 export type OverviewCard = { label: string; value: string; sub: string };
 
+export type ConclusionOrigin = "template" | "model" | "cache";
+
+export function conclusionSourceLabel(origin: ConclusionOrigin): string {
+  if (origin === "model") return "结论来自模型";
+  if (origin === "cache") return "结论来自缓存";
+  return "结论来自模板";
+}
+
 export type ScopeOverview = {
   audience: "od" | "leader";
   title: string;
@@ -41,6 +49,7 @@ export type ScopeOverview = {
   asOf: string;
   year: number;
   conclusion: string;
+  conclusionOrigin: ConclusionOrigin;
   note: string;
   rangeNote: string | null;
   cards: OverviewCard[];
@@ -281,6 +290,7 @@ export function buildScopeOverview(result: PlanResult, rootId: string, audience:
     asOf: result.plan.asOf,
     year: result.plan.year,
     conclusion,
+    conclusionOrigin: "template",
     note: "不含一次性费用（经济补偿、Agent 实施 / 培训），由 HR 和 OD 统一管理，不摊到部门",
     rangeNote,
     cards,

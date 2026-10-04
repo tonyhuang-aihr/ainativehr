@@ -35,8 +35,8 @@ const MATRIX: Record<HeadcountRole, HeadcountAction[]> = {
   od: ["viewBusiness", "import", "editConfig", "viewCompensation", "viewOneOff", "export"],
   hrbp: ["viewBusiness", "viewLeader"],
   leader: ["viewBusiness", "viewLeader"],
-  hr_admin: ["viewBusiness", "viewCompensation", "viewOneOff", "toggleExact", "export"],
-  sys_admin: ["manageUsers", "viewLogs", "wipe", "export"],
+  hr_admin: ["viewBusiness", "viewCompensation", "viewOneOff", "toggleExact", "viewLogs", "export"],
+  sys_admin: ["manageUsers", "viewLogs", "wipe"],
 };
 
 export function can(user: HeadcountUser, action: HeadcountAction): boolean {
