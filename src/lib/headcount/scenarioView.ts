@@ -7,6 +7,8 @@ import { defaultAssumptions, evaluateBaseline, evaluateScenario, scenarioCutSeve
 import { DEFAULT_SETTINGS } from "@/lib/model/types";
 
 export const DEFAULT_PREFILL_NOTE = "没有配置模型，使用默认值：离职率 8%，招聘周期 60 天，调薪率 0%，AI 替代比例沿用沙盘拆解。N+1 默认不计入。";
+export const TIMELINE_EFFECTIVE_CAPTION = "按季初生效";
+export const INCOMPLETE_RATIO_NOTE = "沙盘尚未拆解人 : AI。只标记数据不完整，不按 Agent 个数推算。";
 export const MODEL_PREFILL_NOTE = "已配置模型。用模型预填时只发送脱敏后的部门汇总，不足 5 人的部门不带人数和金额。";
 
 const SPAN_LIMIT = DEFAULT_SETTINGS.thresholds.spanWide;
@@ -59,6 +61,7 @@ export type ScenarioBoard = {
   healthName: string;
   health: HealthCheck[];
   timelineTitle: string;
+  timelineCaption: string;
   timelineSummary: string;
   timelineRows: TimelineRow[];
   assumptionSummary: string;
@@ -191,14 +194,7 @@ export function healthChecks(result: PlanResult, scenario: ScenarioResult): Heal
     });
   }
   if (definition.ratio === "未拆解") {
-    const byQuarter = new Map<number, number>();
-    for (const agent of definition.agents) {
-      const quarter = quarterOf(year, agent.effectiveDate);
-      byQuarter.set(quarter, (byQuarter.get(quarter) ?? 0) + agent.count);
-    }
-    const top = [...byQuarter.entries()].sort((left, right) => right[1] - left[1])[0];
-    const added = top ? `Q${top[0]} 新增 ${top[1]} 个 Agent 的岗位没有沙盘拆解` : "新增 Agent 的岗位没有沙盘拆解";
-    checks.push({ title: "人 : AI 未拆解", body: `${added}，不按 Agent 个数推算。`, compliance: false });
+    checks.push({ title: "人 : AI 未拆解", body: INCOMPLETE_RATIO_NOTE, compliance: false });
   }
   const reserve = result.plan.oneOffBudget;
   if (reserve != null && scenario.oneOffYuan > reserve) {
@@ -359,6 +355,7 @@ export function buildScenarioBoard(result: PlanResult, definitions: ScenarioDefi
     healthName: `${focus.definition.name} · ${health.length} 条`,
     health,
     timelineTitle: `时间轴 · ${focus.definition.name}`,
+    timelineCaption: TIMELINE_EFFECTIVE_CAPTION,
     timelineSummary: `${focus.quarters.map((quarter, index) => `Q${index + 1} ${formatWan(quarter.total)}`).join(" · ")} 万${events ? ` · ${events}` : ""}`,
     timelineRows: focus.quarters.map((quarter, index) => ({
       quarter: `Q${index + 1}`,

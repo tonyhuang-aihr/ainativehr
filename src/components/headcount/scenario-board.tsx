@@ -124,9 +124,12 @@ export function ScenarioBoardView({ board, notice }: { board: ScenarioBoard; not
 
       <section id="scenario-timeline" className="overflow-hidden rounded-2xl border border-line bg-white">
         <details open>
-          <summary className="flex cursor-pointer flex-wrap items-center gap-3 px-4 py-3 text-sm">
-            <b>{board.timelineTitle}</b>
-            <span className="text-muted">{board.timelineSummary}</span>
+          <summary className="cursor-pointer px-4 py-3 text-sm">
+            <span className="flex flex-wrap items-center gap-3">
+              <b>{board.timelineTitle}</b>
+              <span className="text-muted">{board.timelineSummary}</span>
+            </span>
+            <span className="mt-1 block text-xs text-muted">{board.timelineCaption}</span>
           </summary>
           <div className="overflow-x-auto border-t border-line">
             <table className="w-full min-w-[680px] border-collapse text-sm">

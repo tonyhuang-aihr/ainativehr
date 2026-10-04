@@ -32,11 +32,14 @@ describe("场景页与沙盘导入", () => {
     expect(board.hero).toBe("对比的 3 个场景中，沙盘方案 A成本最低（15,945.0 万），比预算总包结余 55.0 万，人 : AI 为 69 : 31；激进 · AI 加速结余 28.0 万，但要在 Q3 减员 8 人、产生 55.0 万经济补偿，人 : AI 未拆解；基准超预算总包 98.5 万。");
     expect(board.columns.map((column) => column.total)).toEqual(["16,095.5", "16,098.5", "15,972.0", "15,945.0"]);
     expect(board.columns.map((column) => column.gap)).toEqual(["超 95.5", "超 98.5", "结余 28.0", "结余 55.0"]);
+    expect(board.timelineCaption).toBe("按季初生效");
     expect(board.timelineSummary).toBe("Q1 3,937.0 · Q2 4,009.0 · Q3 4,040.5 · Q4 3,985.5 万 · Q2 +12 Agent · Q3 减员 8 人");
     expect(board.health).toHaveLength(4);
+    expect(board.health.map((item) => item.title)).toEqual(["《劳动合同法》第 41 条", "人 : AI 未拆解", "一次性费用超出预留", "管理幅度"]);
     expect(board.health[0]).toMatchObject({ title: "《劳动合同法》第 41 条", compliance: true });
     expect(board.health[0].body).toContain("Q3 减员 8 人，约占职工总数 1.6%");
-    expect(board.health[1].title).toBe("人 : AI 未拆解");
+    expect(board.health[1]).toEqual({ title: "人 : AI 未拆解", body: "沙盘尚未拆解人 : AI。只标记数据不完整，不按 Agent 个数推算。", compliance: false });
+    expect(board.health[1].body).not.toMatch(/\d/);
     expect(board.health[2].body).toBe("一次性 97.5 万，超出预留 30.0 万（示例）；部门持续成本结余 95.5 万，合计仍结余 28.0 万。");
     expect(board.health[3].title).toBe("管理幅度");
     expect(board.health[3].body).toContain("基础架构组 33");
