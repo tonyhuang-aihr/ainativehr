@@ -10,11 +10,17 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["src/**/*.test.ts"],
+    server: {
+      deps: {
+        inline: ["next-auth"],
+      },
+    },
   },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
       "server-only": path.resolve(__dirname, "./src/test/server-only-stub.ts"),
+      "next/server": path.resolve(__dirname, "./node_modules/next/server.js"),
     },
   },
 });

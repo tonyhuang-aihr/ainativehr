@@ -9,7 +9,31 @@ export class ScopeDenied extends Error {
   }
 }
 
-const COMPANY_SCENARIO_IDS = new Set(["jz", "jj", "bs", "fa"]);
+export class ScenarioMissing extends Error {
+  readonly status = 404;
+  constructor(message = "场景不存在或已删除") {
+    super(message);
+    this.name = "ScenarioMissing";
+  }
+}
+
+const COMPANY_SCENARIO_IDS = new Set(["jx", "jz", "jj", "bs", "fa"]);
+const PROJECTED_PRESET = /^bu-(.+)-(jz|jj|bs|fa|jx)$/;
+
+/** 知道这个编号，但当前用户看不到。未知编号返回 false，交给 404。 */
+export function focusIsOutOfScope(
+  focusId: string,
+  companyWide: boolean,
+  departmentIds: readonly string[],
+  visibleIds: readonly string[],
+): boolean {
+  if (companyWide) return false;
+  if (COMPANY_SCENARIO_IDS.has(focusId)) return true;
+  const match = PROJECTED_PRESET.exec(focusId);
+  if (!match) return false;
+  const departmentId = match[1];
+  return departmentIds.includes(departmentId) && !visibleIds.includes(departmentId);
+}
 
 /** 公司口径只有 OD 和 HR 管理员。HRBP 只看自己的事业部。 */
 export function seesCompany(user: HeadcountUser): boolean {
@@ -48,9 +72,14 @@ export function selectScenariosForUser(
   const companyWide = seesCompany(user);
   const allowed = new Set(departments.filter((department) => visibleIds.includes(department.id)).map((department) => department.name));
   const names = departments.map((department) => department.name);
+  const departmentIds = departments.map((department) => department.id);
   if (focusId) {
     const target = definitions.find((definition) => definition.id === focusId);
-    if (!target || !scenarioFitsScope(target, allowed, names, companyWide)) throw new ScopeDenied("无权查看");
+    if (!target) {
+      if (focusIsOutOfScope(focusId, companyWide, departmentIds, visibleIds)) throw new ScopeDenied("无权查看");
+      throw new ScenarioMissing();
+    }
+    if (!scenarioFitsScope(target, allowed, names, companyWide)) throw new ScopeDenied("无权查看");
   }
   const visible = definitions.filter((definition) => scenarioFitsScope(definition, allowed, names, companyWide));
   const focus = focusId && visible.some((definition) => definition.id === focusId)

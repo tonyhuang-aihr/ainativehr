@@ -49,6 +49,10 @@ export async function loadScenarioDefinitions(db: AppDatabase): Promise<Scenario
     });
 }
 
+export async function deleteScenarioDefinition(db: AppDatabase, id: string): Promise<void> {
+  await db.delete(schema.scenarios).where(eq(schema.scenarios.id, id));
+}
+
 export async function saveScenarioDefinition(db: AppDatabase, definition: ScenarioDefinition): Promise<void> {
   await db
     .insert(schema.scenarios)

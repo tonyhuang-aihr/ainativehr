@@ -17,7 +17,7 @@ import {
   writeSandboxPlans,
 } from "@/lib/headcount/sandboxMemory";
 import { applyLocalSandboxRestore } from "@/lib/headcount/sandboxRestore";
-import { ScopeDenied, selectScenariosForUser } from "@/lib/headcount/scopeGuard";
+import { ScenarioMissing, selectScenariosForUser } from "@/lib/headcount/scopeGuard";
 import { loadClosure, loadDepartments } from "@/lib/headcount/db/queries";
 import { visibleDepartmentIds } from "@/lib/headcount/authz";
 
@@ -116,7 +116,7 @@ describe("沙盘方案留在浏览器", () => {
     expect((await applyLocalSandboxRestore(hr, lin, [outside])).rejectedIds).toEqual(["sandbox-out"]);
     const after = await loadScenarioDefinitions(hr);
     expect(after.some((item) => item.id === "sandbox-out")).toBe(false);
-    expect(() => selectScenariosForUser(after, lin, departments, visible, "sandbox-out")).toThrow(ScopeDenied);
+    expect(() => selectScenariosForUser(after, lin, departments, visible, "sandbox-out")).toThrow(ScenarioMissing);
     expect(selectScenariosForUser(after, lin, departments, visible, null).definitions.map((item) => item.id)).toEqual(["sandbox-lin"]);
   }, 60_000);
 });

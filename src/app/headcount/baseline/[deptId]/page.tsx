@@ -25,7 +25,7 @@ export default async function BaselineDepartmentPage({
     data = await openDepartment(user, deptId, detail);
   } catch (error) {
     if (error instanceof ScopeDenied) forbidden();
-    redirect("/headcount/baseline");
+    throw error;
   }
   return <LeaderBoard view={data.view} />;
 }

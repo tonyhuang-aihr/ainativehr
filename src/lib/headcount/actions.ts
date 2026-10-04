@@ -7,20 +7,17 @@ import { signIn, signOut } from "@/auth";
 import { can, type HeadcountRole } from "@/lib/headcount/authz";
 import { parseBudgetBatch, parseQuotaBatch } from "@/lib/headcount/configBatch";
 import { getDb } from "@/lib/headcount/db/client";
-import { scopeFor } from "@/lib/headcount/db/present";
 import { loadPlan } from "@/lib/headcount/db/queries";
-import { loadScenarioDefinitions, saveScenarioDefinition } from "@/lib/headcount/db/scenarios";
 import { computePlan } from "@/lib/headcount/engine";
 import { askHeadcountModel, modelConfigured } from "@/lib/headcount/modelClient";
 import { parseScenarioFile } from "@/lib/data/scenarioFile";
 import { buildRdCenterWorkspace } from "@/lib/demo/rdCenter";
 import { scenarioFromSandbox } from "@/lib/headcount/sandboxImport";
-import { defaultAssumptions, presetScenarios, type ScenarioAssumptions, type ScenarioDefinition } from "@/lib/headcount/scenario";
-import { mergeBusinessScenarios } from "@/lib/headcount/buCost";
-import { scopeRoots } from "@/lib/headcount/overview";
-import { DEMO_AI_RATIO } from "@/lib/headcount/sample";
-import { scenarioFitsScope, seesCompany } from "@/lib/headcount/scopeGuard";
-import { assumptionUnits, copyScenario, quarterDate, resolvePrefill, setCompared } from "@/lib/headcount/scenarioView";
+import { normalizeScenarioDefinition, type ScenarioDefinition } from "@/lib/headcount/scenario";
+import { assumptionUnits, resolvePrefill } from "@/lib/headcount/scenarioView";
+import { commitScenarioMemory, openScenarioMemory } from "@/lib/headcount/scenarioMemoryStore";
+import { acceptStoredScenarios, mergeScenarioState, scenarioDelta } from "@/lib/headcount/scenarioState";
+import { executeScenarioCommand, visibleScenarioCatalog, type ScenarioCommand, type WriteScope } from "@/lib/headcount/scenarioWrites";
 import {
   bindAccount,
   createAccount,
@@ -37,7 +34,6 @@ import {
 } from "@/lib/headcount/db/mutate";
 import { listUsers, loadDepartments } from "@/lib/headcount/db/queries";
 import { isDemo, usesEphemeralDb } from "@/lib/headcount/env";
-import { applyLocalSandboxRestore } from "@/lib/headcount/sandboxRestore";
 import { currentUser } from "@/lib/headcount/session";
 
 function notice(path: string, message: string): never {
@@ -240,20 +236,16 @@ async function scenarioActor() {
   return user;
 }
 
-async function scenarioScope(user: { id: string; role: HeadcountRole; departmentIds: string[] }) {
-  const scoped = await scopeFor(user);
-  const companyWide = seesCompany(user);
-  const allowed = new Set(scoped.departments.filter((department) => scoped.visible.includes(department.id)).map((department) => department.name));
-  const db = await getDb();
-  const result = companyWide ? null : computePlan(await loadPlan(db, { departmentIds: null, sensitive: false }));
-  const root = scopeRoots(scoped.departments, scoped.visible)[0] ?? null;
-  return { ...scoped, companyWide, allowed, names: scoped.departments.map((department) => department.name), result, root };
-}
-
-function visibleDefinitions(definitions: ScenarioDefinition[], scope: Awaited<ReturnType<typeof scenarioScope>>) {
-  const visible = definitions.filter((definition) => scenarioFitsScope(definition, scope.allowed, scope.names, scope.companyWide));
-  if (scope.companyWide || !scope.root || !scope.result) return visible;
-  return mergeBusinessScenarios(definitions, visible, scope.root, scope.result);
+function writeScopeOf(memory: Awaited<ReturnType<typeof openScenarioMemory>>): WriteScope {
+  const rootName = memory.departments.find((department) => department.id === memory.root)?.name ?? null;
+  return {
+    companyWide: memory.companyWide,
+    allowed: memory.allowed,
+    names: memory.names,
+    rootId: memory.root,
+    rootName,
+    result: memory.result,
+  };
 }
 
 function quarterValue(value: FormDataEntryValue | null): 1 | 2 | 3 | 4 {
@@ -262,200 +254,147 @@ function quarterValue(value: FormDataEntryValue | null): 1 | 2 | 3 | 4 {
   return 2;
 }
 
-export async function createScenarioAction(formData: FormData) {
+async function runScenarioCommand(command: ScenarioCommand, log: string) {
   const user = await scenarioActor();
-  const db = await getDb();
-  const scope = await scenarioScope(user);
-  const name = String(formData.get("name") ?? "").trim();
-  if (!name) scenarioNotice("场景需要一个名称");
-  const catalog = await loadScenarioDefinitions(db);
-  const visible = visibleDefinitions(catalog, scope);
-  const seed = catalog.find((item) => item.id === "jz") ?? presetScenarios()[0];
-  const ratio = scope.companyWide ? seed.ratio : (DEMO_AI_RATIO[scope.root ?? ""] ?? "未拆解");
-  const definition: ScenarioDefinition = {
-    id: `copy-${Date.now()}`,
-    name,
-    source: "copy",
-    compared: visible.filter((item) => item.compared).length < 3,
-    assumptions: { ...seed.assumptions },
-    assumptionOrigin: "od",
-    hires: [],
-    agents: [],
-    extraAgentOneOff: [],
-    cuts: [],
-    ratio,
-    ratioNote: ratio === "未拆解" ? "沙盘尚未拆解" : seed.ratioNote,
-    structureNote: null,
-    spanAlert: null,
-  };
-  if (!scenarioFitsScope(definition, scope.allowed, scope.names, scope.companyWide)) scenarioNotice("无权查看");
-  await saveScenarioDefinition(db, definition);
-  await recordOperation(db, user.id, user.name, "新建场景", definition.name);
-  scenarioNotice(`已新建${definition.name}`, definition.id);
+  const memory = await openScenarioMemory(user);
+  const scope = writeScopeOf(memory);
+  const visible = visibleScenarioCatalog(memory.catalog, scope);
+  const outcome = executeScenarioCommand(memory.catalog, visible, scope, command);
+  if (!outcome.ok) scenarioNotice(outcome.notice, outcome.focusId);
+  await commitScenarioMemory(memory, outcome.catalog, outcome.changed, outcome.removedId);
+  await recordOperation(memory.db, user.id, user.name, log, outcome.changed?.name ?? outcome.removedId ?? outcome.focusId);
+  scenarioNotice(outcome.notice, outcome.removedId ? undefined : outcome.focusId);
+}
+
+export async function createScenarioAction(formData: FormData) {
+  await runScenarioCommand({ type: "create", name: String(formData.get("name") ?? ""), id: `copy-${Date.now()}` }, "新建场景");
 }
 
 export async function renameScenarioAction(formData: FormData) {
-  const user = await scenarioActor();
-  const db = await getDb();
-  const scope = await scenarioScope(user);
-  const id = String(formData.get("id") ?? "");
-  const name = String(formData.get("name") ?? "").trim();
-  if (!name) scenarioNotice("场景需要一个名称", id);
-  if (id === "jz" || id === "jj" || id === "bs" || id === "fa" || id === "jx") scenarioNotice("这个场景不能改名", id);
-  const current = visibleDefinitions(await loadScenarioDefinitions(db), scope).find((item) => item.id === id);
-  if (!current) scenarioNotice("无权查看");
-  const next = { ...current, name };
-  await saveScenarioDefinition(db, next);
-  await recordOperation(db, user.id, user.name, "重命名场景", `${current.name} → ${name}`);
-  scenarioNotice(`已改名为${name}`, id);
+  await runScenarioCommand({ type: "rename", id: String(formData.get("id") ?? ""), name: String(formData.get("name") ?? "") }, "重命名场景");
 }
 
 export async function copyScenarioAction(formData: FormData) {
-  const user = await scenarioActor();
-  const db = await getDb();
-  const scope = await scenarioScope(user);
-  const definitions = visibleDefinitions(await loadScenarioDefinitions(db), scope);
-  const copy = copyScenario(definitions, String(formData.get("id") ?? ""), `copy-${Date.now()}`);
-  if (!copy || !scenarioFitsScope(copy, scope.allowed, scope.names, scope.companyWide)) scenarioNotice("无权查看");
-  await saveScenarioDefinition(db, copy);
-  await recordOperation(db, user.id, user.name, "复制场景", copy.name);
-  scenarioNotice(`已复制为${copy.name}`, copy.id);
+  await runScenarioCommand({ type: "copy", sourceId: String(formData.get("id") ?? ""), id: `copy-${Date.now()}` }, "复制场景");
+}
+
+export async function deleteScenarioAction(formData: FormData) {
+  await runScenarioCommand({ type: "delete", id: String(formData.get("id") ?? "") }, "删除场景");
 }
 
 export async function toggleScenarioAction(formData: FormData) {
-  const user = await scenarioActor();
-  const db = await getDb();
-  const definitions = visibleDefinitions(await loadScenarioDefinitions(db), await scenarioScope(user));
-  const id = String(formData.get("id") ?? "");
-  const next = setCompared(definitions, id, formData.get("compared") === "on");
-  if (next.error) scenarioNotice(next.error, id);
-  const updated = next.definitions.find((item) => item.id === id);
-  if (!updated) scenarioNotice("无权查看");
-  await saveScenarioDefinition(db, updated);
-  await recordOperation(db, user.id, user.name, "场景对比", `${updated.name} ${updated.compared ? "加入" : "移出"}`);
-  scenarioNotice(updated.compared ? `${updated.name}已加入对比` : `${updated.name}已移出对比`, id);
+  await runScenarioCommand({ type: "toggle", id: String(formData.get("id") ?? ""), compared: formData.get("compared") === "on" }, "场景对比");
 }
 
 export async function saveAssumptionsAction(formData: FormData) {
-  const user = await scenarioActor();
-  const db = await getDb();
-  const definitions = visibleDefinitions(await loadScenarioDefinitions(db), await scenarioScope(user));
-  const id = String(formData.get("id") ?? "");
-  const current = definitions.find((item) => item.id === id);
-  if (!current) scenarioNotice("无权查看");
-  const attrition = Number(formData.get("attrition") ?? "");
-  const cycle = Number(formData.get("cycle") ?? "");
-  const raise = Number(formData.get("raise") ?? "");
   const aiRaw = String(formData.get("ai") ?? "").trim();
-  const ai = aiRaw === "" ? null : Number(aiRaw);
-  if (![attrition, cycle, raise].every((value) => Number.isFinite(value)) || (ai != null && !Number.isFinite(ai))) scenarioNotice("假设没有写成数字", id);
-  const assumptions: ScenarioAssumptions = defaultAssumptions({
-    attritionRate: attrition / 100,
-    hiringCycleDays: Math.round(cycle),
-    raiseRate: raise / 100,
-    aiReplacement: ai == null ? null : ai / 100,
-    noticePay: formData.get("noticePay") === "on",
-  });
-  const next: ScenarioDefinition = { ...current, assumptions, assumptionOrigin: "od" };
-  await saveScenarioDefinition(db, next);
-  await recordOperation(db, user.id, user.name, "调整场景假设", current.name);
-  scenarioNotice("假设已保存", id);
+  await runScenarioCommand(
+    {
+      type: "assumptions",
+      id: String(formData.get("id") ?? ""),
+      attrition: Number(formData.get("attrition") ?? ""),
+      cycle: Number(formData.get("cycle") ?? ""),
+      raise: Number(formData.get("raise") ?? ""),
+      ai: aiRaw === "" ? null : Number(aiRaw),
+      noticePay: formData.get("noticePay") === "on",
+    },
+    "调整场景假设",
+  );
 }
 
 export async function addScenarioChangeAction(formData: FormData) {
-  const user = await scenarioActor();
-  const db = await getDb();
-  const scope = await scenarioScope(user);
-  const definitions = visibleDefinitions(await loadScenarioDefinitions(db), scope);
-  const id = String(formData.get("id") ?? "");
-  const current = definitions.find((item) => item.id === id);
-  if (!current) scenarioNotice("无权查看");
-  const kind = String(formData.get("kind") ?? "");
-  const count = Number(formData.get("count") ?? "");
-  const effectiveDate = quarterDate(quarterValue(formData.get("quarter")));
-  if (!Number.isInteger(count) || count <= 0) scenarioNotice("人数要写成正整数", id);
-  const next: ScenarioDefinition = { ...current, hires: [...current.hires], agents: [...current.agents], cuts: [...current.cuts] };
-  if (kind === "hire") {
-    next.hires.push({ departmentName: String(formData.get("department") ?? ""), grade: String(formData.get("grade") ?? ""), count, effectiveDate });
-  } else if (kind === "agent") {
-    const monthly = Number(formData.get("monthly") ?? "");
-    const oneOff = Number(formData.get("oneOff") ?? 0);
-    const departmentName = String(formData.get("department") ?? "").trim();
-    if (!departmentName) scenarioNotice(`Agent「${String(formData.get("agentName") ?? "新增 Agent")}」缺少所属部门`, id);
-    if (!Number.isFinite(monthly) || !Number.isFinite(oneOff)) scenarioNotice("Agent 费用没有写成数字", id);
-    next.agents.push({ name: String(formData.get("agentName") ?? "新增 Agent"), count, monthly, effectiveDate, oneOff, departmentName });
-  } else if (kind === "cut") {
-    const mark = String(formData.get("mark") ?? "N");
-    const tenureYears = Number(formData.get("tenure") ?? "");
-    if (mark !== "N" && mark !== "N+1" && mark !== "不计") scenarioNotice("补偿口径不对", id);
-    if (!Number.isFinite(tenureYears)) scenarioNotice("平均司龄没有写成数字", id);
-    next.cuts.push({
-      departmentName: String(formData.get("department") ?? ""),
+  await runScenarioCommand(
+    {
+      type: "change",
+      id: String(formData.get("id") ?? ""),
+      kind: String(formData.get("kind") ?? ""),
+      count: Number(formData.get("count") ?? ""),
+      quarter: quarterValue(formData.get("quarter")),
+      department: String(formData.get("department") ?? ""),
       grade: String(formData.get("grade") ?? ""),
-      count,
-      effectiveDate,
-      mark,
-      tenureYears,
-      groupSize: count,
-    });
-  } else scenarioNotice("变动类型不对", id);
-  if (!scenarioFitsScope(next, scope.allowed, scope.names, scope.companyWide)) scenarioNotice("无权查看");
-  await saveScenarioDefinition(db, next);
-  await recordOperation(db, user.id, user.name, "按季调整场景", `${current.name} ${kind} ${effectiveDate}`);
-  scenarioNotice("这一季的变动已记入场景", id);
-}
-
-async function storeImported(user: { id: string; name: string }, definition: ScenarioDefinition) {
-  const db = await getDb();
-  const definitions = await loadScenarioDefinitions(db);
-  const others = definitions.filter((item) => item.compared && item.id !== definition.id).length;
-  const next = { ...definition, compared: others >= 3 ? false : definition.compared };
-  await saveScenarioDefinition(db, next);
-  await recordOperation(db, user.id, user.name, "导入沙盘方案", next.structureNote ?? next.name);
-  scenarioNotice(`已导入${next.name}。${next.structureNote ?? ""} 人 : AI ${next.ratio}。花名册没有写入。`, next.id);
+      agentName: String(formData.get("agentName") ?? ""),
+      monthly: Number(formData.get("monthly") ?? ""),
+      oneOff: Number(formData.get("oneOff") ?? 0),
+      mark: String(formData.get("mark") ?? "N"),
+      tenure: Number(formData.get("tenure") ?? ""),
+    },
+    "按季调整场景",
+  );
 }
 
 export async function restoreLocalSandboxAction(plans: ScenarioDefinition[]): Promise<{ restoredIds: string[]; rejectedIds: string[] }> {
+  return adoptDemoStateAction(plans);
+}
+
+export async function adoptDemoStateAction(plans: ScenarioDefinition[]): Promise<{ restoredIds: string[]; rejectedIds: string[] }> {
   const user = await currentUser();
   if (!user || !can(user, "viewScenarios") || !usesEphemeralDb()) return { restoredIds: [], rejectedIds: [] };
-  const result = await applyLocalSandboxRestore(await getDb(), user, plans);
-  if (result.restoredIds.length) revalidatePath("/headcount/scenarios");
-  return result;
+  const memory = await openScenarioMemory(user);
+  const scope = writeScopeOf(memory);
+  const restoredIds: string[] = [];
+  const rejectedIds: string[] = [];
+  const accepted: ScenarioDefinition[] = [];
+  for (const raw of plans) {
+    let definition: ScenarioDefinition | null = null;
+    try {
+      definition = raw && typeof raw === "object" && typeof raw.id === "string" ? normalizeScenarioDefinition(raw) : null;
+    } catch {
+      definition = null;
+    }
+    if (!definition) {
+      if (raw && typeof raw === "object" && "id" in raw && typeof raw.id === "string") rejectedIds.push(raw.id);
+      continue;
+    }
+    const [kept] = acceptStoredScenarios([definition], scope);
+    if (!kept) {
+      rejectedIds.push(definition.id);
+      continue;
+    }
+    accepted.push(kept);
+    restoredIds.push(kept.id);
+  }
+  const merged = mergeScenarioState(memory.seed, [...scenarioDelta(memory.seed, memory.catalog), ...accepted]);
+  await commitScenarioMemory(memory, merged, null, null);
+  if (restoredIds.length) {
+    await recordOperation(memory.db, user.id, user.name, "恢复本机场景", restoredIds.join(","));
+    revalidatePath("/headcount/scenarios");
+  }
+  return { restoredIds, rejectedIds };
 }
 
 export async function importSampleSandboxAction(formData: FormData) {
-  const user = await scenarioActor();
   const definition = scenarioFromSandbox(buildRdCenterWorkspace(), quarterValue(formData.get("quarter")));
-  const scope = await scenarioScope(user);
-  if (!scenarioFitsScope(definition, scope.allowed, scope.names, scope.companyWide)) scenarioNotice("无权查看");
-  await storeImported(user, definition);
+  const user = await scenarioActor();
+  const memory = await openScenarioMemory(user);
+  const id = memory.companyWide ? definition.id : `sandbox-${memory.root ?? "bu"}-${Date.now()}`;
+  await runScenarioCommand({ type: "import", definition, id }, "导入沙盘方案");
 }
 
 export async function importSandboxFileAction(formData: FormData) {
-  const user = await scenarioActor();
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) scenarioNotice("请选择沙盘导出的方案文件");
   const workspace = parseScenarioFile(await file.text());
   if (!workspace) scenarioNotice("这不是沙盘导出的方案文件");
   const definition = scenarioFromSandbox(workspace, quarterValue(formData.get("quarter")));
-  const scope = await scenarioScope(user);
-  if (!scenarioFitsScope(definition, scope.allowed, scope.names, scope.companyWide)) scenarioNotice("无权查看");
-  await storeImported(user, definition);
+  const user = await scenarioActor();
+  const memory = await openScenarioMemory(user);
+  const id = memory.companyWide ? definition.id : `sandbox-${memory.root ?? "bu"}-${Date.now()}`;
+  await runScenarioCommand({ type: "import", definition, id }, "导入沙盘方案");
 }
 
 export async function prefillAssumptionsAction(formData: FormData) {
   const user = await scenarioActor();
-  const db = await getDb();
-  const scope = await scenarioScope(user);
+  const memory = await openScenarioMemory(user);
+  const scope = writeScopeOf(memory);
   const id = String(formData.get("id") ?? "");
-  const definitions = visibleDefinitions(await loadScenarioDefinitions(db), scope);
-  const current = definitions.find((item) => item.id === id);
+  const current = visibleScenarioCatalog(memory.catalog, scope).find((item) => item.id === id);
   if (!current) scenarioNotice("无权查看");
-  const plan = await loadPlan(db, { departmentIds: scope.companyWide ? null : scope.visible, sensitive: can(user, "viewOneOff") });
+  const plan = await loadPlan(memory.db, { departmentIds: memory.companyWide ? null : memory.visibleIds, sensitive: can(user, "viewOneOff") });
   const units = assumptionUnits(computePlan(plan));
   const resolved = await resolvePrefill(units, modelConfigured() ? askHeadcountModel : null);
-  await saveScenarioDefinition(db, { ...current, assumptions: resolved.assumptions, assumptionOrigin: resolved.origin });
-  await recordOperation(db, user.id, user.name, "预填场景假设", `${current.name} ${resolved.origin}`);
+  const next = { ...current, assumptions: resolved.assumptions, assumptionOrigin: resolved.origin };
+  await commitScenarioMemory(memory, memory.catalog.map((item) => (item.id === id ? next : item)).concat(memory.catalog.some((item) => item.id === id) ? [] : [next]), next, null);
+  await recordOperation(memory.db, user.id, user.name, "预填场景假设", `${current.name} ${resolved.origin}`);
   scenarioNotice(resolved.note, id);
 }
 

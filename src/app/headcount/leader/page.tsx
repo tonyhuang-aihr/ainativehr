@@ -23,7 +23,7 @@ export default async function LeaderPage({
     screen = await openLeader(user, query.dept, detail);
   } catch (error) {
     if (error instanceof ScopeDenied) forbidden();
-    screen = await openLeader(user, undefined, detail);
+    throw error;
   }
   if (screen.kind === "overview") {
     return (

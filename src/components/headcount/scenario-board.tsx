@@ -2,6 +2,7 @@ import {
   addScenarioChangeAction,
   copyScenarioAction,
   createScenarioAction,
+  deleteScenarioAction,
   importSampleSandboxAction,
   importSandboxFileAction,
   prefillAssumptionsAction,
@@ -13,7 +14,7 @@ import { SandboxLocalRestore } from "@/components/headcount/sandbox-restore";
 import { ScenarioFileField } from "@/components/headcount/scenario-file-field";
 import { DepartmentDailyRows } from "@/components/headcount/department-daily-rows";
 import { InfoMark } from "@/components/headcount/info-mark";
-import { COMPARE_SCROLL_HINT, SCENARIO_TOTAL_NOTE, TIMELINE_CHANGE_NOTE } from "@/lib/headcount/copy";
+import { COMPARE_SCROLL_HINT, HRBP_SCENARIO_TOTAL_NOTE, SCENARIO_TOTAL_NOTE, TIMELINE_CHANGE_NOTE } from "@/lib/headcount/copy";
 import type { ScenarioDefinition } from "@/lib/headcount/scenario";
 import type { ScenarioBoard } from "@/lib/headcount/scenarioView";
 
@@ -35,7 +36,7 @@ export function ScenarioBoardView({
 }: {
   board: ScenarioBoard;
   notice?: string;
-  sandboxRestore?: { userId: string; scopeKey: string; plans: ScenarioDefinition[] } | null;
+  sandboxRestore?: { userId: string; scopeKey: string; plans: ScenarioDefinition[]; authoritative: boolean } | null;
 }) {
   return (
     <div className="space-y-4">
@@ -43,7 +44,9 @@ export function ScenarioBoardView({
         <div>
           <h1 className="text-2xl font-semibold">场景与时间轴</h1>
           <p className="mt-1 text-sm text-muted">基于基线（含已确认在途）· 仅 OD / HRBP 可见 · {board.year} 自然季度</p>
-          {sandboxRestore ? <SandboxLocalRestore userId={sandboxRestore.userId} scopeKey={sandboxRestore.scopeKey} plans={sandboxRestore.plans} /> : null}
+          {sandboxRestore ? (
+            <SandboxLocalRestore userId={sandboxRestore.userId} scopeKey={sandboxRestore.scopeKey} plans={sandboxRestore.plans} authoritative={sandboxRestore.authoritative} />
+          ) : null}
         </div>
         <a className="text-sm text-primary" href="/headcount/explain">
           口径说明
@@ -55,7 +58,7 @@ export function ScenarioBoardView({
         <div>
           <p className="text-xs text-[#7C3AED]">
             AI 生成 · 依据可查
-            <InfoMark note={SCENARIO_TOTAL_NOTE} />
+            <InfoMark note={board.showOneOff ? SCENARIO_TOTAL_NOTE : HRBP_SCENARIO_TOTAL_NOTE} />
           </p>
           <p className="mt-3 text-base leading-8">{board.hero}</p>
           <p className="mt-4 text-xs text-muted">{board.oneOffCaption}</p>
@@ -338,6 +341,14 @@ export function ScenarioBoardView({
                   重命名
                 </button>
               </form>
+              {item.source === "copy" || (item.source === "sandbox" && item.id !== "fa") ? (
+                <form action={deleteScenarioAction}>
+                  <input name="id" type="hidden" value={item.id} />
+                  <button className="rounded-lg px-2 py-1 text-primary" type="submit">
+                    删除
+                  </button>
+                </form>
+              ) : null}
             </li>
           ))}
         </ul>

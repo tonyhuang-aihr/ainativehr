@@ -9,7 +9,7 @@ import { formatWan } from "@/lib/headcount/money";
 import { DEPT } from "@/lib/headcount/sample";
 import { scenarioFromSandbox } from "@/lib/headcount/sandboxImport";
 import { presetScenarios } from "@/lib/headcount/scenario";
-import { assertDepartmentVisible, ScopeDenied, selectScenariosForUser } from "@/lib/headcount/scopeGuard";
+import { assertDepartmentVisible, focusIsOutOfScope, ScenarioMissing, ScopeDenied, selectScenariosForUser } from "@/lib/headcount/scopeGuard";
 
 const lin = { id: "lin", role: "hrbp" as const, departmentIds: [DEPT.prod1] };
 const huang = { id: "huang", role: "od" as const, departmentIds: [] as string[] };
@@ -56,6 +56,10 @@ describe("HRBP 只看本事业部", () => {
     expect(selectScenariosForUser([own], lin, departments, visible, own.id).definitions.map((item) => item.id)).toEqual(["lin-own"]);
     const odVisible = visibleDepartmentIds(huang, departments, closure);
     expect(selectScenariosForUser(presetScenarios(), huang, departments, odVisible, null).definitions).toHaveLength(4);
+    expect(() => selectScenariosForUser(presetScenarios(), huang, departments, odVisible, "doesnotexist")).toThrow(ScenarioMissing);
+    expect(() => selectScenariosForUser(presetScenarios(), lin, departments, visible, "jx")).toThrow(ScopeDenied);
+    expect(() => selectScenariosForUser(presetScenarios(), lin, departments, visible, "bu-plat-jz")).toThrow(ScopeDenied);
+    expect(focusIsOutOfScope("doesnotexist", true, departments.map((department) => department.id), odVisible)).toBe(false);
     expect(names).toContain("产品研发一部");
   }, 60_000);
 });

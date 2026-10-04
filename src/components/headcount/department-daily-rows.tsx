@@ -30,12 +30,8 @@ export function DepartmentDailyRows({
         </td>
         {columns.map((column) => (
           <td key={column.id} className={`px-4 py-2 ${column.lowest ? "bg-[#FAFAFF]" : ""}`}>
-            {column.daily}
-            {column.approx ? (
-              <>
-                ≈<InfoMark note={ROUNDING_GAP_NOTE} />
-              </>
-            ) : null}
+            {column.approx ? `≈ ${column.daily}` : column.daily}
+            {column.approx ? <InfoMark note={ROUNDING_GAP_NOTE} /> : null}
           </td>
         ))}
       </tr>
