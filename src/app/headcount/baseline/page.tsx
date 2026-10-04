@@ -15,7 +15,7 @@ export default async function BaselinePage() {
       <div>
         <h1 className="text-2xl font-semibold">OD 底座 · {data.cards.name}</h1>
         <p className="mt-1 text-sm text-muted">
-          {data.year} 年 · 截至 {data.asOf}。表里的全年预计含一次性费用，用来对齐设计稿。上面的卡片把日常成本和一次性费用分开。
+          {data.year} 年 · 截至 {data.asOf}。日常全年对照部门预算。一次性费用只在公司层对照预算池。
         </p>
       </div>
       <section className="grid gap-3 md:grid-cols-4">
@@ -35,16 +35,21 @@ export default async function BaselinePage() {
         <article className="rounded-2xl border border-line bg-white p-4">
           <p className="text-sm text-muted">日常全年 / 公司总包</p>
           <p className="mt-2 text-xl font-semibold">{data.cards.yearDaily} 万</p>
-          <p className="text-sm text-muted">总包 {data.cards.companyBudget} 万</p>
+          <p className="text-sm text-muted">
+            总包 {data.cards.companyBudget} 万 · {data.cards.dailyGap}
+          </p>
         </article>
         <article className="rounded-2xl border border-line bg-white p-4">
           <p className="text-sm text-muted">一次性 / 预算池</p>
           <p className="mt-2 text-xl font-semibold">{data.cards.yearOneOff} 万</p>
-          <p className="text-sm text-muted">{data.cards.oneOffBudget ? `${data.cards.oneOffBudget} 万` : "未设置一次性费用预算池"}</p>
+          <p className="text-sm text-muted">{data.cards.oneOffNote}</p>
         </article>
       </section>
+      <p className="text-sm text-muted">
+        公司合计：日常 {data.cards.yearDaily} 万 + 一次性 {data.cards.yearOneOff} 万 = {data.cards.yearTotal} 万。
+      </p>
       <div className="overflow-x-auto rounded-2xl border border-line bg-white">
-        <table className="w-full min-w-[760px] text-sm">
+        <table className="w-full min-w-[980px] text-sm">
           <thead>
             <tr className="text-left text-muted">
               <th className="px-3 py-3">部门</th>
@@ -55,7 +60,9 @@ export default async function BaselinePage() {
               <th>空缺</th>
               <th>当前</th>
               <th>日常全年</th>
-              <th>全年预计（含一次性）</th>
+              <th>预算</th>
+              <th>对比</th>
+              <th>一次性</th>
             </tr>
           </thead>
           <tbody>
@@ -71,7 +78,12 @@ export default async function BaselinePage() {
                 <td>{row.vacancy}</td>
                 <td>{row.current}</td>
                 <td>{row.yearDaily}</td>
-                <td>{row.yearTotal}</td>
+                <td>{row.budget ? `${row.budgetKind === "公司总包" ? "总包 " : ""}${row.budget}` : "未设置"}</td>
+                <td>{row.dailyGap}</td>
+                <td>
+                  {row.yearOneOff}
+                  {row.oneOffNote ? <span className="block text-xs text-muted">{row.oneOffNote}</span> : null}
+                </td>
               </tr>
             ))}
           </tbody>

@@ -293,3 +293,7 @@ export async function listOperationLogs(db: AppDatabase) {
   return db.select().from(schema.operationLogs).orderBy(desc(schema.operationLogs.createdAt)).limit(100);
 }
 
+export async function listToggleLogs(db: AppDatabase) {
+  return db.select().from(schema.toggleLogs).orderBy(desc(schema.toggleLogs.createdAt)).limit(50);
+}
+

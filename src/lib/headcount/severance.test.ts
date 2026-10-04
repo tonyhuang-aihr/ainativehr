@@ -5,6 +5,8 @@ import {
   compensationMonthsFromAverage,
   completeMonths,
   estimateSeverance,
+  NOTICE_PAY_BASE,
+  noticePayMonthly,
   resolveTenureMonths,
 } from "@/lib/headcount/severance";
 
@@ -138,6 +140,19 @@ describe("第 47 条经济补偿", () => {
     expect(switched.amount).toBe(plus.amount);
     expect(off.amount).toBe(base.amount);
     expect(estimateSeverance({ mark: "不计", gradeAnnual: 120_000, noticePay: true, cityMonthly: CITY }).amount).toBe(0);
+    expect(NOTICE_PAY_BASE).toBe("capped");
+  });
+
+  it("代通知金基数只在一处切换：封顶月基数或未封顶月工资", () => {
+    const annual = 480_000;
+    const capped = estimateSeverance({ mark: "N+1", gradeAnnual: annual, averageMonths: 12, cityMonthly: CITY, noticePayBase: "capped" });
+    const uncapped = estimateSeverance({ mark: "N+1", gradeAnnual: annual, averageMonths: 12, cityMonthly: CITY, noticePayBase: "uncapped" });
+    expect(capped.capped).toBe(true);
+    expect(capped.monthlyBase).toBe(CAP);
+    expect(noticePayMonthly(annual, capped.monthlyBase, "capped")).toBe(CAP);
+    expect(noticePayMonthly(annual, capped.monthlyBase, "uncapped")).toBe(annual / 12);
+    expect(uncapped.amount).toBe(capped.amount - CAP + annual / 12);
+    expect(estimateSeverance({ mark: "N+1", gradeAnnual: annual, averageMonths: 12, cityMonthly: CITY }).amount).toBe(capped.amount);
   });
 
   it("场景减员用平均司龄；不足 5 人改用上一级", () => {

@@ -1,8 +1,9 @@
 import { Button } from "@/components/ui";
 import { bindUserAction, createUserAction, exactAction, purgeLogsAction, restoreAction, wipeAction } from "@/lib/headcount/actions";
-import { can } from "@/lib/headcount/authz";
+import { can, roleLabel } from "@/lib/headcount/authz";
+import { formatBeijing } from "@/lib/headcount/clock";
 import { getDb } from "@/lib/headcount/db/client";
-import { listAccessLogs, listOperationLogs, listUsers, loadDepartments, loadSettings } from "@/lib/headcount/db/queries";
+import { listAccessLogs, listOperationLogs, listToggleLogs, listUsers, loadDepartments, loadSettings } from "@/lib/headcount/db/queries";
 import { currentUser } from "@/lib/headcount/session";
 import { redirect } from "next/navigation";
 
@@ -19,6 +20,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
   const users = can(user, "manageUsers") ? await listUsers(db) : [];
   const access = can(user, "viewLogs") ? await listAccessLogs(db, { name: query.q }) : [];
   const operations = can(user, "viewLogs") ? await listOperationLogs(db) : [];
+  const toggles = can(user, "toggleExact") || can(user, "viewLogs") ? await listToggleLogs(db) : [];
   return (
     <div className="space-y-6">
       <div>
@@ -40,6 +42,19 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
             </Button>
           </div>
         </form>
+      ) : null}
+      {can(user, "toggleExact") || can(user, "viewLogs") ? (
+        <div className="rounded-2xl border border-line bg-white p-4 text-sm">
+          <h2 className="font-medium">精确估算开关记录</h2>
+          <ul className="mt-2 space-y-1">
+            {toggles.map((row) => (
+              <li key={row.id}>
+                {formatBeijing(row.createdAt)} · {row.userName} · {row.enabled ? "打开" : "关闭"}
+              </li>
+            ))}
+            {toggles.length === 0 ? <li className="text-muted">还没有记录</li> : null}
+          </ul>
+        </div>
       ) : null}
       {can(user, "manageUsers") ? (
         <section className="space-y-4">
@@ -81,7 +96,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
                     <td className="px-3 py-2">
                       {account.name} · {account.username}
                     </td>
-                    <td>{account.role}</td>
+                    <td>{roleLabel(account.role)}</td>
                     <td>
                       <form action={bindUserAction} className="flex gap-2">
                         <input type="hidden" name="userId" value={account.id} />
@@ -118,7 +133,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
             <ul className="mt-2 space-y-1">
               {access.slice(0, 30).map((row) => (
                 <li key={row.id}>
-                  {new Date(row.createdAt).toISOString()} · {row.userName} · {row.departmentName}
+                  {formatBeijing(row.createdAt)} · {row.userName} · {row.departmentName}
                 </li>
               ))}
               {access.length === 0 ? <li className="text-muted">还没有记录</li> : null}
@@ -129,7 +144,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
             <ul className="mt-2 space-y-1">
               {operations.slice(0, 20).map((row) => (
                 <li key={row.id}>
-                  {row.userName} · {row.action} · {row.detail}
+                  {formatBeijing(row.createdAt)} · {row.userName} · {row.action} · {row.detail}
                 </li>
               ))}
             </ul>

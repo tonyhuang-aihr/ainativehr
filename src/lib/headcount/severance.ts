@@ -72,11 +72,21 @@ export function resolveTenureMonths(
   throw new SeveranceInputError("缺少可用的部门职级平均司龄");
 }
 
+/** 代通知金多出来的那一个月，用封顶后的月基数，还是用未封顶的月工资。产品只改这一处。 */
+export type NoticePayBase = "capped" | "uncapped";
+
+/** 默认沿用 PRD 伪代码：先封顶，再把封顶后的月基数加进代通知金。 */
+export const NOTICE_PAY_BASE: NoticePayBase = "capped";
+
+export function noticePayMonthly(gradeAnnual: number, cappedMonthly: number, choice: NoticePayBase = NOTICE_PAY_BASE): number {
+  return choice === "uncapped" ? gradeAnnual / 12 : cappedMonthly;
+}
+
 /**
  * 《劳动合同法》第 47 条。输入是补偿标记，不是离职类型。
  * 月基数高于当地上年度职工月平均工资 3 倍时，基数按 3 倍封顶，年限最多 12 年。
  * 正好等于 3 倍时不封顶。没有城市工资配置时不封顶，并给出提示。
- * 代通知金沿用封顶之后的月基数（待确认事项里的暂按）。
+ * 代通知金的基数由 NOTICE_PAY_BASE 决定，不散落在别的计算里。
  */
 export function estimateSeverance(input: {
   mark: CompMark;
@@ -86,6 +96,7 @@ export function estimateSeverance(input: {
   averageMonths?: number;
   cityMonthly?: number | null;
   noticePay?: boolean;
+  noticePayBase?: NoticePayBase;
 }): SeveranceResult {
   if (input.mark === "不计") {
     return { amount: 0, compensationMonths: 0, monthlyBase: 0, capped: false, warning: null };
@@ -113,6 +124,6 @@ export function estimateSeverance(input: {
     }
   }
   let amount = base * months;
-  if (input.mark === "N+1" || input.noticePay) amount += base;
+  if (input.mark === "N+1" || input.noticePay) amount += noticePayMonthly(input.gradeAnnual, base, input.noticePayBase);
   return { amount, compensationMonths: months, monthlyBase: base, capped, warning };
 }

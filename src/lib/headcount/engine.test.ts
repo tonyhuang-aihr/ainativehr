@@ -31,6 +31,8 @@ describe("示例公司与设计稿数字一致", () => {
     expect(formatWan(center.currentYuan)).toBe("15,896.5");
     expect(formatWan(center.inFlightQuarterTotal)).toBe("55.0");
     expect(formatWan(center.inFlightYearTotal)).toBe("198.5");
+    expect(formatWan(center.yearDailyYuan)).toBe("16,070.5");
+    expect(formatWan(center.yearOneOffYuan)).toBe("24.5");
     expect(formatWan(center.yearTotalYuan)).toBe("16,095.0");
   });
 
@@ -66,19 +68,20 @@ describe("示例公司与设计稿数字一致", () => {
     expect(deptStat(result, DEPT.platDirect).onBoard).toBe(2);
   });
 
-  it("部门行与设计稿一致", () => {
-    const expectDept = (id: string, fields: { on: number; transit: number; cur: string; year: string }) => {
+  it("部门行把日常全年和一次性分开", () => {
+    const expectDept = (id: string, fields: { on: number; transit: number; cur: string; daily: string; oneOff: string }) => {
       const stat = deptStat(result, id);
       expect(stat.onBoard).toBe(fields.on);
       expect(stat.inTransit).toBe(fields.transit);
       expect(formatWan(stat.currentYuan)).toBe(fields.cur);
-      expect(formatWan(stat.yearTotalYuan)).toBe(fields.year);
+      expect(formatWan(stat.yearDailyYuan)).toBe(fields.daily);
+      expect(formatWan(stat.yearOneOffYuan)).toBe(fields.oneOff);
     };
-    expectDept(DEPT.prod1, { on: 150, transit: 4, cur: "4,791.0", year: "4,859.0" });
-    expectDept(DEPT.prod2, { on: 131, transit: 2, cur: "4,169.0", year: "4,196.5" });
-    expectDept(DEPT.qa, { on: 77, transit: 3, cur: "2,547.0", year: "2,587.0" });
-    expectDept(DEPT.ai, { on: 65, transit: 1, cur: "2,213.0", year: "2,228.5" });
-    expectDept(DEPT.direct, { on: 1, transit: 0, cur: "140.0", year: "140.0" });
+    expectDept(DEPT.prod1, { on: 150, transit: 4, cur: "4,791.0", daily: "4,845.0", oneOff: "14.0" });
+    expectDept(DEPT.prod2, { on: 131, transit: 2, cur: "4,169.0", daily: "4,196.5", oneOff: "0.0" });
+    expectDept(DEPT.qa, { on: 77, transit: 3, cur: "2,547.0", daily: "2,585.0", oneOff: "2.0" });
+    expectDept(DEPT.ai, { on: 65, transit: 1, cur: "2,213.0", daily: "2,228.5", oneOff: "0.0" });
+    expectDept(DEPT.direct, { on: 1, transit: 0, cur: "140.0", daily: "140.0", oneOff: "0.0" });
   });
 
   it("在途驱动项按组汇总，不把一次性费用算进日常", () => {

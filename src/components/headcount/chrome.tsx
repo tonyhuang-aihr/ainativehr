@@ -1,13 +1,6 @@
 import { logoutAction } from "@/lib/headcount/actions";
-import type { HeadcountRole } from "@/lib/headcount/authz";
+import { ROLE_LABEL, type HeadcountRole } from "@/lib/headcount/authz";
 import Link from "next/link";
-
-const ROLE_LABEL: Record<HeadcountRole, string> = {
-  od: "OD / HRBP",
-  leader: "业务负责人",
-  hr_admin: "HR 管理员",
-  sys_admin: "系统管理员",
-};
 
 export function HeadcountChrome({
   role,
@@ -26,7 +19,7 @@ export function HeadcountChrome({
     role && role !== "sys_admin" ? { href: "/headcount/leader", label: "负责人" } : null,
     role === "hr_admin" || role === "sys_admin" ? { href: "/headcount/admin", label: "管理" } : null,
     { href: "/headcount/explain", label: "数据说明" },
-    { href: "/headcount/later", label: "稍后" },
+    { href: "/headcount/later", label: "规划中（P1/P2）" },
   ].filter((link): link is { href: string; label: string } => Boolean(link));
 
   return (

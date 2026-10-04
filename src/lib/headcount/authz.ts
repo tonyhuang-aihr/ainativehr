@@ -1,5 +1,16 @@
 export type HeadcountRole = "od" | "leader" | "hr_admin" | "sys_admin";
 
+export const ROLE_LABEL: Record<HeadcountRole, string> = {
+  od: "OD / HRBP",
+  leader: "业务负责人",
+  hr_admin: "HR 管理员",
+  sys_admin: "系统管理员",
+};
+
+export function roleLabel(role: string): string {
+  return ROLE_LABEL[role as HeadcountRole] ?? role;
+}
+
 export type HeadcountUser = {
   id: string;
   role: HeadcountRole;

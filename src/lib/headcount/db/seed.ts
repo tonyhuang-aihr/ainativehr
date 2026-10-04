@@ -225,6 +225,12 @@ export async function seedSample(db: AppDatabase, options?: { replaceUsers?: boo
       })),
     );
   }
+  await db.insert(schema.toggleLogs).values({
+    userId: "hradmin",
+    userName: "韩管理",
+    enabled: false,
+    createdAt: Date.parse("2026-10-04T02:15:00Z"),
+  });
   await db.insert(schema.scenarios).values({
     id: "later",
     name: "情景与时间线",
