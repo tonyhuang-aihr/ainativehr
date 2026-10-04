@@ -56,6 +56,14 @@ export function LeaderBoard({ view }: { view: LeaderView }) {
         </div>
       </section>
 
+      {anyOpen ? (
+        <div className="sticky top-14 z-20 -mx-4 flex flex-wrap gap-6 border-y border-line bg-white/95 px-4 py-3 text-sm backdrop-blur">
+          <span>当前 {view.now.currentLabel} 万</span>
+          <span>全年 {view.annualLabel} 万</span>
+          <span>{view.deltaLabel ?? "未设置部门预算"}</span>
+        </div>
+      ) : null}
+
       <section className="grid gap-3 md:grid-cols-3">
         <article className="rounded-2xl border border-line bg-white p-4">
           <p className="text-sm text-muted">现在</p>
@@ -110,15 +118,6 @@ export function LeaderBoard({ view }: { view: LeaderView }) {
         </ul>
       </section>
 
-      {anyOpen ? (
-        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-white/95 px-4 py-3 backdrop-blur">
-          <div className="mx-auto flex max-w-6xl flex-wrap gap-6 text-sm">
-            <span>当前 {view.now.currentLabel} 万</span>
-            <span>全年 {view.annualLabel} 万</span>
-            <span>{view.deltaLabel ?? "未设置部门预算"}</span>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }
