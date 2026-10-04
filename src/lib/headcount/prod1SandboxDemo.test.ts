@@ -21,8 +21,8 @@ import {
 } from "@/lib/headcount/prod1SandboxDemo";
 import { DEPT, samplePlan } from "@/lib/headcount/sample";
 import { scenarioFitsScope } from "@/lib/headcount/scopeGuard";
-import { evaluateBaseline, evaluateScenario, nofillLabelNote, presetScenarios, quarterChangeDetails } from "@/lib/headcount/scenario";
-import { buildScenarioBoard, DEFAULT_PREFILL_NOTE } from "@/lib/headcount/scenarioView";
+import { evaluateBaseline, evaluateScenario, nofillLabelNote, presetScenarios } from "@/lib/headcount/scenario";
+import { buildScenarioBoard, DEFAULT_PREFILL_NOTE, setCompared, singleDepartmentPlanNote } from "@/lib/headcount/scenarioView";
 import { executeScenarioCommand, importableSandboxPlans, visibleScenarioCatalog, type WriteScope } from "@/lib/headcount/scenarioWrites";
 
 const result = computePlan(samplePlan());
@@ -274,7 +274,8 @@ describe("沙盘示例 · 产品研发一部的核对数字", () => {
       oneOff: "26.5",
       gap: "结余 125.5",
       ratio: "70 : 30 · 仅产品研发一部",
-      subtitle: "成本最低 · 仅产品研发一部",
+      subtitle: "仅产品研发一部",
+      subtitleNote: singleDepartmentPlanNote("产品研发一部"),
       yearApprox: true,
     });
     expect(column?.dailyParts?.map((part) => `${part.name} ${part.text}`)).toEqual([
@@ -309,21 +310,62 @@ describe("沙盘示例 · 产品研发一部的核对数字", () => {
       DEFAULT_PREFILL_NOTE,
     );
     expect(besideConservative.columns.find((item) => item.id === PROD1_SANDBOX_DEMO_ID)?.subtitle).toBe("仅产品研发一部");
+    expect(odBoard.hero).not.toContain(PROD1_SANDBOX_DEMO_NAME);
+    expect(odBoard.lowestName).not.toBe(PROD1_SANDBOX_DEMO_NAME);
+  });
+
+  it("加进公司对比后不参与成本最低，方案 A 和顶部结论保持原样", () => {
+    const before = buildScenarioBoard(result, presetScenarios(), "fa", DEFAULT_PREFILL_NOTE);
+    const added = setCompared([...presetScenarios(), companyPlan], companyPlan.id, true);
+    expect(added.error).toBeNull();
+    const after = buildScenarioBoard(result, added.definitions, "fa", DEFAULT_PREFILL_NOTE);
+    expect(after.hero).toBe(before.hero);
+    expect(after.hero).toContain("沙盘方案 A · 拆组前成本最低（15,945.0 万）");
+    expect(after.hero).not.toContain(PROD1_SANDBOX_DEMO_NAME);
+    expect(after.lowestName).toBe("沙盘方案 A · 拆组前");
+    expect(after.lowestTotal).toBe(before.lowestTotal);
+    expect(after.columns.find((column) => column.id === "fa")).toMatchObject({ subtitle: "成本最低", lowest: true });
+    const demo = after.columns.find((column) => column.id === PROD1_SANDBOX_DEMO_ID);
+    expect(demo).toMatchObject({
+      subtitle: "仅产品研发一部",
+      lowest: false,
+      ratio: "70 : 30 · 仅产品研发一部",
+      subtitleNote: "单部门方案：只含产品研发一部的变动，其他部门按基线和默认假设计算，不参与『成本最低』比较；人 : AI 只代表产品研发一部已拆解的岗位。",
+    });
+    expect(demo?.subtitle).not.toContain("成本最低");
+    const html = renderToStaticMarkup(createElement(ScenarioBoardView, { board: after }));
+    const subtitleAt = html.indexOf("仅产品研发一部");
+    const noteAt = html.indexOf("单部门方案：只含产品研发一部的变动");
+    expect(subtitleAt).toBeGreaterThan(-1);
+    expect(noteAt).toBeGreaterThan(subtitleAt);
   });
 
   it("出缺不补并进离职未补位，范围外的部门仍然整份拒绝", () => {
     expect(scenarioFitsScope(linPlan, linScope.allowed, linScope.names, false)).toBe(true);
     const q1 = {
       ...companyPlan,
-      nofill: [{ departmentName: "产品研发一部", grade: "P5", count: 1, effectiveDate: "2027-01-01" }],
+      nofill: [{ departmentName: "产品研发一部", grade: "P5", count: 2, effectiveDate: "2027-01-01" }],
     };
-    const scenario = businessScenarioResult(result, q1, DEPT.prod1);
-    const baseline = evaluateBaseline(result, DEPT.prod1);
-    const details = quarterChangeDetails(baseline, scenario, { people: 150, agents: 4 });
-    const q1Label = details.find((label) => label.text.startsWith("Q1 离职未补位"));
-    expect(q1Label?.text.startsWith("Q1 离职未补位 4 人")).toBe(true);
-    expect(q1Label?.note).toBe(nofillLabelNote(1, 3));
-    expect(q1Label?.note).toContain("其余 3 人按离职率估算。");
+    const midQuarter = {
+      ...companyPlan,
+      nofill: [{ departmentName: "产品研发一部", grade: "P5", count: 2, effectiveDate: "2027-02-15" }],
+    };
+    const linOptions = { mode: "business" as const, rootId: DEPT.prod1, departmentNames: ["产品研发一部"] };
+    const linQ1 = buildScenarioBoard(result, [{ ...q1, id: linPlan.id, compared: true }], linPlan.id, DEFAULT_PREFILL_NOTE, linOptions);
+    const q1Text = "Q1 离职未补位 5 人（含基线变动共 150→146）";
+    const q1Index = linQ1.timelineLabels.indexOf(q1Text);
+    expect(q1Index).toBeGreaterThan(-1);
+    expect(linQ1.timelineLabelNotes[q1Index]?.endsWith("其余 3 人按离职率估算。")).toBe(true);
+    const q1Html = renderToStaticMarkup(createElement(ScenarioBoardView, { board: linQ1 }));
+    const labelAt = q1Html.indexOf(q1Text);
+    const hoverAt = q1Html.indexOf("其余 3 人按离职率估算。");
+    expect(labelAt).toBeGreaterThan(-1);
+    expect(hoverAt).toBeGreaterThan(labelAt);
+    const atStart = businessScenarioResult(result, q1, DEPT.prod1);
+    const atMid = businessScenarioResult(result, midQuarter, DEPT.prod1);
+    expect(atMid.dailyYuan).toBe(atStart.dailyYuan);
+    expect(atMid.quarters.map((quarter) => quarter.headcount)).toEqual(atStart.quarters.map((quarter) => quarter.headcount));
+    expect(atMid.flows.map((flow) => flow.nofill)).toEqual([2, 0, 0, 0]);
     const leaked = { ...companyPlan, nofill: [{ departmentName: "数据智能部", grade: "P5", count: 1, effectiveDate: "2027-04-01" }] };
     expect(importableSandboxPlans([leaked], linScope)).toEqual([]);
     expect(evaluateScenario(result, companyPlan).definition.cuts).toEqual([]);

@@ -25,6 +25,8 @@ export type CompareColumn = {
   id: string;
   name: string;
   subtitle: string;
+  /** 单部门方案副标题上的 ⓘ。公司口径才有。 */
+  subtitleNote: string | null;
   total: string;
   gap: string;
   over: boolean;
@@ -216,9 +218,14 @@ export function displayedRatio(definition: ScenarioDefinition, companyWide: bool
   return definition.ratio;
 }
 
-export function partialBuName(definition: ScenarioDefinition): string | null {
+export function partialBuName(definition: { buRatio?: Record<string, string> }): string | null {
   const entries = Object.entries(definition.buRatio ?? {});
   return entries.length === 1 ? entries[0][0] : null;
+}
+
+/** 公司对比里的单部门方案。不参与「成本最低」，副标题只写范围。 */
+export function singleDepartmentPlanNote(departmentName: string): string {
+  return `单部门方案：只含${departmentName}的变动，其他部门按基线和默认假设计算，不参与『成本最低』比较；人 : AI 只代表${departmentName}已拆解的岗位。`;
 }
 
 function ratioWords(definition: ScenarioDefinition, companyWide: boolean): string {
@@ -296,8 +303,9 @@ export function copyScenario(definitions: ScenarioDefinition[], sourceId: string
 }
 
 export function setCompared(definitions: ScenarioDefinition[], id: string, compared: boolean): { definitions: ScenarioDefinition[]; error: string | null } {
-  const others = definitions.filter((item) => item.compared && item.id !== id).length;
-  if (compared && others >= 3) return { definitions, error: "最多对比 3 个场景" };
+  const target = definitions.find((item) => item.id === id);
+  const others = definitions.filter((item) => item.compared && item.id !== id && !partialBuName(item)).length;
+  if (compared && !partialBuName(target ?? {}) && others >= 3) return { definitions, error: "最多对比 3 个场景" };
   return { definitions: definitions.map((item) => (item.id === id ? { ...item, compared } : item)), error: null };
 }
 
@@ -334,7 +342,8 @@ export function buildScenarioBoard(result: PlanResult, definitions: ScenarioDefi
   }));
   const focus = (focusId === "jx" ? undefined : evaluated.get(focusId)) ?? (company ? evaluated.get("jj") : undefined) ?? [...evaluated.values()][0] ?? baseline;
   const compared = definitions.filter((definition) => definition.compared).map((definition) => evaluated.get(definition.id)!);
-  const lowest = [...compared].sort((left, right) => amountOf(left) - amountOf(right))[0] ?? baseline;
+  const ranked = compared.filter((item) => !(company && partialBuName(item.definition)));
+  const lowest = [...ranked].sort((left, right) => amountOf(left) - amountOf(right))[0] ?? baseline;
   const within = compared.filter((item) => roundToHalfWan(amountOf(item)) <= roundToHalfWan(budgetYuan)).length;
   const health = compared.map((item) => healthRow(result, item, company ? undefined : { budgetYuan, basis: "daily", article: "scope" }));
   const hints = health.flatMap((row) => row.cells).filter((cell) => cell.tone === "warn" || cell.tone === "compliance");
@@ -357,7 +366,8 @@ export function buildScenarioBoard(result: PlanResult, definitions: ScenarioDefi
     else if (item.definition.source === "sandbox") subtitle = "来自沙盘";
     else if (item.definition.source === "copy") subtitle = "副本";
     const partial = company ? partialBuName(item.definition) : null;
-    if (partial) subtitle = lowestColumn ? `成本最低 · 仅${partial}` : `仅${partial}`;
+    const subtitleNote = partial ? singleDepartmentPlanNote(partial) : null;
+    if (partial) subtitle = `仅${partial}`;
     const parts = columnParts(result, item, company);
     const shownQuarters = item.quarters.map((quarter) => (company ? quarter.total : quarter.labor + quarter.agent));
     const yearApprox = roundingGapWan(roundToHalfWan(amountOf(item)), shownQuarters.map((value) => roundToHalfWan(value))) !== 0;
@@ -365,6 +375,7 @@ export function buildScenarioBoard(result: PlanResult, definitions: ScenarioDefi
       id: item.definition.id,
       name: item.definition.name,
       subtitle,
+      subtitleNote,
       total: formatWan(amountOf(item)),
       gap: gap.text,
       over: gap.over,
@@ -379,8 +390,7 @@ export function buildScenarioBoard(result: PlanResult, definitions: ScenarioDefi
       ...parts,
     };
   });
-  const heroCompared = compared.length ? compared : [focus];
-  const hero = heroSentence(result, heroCompared, company ? { companyWide: true } : { budgetYuan, basis: "daily", budgetName: "部门预算", companyWide: false });
+  const hero = heroSentence(result, ranked, company ? { companyWide: true } : { budgetYuan, basis: "daily", budgetName: "部门预算", companyWide: false });
   const cut = focus.definition.cuts[0];
   const cutSummary = cut
     ? focus.definition.cuts

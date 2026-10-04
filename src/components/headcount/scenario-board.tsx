@@ -111,7 +111,10 @@ export function ScenarioBoardView({
                 {board.columns.map((column) => (
                   <th key={column.id} className={`px-4 py-3 font-medium ${column.lowest ? "bg-[#FAFAFF] text-primary" : ""}`}>
                     <div className="text-ink">{column.name}</div>
-                    <div className="text-xs font-normal text-muted">{column.subtitle}</div>
+                    <div className="text-xs font-normal text-muted">
+                      {column.subtitle}
+                      {column.subtitleNote ? <InfoMark note={column.subtitleNote} /> : null}
+                    </div>
                   </th>
                 ))}
               </tr>
