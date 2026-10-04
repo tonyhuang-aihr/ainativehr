@@ -264,7 +264,10 @@ function PeopleSection({ view, hrefFor }: { view: LeaderView; hrefFor: (patch: R
               <tbody>
                 {page.rows.map((row) => (
                   <tr key={row.id} className="border-t border-line" title={row.quarters}>
-                    <td className="py-2">{row.name}</td>
+                    <td className="py-2">
+                      {row.name}
+                      {row.nameNote ? <InfoMark note={row.nameNote} /> : null}
+                    </td>
                     {view.showDepartment ? <td>{row.departmentName}</td> : null}
                     <td>{row.title}</td>
                     <td>{row.grade}</td>

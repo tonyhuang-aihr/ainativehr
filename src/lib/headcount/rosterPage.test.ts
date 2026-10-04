@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { OUTSOURCE_SEAT_NOTE, TOOLTIPS } from "@/lib/headcount/copy";
 import { computePlan } from "@/lib/headcount/engine";
 import { buildLeaderView } from "@/lib/headcount/leaderView";
 import { DEPT, samplePlan } from "@/lib/headcount/sample";
@@ -100,5 +101,19 @@ describe("人员明细和 Agent 明细分页", () => {
     expect(JSON.stringify(leader.people)).not.toContain("质量与交付部");
     expect(JSON.stringify(leader.people)).not.toContain("数据智能部");
     expect(leader.agentsPage.counts).toMatchObject({ 全部: 4, 在用无变动: 1, 在途: 3, 待新增: 1, "待扩容或调整": 1, 待下线: 1 });
+  });
+
+  it("外包汇总行带座位说明，实习和正式行没有", () => {
+    expect(TOOLTIPS).toHaveLength(53);
+    expect(OUTSOURCE_SEAT_NOTE).toBe("外包只有座位数，按部门汇总，不列姓名。");
+    const company = collectPersonLines(result, DEPT.center);
+    const seats = pagePeople(company, { ...defaultDetailQuery(), peopleTypes: ["外包"], peopleSize: 50 }, { exact: true });
+    expect(seats.rows.length).toBeGreaterThan(0);
+    expect(seats.rows.every((row) => row.name.startsWith("外包（") && row.nameNote === OUTSOURCE_SEAT_NOTE)).toBe(true);
+    for (const type of ["正式", "实习", "顾问"] as const) {
+      const others = pagePeople(company, { ...defaultDetailQuery(), peopleTypes: [type], peopleSize: 50 }, { exact: true });
+      expect(others.rows.length).toBeGreaterThan(0);
+      expect(others.rows.every((row) => row.nameNote == null)).toBe(true);
+    }
   });
 });

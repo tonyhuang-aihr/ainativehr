@@ -1,4 +1,5 @@
 import { CURRENT_QUARTER_INDEX } from "@/lib/headcount/calendar";
+import { OUTSOURCE_SEAT_NOTE } from "@/lib/headcount/copy";
 import { subtreeIds, type MovementImpact, type PlanResult } from "@/lib/headcount/engine";
 import { formatSignedWan, formatWan, quarterBand, yearBand } from "@/lib/headcount/money";
 import { sortByReporting } from "@/lib/headcount/sortPeople";
@@ -74,6 +75,7 @@ export type PersonTableRow = {
   yearCost: string;
   yearImpact: string;
   compMark?: string;
+  nameNote?: string;
   quarters: string;
 };
 
@@ -375,6 +377,7 @@ export function pagePeople(
         quarters: ["Q1", "Q2", "Q3", "Q4"].map((label, index) => `${label} ${moneyText(options.exact, line.quarters[index] ?? 0, false)}`).join(" · "),
       };
       if (options.showCompensation) row.compMark = line.compMark ?? "—";
+      if (line.employmentType === "外包" && line.id.startsWith("other:")) row.nameNote = OUTSOURCE_SEAT_NOTE;
       return row;
     }),
     summary,

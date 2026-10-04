@@ -1,4 +1,4 @@
-/** 悬停文案 v1.1，与设计稿同一份，共 52 条。改文案先改生成稿再整表替换。 */
+/** 悬停文案 v1.1，与设计稿同一份，共 53 条。改文案先改生成稿再整表替换。 */
 
 export const TOOLTIPS = [
   { page: "负责人视图 · 总览（多部门，赵一）", metric: "编制与人员", text: "编制、在岗、在途、空缺只算正式员工；外包、实习、顾问单列人数。空缺 = 编制 −（在岗 + 在途）。" },
@@ -53,6 +53,7 @@ export const TOOLTIPS = [
   { page: "OD 底座 · 部门页", metric: "在途合计", text: "合计先用未取整的金额加总，再取整到 0.5 万，可能和逐行相加略有差异。" },
   { page: "场景与时间轴 v2", metric: "场景总成本", text: "场景总成本 = 部门日常成本（人工 + Agent 席位、算力）+ 一次性费用（经济补偿、Agent 实施和培训费）。一次性费用由 HR/OD 统一管理，不摊到部门。" },
   { page: "场景与时间轴 v2", metric: "时间轴", text: "场景新增 = 本场景在基线之上加减的数量；括号里是加上已确认在途后，季初到季末的实际变化。两个数都直接取成本引擎结果。场景里的变动统一按该季第一天生效（P0）。" },
+  { page: "人员明细", metric: "外包汇总", text: "外包只有座位数，按部门汇总，不列姓名。" },
 ] as const;
 
 export function tooltip(page: string, metric: string): string {
@@ -87,6 +88,8 @@ export const GAP_NOTE = tooltip("OD 底座 · 总览", "差额");
 export const ONE_OFF_NOTE = tooltip("OD 底座 · 总览", "一次性费用 vs 预留");
 export const TIMELINE_CHANGE_NOTE = tooltip("场景与时间轴 v2", "时间轴");
 export const SCENARIO_TOTAL_NOTE = tooltip("场景与时间轴 v2", "场景总成本");
+
+export const OUTSOURCE_SEAT_NOTE = tooltip("人员明细", "外包汇总");
 
 export const ONE_OFF_CARD_LABEL = "一次性费用 vs 预留";
 export const COMPARE_SCROLL_HINT = "左右滑动查看其他场景，左侧名称保持不动";

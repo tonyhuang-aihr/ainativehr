@@ -39,8 +39,12 @@ describe("场景页与沙盘导入", () => {
     const labels = quarterChangeLabels(baseline, aggressive, opening);
     expect(board.timelineLabels).toEqual(labels);
     expect(board.timelineSummary).toContain(labels.join(" · "));
-    expect(labels).toContain("Q2 场景新增 12 个 Agent（含基线变动共 19→34）");
-    expect(labels.some((label) => label.startsWith("Q3 场景减员 8 人（含基线变动共 "))).toBe(true);
+    expect(labels).toEqual([
+      "Q1 场景减员 10 人（含基线变动共 486→479）",
+      "Q2 场景新增 12 个 Agent（含基线变动共 19→34）",
+      "Q2 场景增员 2 人（含基线变动共 479→482）",
+      "Q3 场景减员 8 人（含基线变动共 482→474）",
+    ]);
     expect(opening.agents).toBe(15);
     expect(baseline.quarters.map((quarter) => quarter.agents)).toEqual([19, 22, 21, 21]);
     expect(aggressive.quarters.map((quarter) => quarter.agents)).toEqual([19, 34, 33, 33]);
