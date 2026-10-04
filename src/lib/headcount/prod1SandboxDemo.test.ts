@@ -252,6 +252,9 @@ describe("沙盘示例 · 产品研发一部的核对数字", () => {
     expect(linBoard.timelineLabelNotes[0]).toBeNull();
     expect(linBoard.timelineLabelNotes[1]).toBe(nofillLabelNote(2, 0));
     expect(linBoard.timelineLabelNotes[1]).not.toContain("其余");
+    expect(linBoard.timelineLabelNotes[1]).not.toContain("出缺不补 N 人");
+    expect(linBoard.timelineLabelNotes[1]).not.toContain("其余 M 人");
+    expect(linBoard.stepCheck).toBe(`0 / 1 个场景在预算内 · 最低：${PROD1_SANDBOX_DEMO_NAME}`);
     expect(linBoard.timelineLabelNotes[2]).toBeNull();
     expect(health(linBoard, "超预算")).toBe("超 31.5");
     expect(health(linBoard, "管理幅度")).toBe("—");
@@ -320,6 +323,8 @@ describe("沙盘示例 · 产品研发一部的核对数字", () => {
     expect(added.error).toBeNull();
     const after = buildScenarioBoard(result, added.definitions, "fa", DEFAULT_PREFILL_NOTE);
     expect(after.hero).toBe(before.hero);
+    expect(after.stepCheck).toBe(before.stepCheck);
+    expect(before.stepCheck).toBe("2 / 3 个场景在预算内 · 最低：沙盘方案 A · 拆组前");
     expect(after.hero).toContain("沙盘方案 A · 拆组前成本最低（15,945.0 万）");
     expect(after.hero).not.toContain(PROD1_SANDBOX_DEMO_NAME);
     expect(after.lowestName).toBe("沙盘方案 A · 拆组前");
@@ -338,6 +343,18 @@ describe("沙盘示例 · 产品研发一部的核对数字", () => {
     const noteAt = html.indexOf("单部门方案：只含产品研发一部的变动");
     expect(subtitleAt).toBeGreaterThan(-1);
     expect(noteAt).toBeGreaterThan(subtitleAt);
+  });
+
+  it("公司口径的预算内计数只含公司方案，单部门方案不占分母", () => {
+    const companyWide = (ids: string[]) => presetScenarios().map((item) => ({ ...item, compared: ids.includes(item.id) }));
+    const withinTwo = buildScenarioBoard(result, [...companyWide(["fa", "jj"]), { ...companyPlan, compared: true }], "fa", DEFAULT_PREFILL_NOTE);
+    expect(withinTwo.columns.filter((column) => column.id !== "jx").map((column) => column.name)).toEqual(["激进 · AI 加速", "沙盘方案 A · 拆组前", PROD1_SANDBOX_DEMO_NAME]);
+    expect(withinTwo.stepCheck).toBe("2 / 2 个场景在预算内 · 最低：沙盘方案 A · 拆组前");
+    expect(withinTwo.columns.find((column) => column.id === "fa")).toMatchObject({ subtitle: "成本最低", lowest: true });
+    expect(withinTwo.hero).not.toContain(PROD1_SANDBOX_DEMO_NAME);
+    const oneOver = buildScenarioBoard(result, [...companyWide(["fa", "jz"]), { ...companyPlan, compared: true }], "fa", DEFAULT_PREFILL_NOTE);
+    expect(oneOver.stepCheck).toBe("1 / 2 个场景在预算内 · 最低：沙盘方案 A · 拆组前");
+    expect(oneOver.stepCheck).not.toContain("/ 3 ");
   });
 
   it("出缺不补并进离职未补位，范围外的部门仍然整份拒绝", () => {

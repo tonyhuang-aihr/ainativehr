@@ -73,6 +73,7 @@ describe("场景页与沙盘导入", () => {
     expect(board.incompleteRatioNote).toBe("沙盘尚未拆解人 : AI。只标记数据不完整，不按 Agent 个数推算。");
     expect(board.cutSummary).toContain("质量与交付部 · P5 · 8 人 · 2027-07-01 · 补偿 55.0 万");
     expect(board.assumptionSummary).toContain("N+1 不计入");
+    expect(board.stepCheck).toBe("2 / 3 个场景在预算内 · 最低：沙盘方案 A · 拆组前");
     expect(board.stepCheckNote).toBe("体检 4 条提示，1 条涉及合规");
     const blob = JSON.stringify(board);
     expect(blob).not.toMatch(/钱二|赵一|68750|每人|employeeNo/);

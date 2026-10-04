@@ -2,7 +2,7 @@ import type { ChatTurn } from "@/lib/ai/desensitize";
 import { quarterIndex, parseIsoDate } from "@/lib/headcount/calendar";
 import { conclusionFacts, directChildFacts, modelUnits, type ModelUnit } from "@/lib/headcount/conclusion";
 import { deptStat, type PlanResult } from "@/lib/headcount/engine";
-import { TIMELINE_CHANGE_NOTE, UNATTRIBUTED_AGENT_NOTE } from "@/lib/headcount/copy";
+import { SINGLE_DEPARTMENT_PLAN_NOTE, TIMELINE_CHANGE_NOTE, UNATTRIBUTED_AGENT_NOTE } from "@/lib/headcount/copy";
 import { baselineDailyBreakdown, businessScenarioResult, scenarioDailyBreakdown } from "@/lib/headcount/buCost";
 import { formatWan, roundingGapWan, roundToHalfWan } from "@/lib/headcount/money";
 import { DEMO_AI_RATIO } from "@/lib/headcount/sample";
@@ -225,6 +225,7 @@ export function partialBuName(definition: { buRatio?: Record<string, string> }):
 
 /** 公司对比里的单部门方案。不参与「成本最低」，副标题只写范围。 */
 export function singleDepartmentPlanNote(departmentName: string): string {
+  if (departmentName === "产品研发一部") return SINGLE_DEPARTMENT_PLAN_NOTE;
   return `单部门方案：只含${departmentName}的变动，其他部门按基线和默认假设计算，不参与『成本最低』比较；人 : AI 只代表${departmentName}已拆解的岗位。`;
 }
 
@@ -344,7 +345,7 @@ export function buildScenarioBoard(result: PlanResult, definitions: ScenarioDefi
   const compared = definitions.filter((definition) => definition.compared).map((definition) => evaluated.get(definition.id)!);
   const ranked = compared.filter((item) => !(company && partialBuName(item.definition)));
   const lowest = [...ranked].sort((left, right) => amountOf(left) - amountOf(right))[0] ?? baseline;
-  const within = compared.filter((item) => roundToHalfWan(amountOf(item)) <= roundToHalfWan(budgetYuan)).length;
+  const within = ranked.filter((item) => roundToHalfWan(amountOf(item)) <= roundToHalfWan(budgetYuan)).length;
   const health = compared.map((item) => healthRow(result, item, company ? undefined : { budgetYuan, basis: "daily", article: "scope" }));
   const hints = health.flatMap((row) => row.cells).filter((cell) => cell.tone === "warn" || cell.tone === "compliance");
   const compliance = hints.filter((cell) => cell.tone === "compliance").length;
@@ -411,7 +412,7 @@ export function buildScenarioBoard(result: PlanResult, definitions: ScenarioDefi
     stepSelectNote: `${leftOut.join(" · ") || "对比里的场景都已选上"} · 最多对比 3 个`,
     stepAssume: `${focus.definition.name}：离职率 ${ratePercent(assumptions.attritionRate)}% · 招聘周期 ${assumptions.hiringCycleDays} 天`,
     stepAssumeNote: `${labels.join(" · ") || "这一场景没有按季增减"} · ${pending ? `另有 ${pending} 项假设待定` : "假设都已填写"}`,
-    stepCheck: `${within} / ${compared.length} 个场景在预算内 · 最低：${lowest.definition.name}`,
+    stepCheck: `${within} / ${ranked.length} 个场景在预算内 · 最低：${lowest.definition.name}`,
     stepCheckNote: `体检 ${hints.length} 条提示，${compliance} 条涉及合规`,
     columns,
     healthName: "对比场景",

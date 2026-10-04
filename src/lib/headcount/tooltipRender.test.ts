@@ -5,7 +5,7 @@ import { DepartmentDailyRows } from "@/components/headcount/department-daily-row
 import { LeaderBoard } from "@/components/headcount/leader-board";
 import { ScenarioBoardView } from "@/components/headcount/scenario-board";
 import { ScopeOverviewBoard } from "@/components/headcount/scope-overview";
-import { HRBP_SCENARIO_TOTAL_NOTE, SCOPE_TOTAL_NOTE, SCENARIO_TOTAL_NOTE, TIMELINE_CHANGE_NOTE, TOOLTIPS } from "@/lib/headcount/copy";
+import { HRBP_SCENARIO_TOTAL_NOTE, NOFILL_LABEL_TEMPLATE, SCOPE_TOTAL_NOTE, SCENARIO_TOTAL_NOTE, SINGLE_DEPARTMENT_PLAN_NOTE, TIMELINE_CHANGE_NOTE, TOOLTIPS } from "@/lib/headcount/copy";
 import { loadTooltipFile } from "@/lib/headcount/tooltipFile";
 import { computePlan } from "@/lib/headcount/engine";
 import { buildLeaderView } from "@/lib/headcount/leaderView";
@@ -13,6 +13,7 @@ import { buildScopeOverview, scopeHasSmallGroup } from "@/lib/headcount/overview
 import { defaultDetailQuery } from "@/lib/headcount/rosterPage";
 import { DEPT, samplePlan } from "@/lib/headcount/sample";
 import { mergeBusinessScenarios } from "@/lib/headcount/buCost";
+import { sandboxImportCandidates } from "@/lib/headcount/prod1SandboxDemo";
 import { presetScenarios } from "@/lib/headcount/scenario";
 import { buildScenarioBoard, DEFAULT_PREFILL_NOTE } from "@/lib/headcount/scenarioView";
 
@@ -36,10 +37,12 @@ function isRowFigure(note: string): boolean {
   return note.startsWith("Q1 ");
 }
 
-// TODO: 悬停表会增到 58 条。单部门方案副标题和「出缺不补」这两条等 HR AI-OD 的文件贴进来后再对上，然后删掉这个例外。
-function isPendingTooltip(note: string): boolean {
-  return note.startsWith("含场景出缺不补 ") || note.startsWith("单部门方案：");
+/** 出缺不补那一行是模板：页面填上人数，不渲染括号说明，也不渲染字面的 N / M。 */
+function isFilledNofillNote(note: string): boolean {
+  return /^含场景出缺不补 \d+ 人：/.test(note);
 }
+
+const NOFILL_TEMPLATE_METRIC = "离职未补位标签（含出缺不补）";
 
 function detail(patch: { peopleTypes?: string[]; peopleStatuses?: string[] } = {}) {
   return { ...defaultDetailQuery(), peopleSize: 50 as const, ...patch };
@@ -69,6 +72,8 @@ describe("每个角色页面上的 ⓘ 都按悬停表原文渲染", () => {
   const odOverview = buildScopeOverview(result, DEPT.center, "od", false);
   const hrbpOverview = buildScopeOverview(result, DEPT.prod1, "hrbp", false);
 
+  const demo = sandboxImportCandidates(2).find((item) => item.id === "prod1-demo")!;
+  const demoBoard = buildScenarioBoard(result, [...presets, { ...demo, compared: true }], demo.id, DEFAULT_PREFILL_NOTE);
   const rendered = {
     od: [
       ...labels(createElement(ScopeOverviewBoard, { overview: odOverview })),
@@ -76,6 +81,7 @@ describe("每个角色页面上的 ⓘ 都按悬停表原文渲染", () => {
       ...labels(createElement(LeaderBoard, { view: odOutsource })),
       ...labels(createElement(LeaderBoard, { view: odTransit })),
       ...labels(createElement(ScenarioBoardView, { board: companyBoard })),
+      ...labels(createElement(ScenarioBoardView, { board: demoBoard })),
       ...labels(createElement(DepartmentDailyRows, { columns: companyBoard.columns, note: companyBoard.dailyBreakdown!.note, defaultOpen: true })),
     ],
     leader: [
@@ -91,7 +97,7 @@ describe("每个角色页面上的 ⓘ 都按悬停表原文渲染", () => {
 
   it("渲染出来的每条说明都能对上文件，文件里的每条也都有页面", () => {
     const file = new Set<string>(tooltipFile.map((item) => item.text));
-    expect(tooltipFile).toHaveLength(56);
+    expect(tooltipFile).toHaveLength(58);
     expect(tooltipFile.at(-1)?.metric).toBe("场景总成本（HRBP 版）");
     expect(file.has("两个数都直接取成本引擎结果")).toBe(false);
     expect(file.has("相加与合计差 0.5 万")).toBe(false);
@@ -104,8 +110,9 @@ describe("每个角色页面上的 ⓘ 都按悬停表原文渲染", () => {
     const onlyInCode = TOOLTIPS.filter((item) => !tooltipFile.some((entry) => entry.page === item.page && entry.metric === item.metric)).map((item) => item.metric);
     expect(onlyInCode).toEqual([]);
     for (const [role, notes] of Object.entries(rendered)) {
-      const unknown = notes.filter((note) => !file.has(note) && !isRowFigure(note) && !isPendingTooltip(note));
+      const unknown = notes.filter((note) => !file.has(note) && !isRowFigure(note) && !isFilledNofillNote(note));
       expect(unknown, role).toEqual([]);
+      expect(notes.filter((note) => note.includes("出缺不补 N 人") || note.includes("其余 M 人") || note.includes("同季还有按离职率估算的未补位时")), role).toEqual([]);
     }
     expect(rendered.od).toContain(FILE_TIMELINE);
     expect(rendered.od).toContain(SCENARIO_TOTAL_NOTE);
@@ -115,7 +122,10 @@ describe("每个角色页面上的 ⓘ 都按悬停表原文渲染", () => {
     expect(rendered.hrbp.join("\n")).not.toContain("场景总成本 = 部门日常成本（人工 + Agent 席位、算力）+ 一次性费用");
     expect(TIMELINE_CHANGE_NOTE).toBe(FILE_TIMELINE);
     const seen = new Set([...rendered.od, ...rendered.leader, ...rendered.hrbp]);
-    const missing = tooltipFile.filter((item) => !seen.has(item.text)).map((item) => `${item.page} / ${item.metric}`);
+    const missing = tooltipFile.filter((item) => item.metric !== NOFILL_TEMPLATE_METRIC && !seen.has(item.text)).map((item) => `${item.page} / ${item.metric}`);
     expect(missing).toEqual([]);
+    expect(seen.has(NOFILL_LABEL_TEMPLATE)).toBe(false);
+    expect(seen.has(SINGLE_DEPARTMENT_PLAN_NOTE)).toBe(true);
+    expect([...seen].some((note) => note.startsWith("含场景出缺不补 2 人：") && !note.includes("其余"))).toBe(true);
   });
 });

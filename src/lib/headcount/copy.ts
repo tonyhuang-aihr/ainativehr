@@ -1,4 +1,4 @@
-/** 悬停文案 v1.1。每条都和 `tooltips-v1.1.md` 逐字相同，含补充区的三条。 */
+/** 悬停文案 v1.1。每条都和 `tooltips-v1.1.md` 逐字相同，含补充区。 */
 
 export const TOOLTIPS = [
   { page: "负责人视图 · 总览（多部门，赵一）", metric: "编制与人员", text: "编制、在岗、在途、空缺只算正式员工；外包、实习、顾问单列人数。空缺 = 编制 −（在岗 + 在途）。" },
@@ -56,6 +56,8 @@ export const TOOLTIPS = [
   { page: "场景与时间轴 v2", metric: "未归属部门 Agent ⓘ", text: "沙盘里没有岗位拆解的 Agent，只计入公司口径，不分到部门。" },
   { page: "人员明细（外包汇总行，当前示例状态未展示）", metric: "外包（部门）", text: "外包只有座位数，按部门汇总，不列姓名" },
   { page: "HRBP 场景（业务单元范围合计行，暂无设计稿页面）", metric: "范围合计 ⓘ", text: "范围合计只含日常成本（人工 + Agent），对比范围内部门预算之和；一次性费用（经济补偿、Agent 实施和培训费）由 HR 和 OD 统一管理，不计入。" },
+  { page: "HRBP / OD 场景时间轴（「离职未补位」标签含出缺不补时，当前示例状态未展示）", metric: "离职未补位标签（含出缺不补）", text: "含场景出缺不补 N 人：岗位空出后不再补人，从该季第一天起按职级扣减；不算增员或减员，不产生经济补偿。（同季还有按离职率估算的未补位时，句末加：其余 M 人按离职率估算。）" },
+  { page: "OD 场景对比（手动加入单部门方案时，列头副标题和人 : AI 格，暂无设计稿页面）", metric: "仅产品研发一部 ⓘ", text: "单部门方案：只含产品研发一部的变动，其他部门按基线和默认假设计算，不参与『成本最低』比较；人 : AI 只代表产品研发一部已拆解的岗位。" },
   { page: "HRBP 场景（业务单元范围的场景总成本，暂无设计稿页面）", metric: "场景总成本（HRBP 版）", text: "场景总成本 = 日常成本（人工 + Agent 席位、算力）。一次性费用（经济补偿、Agent 实施和培训费）由 HR 和 OD 统一管理，不计入。" },
 ] as const;
 
@@ -102,6 +104,9 @@ export const SCENARIO_TOTAL_NOTE = slot("场景与时间轴 v2", "场景总成�
 export const OUTSOURCE_SEAT_NOTE = slot("人员明细（外包汇总行，当前示例状态未展示）", "外包（部门）");
 export const SCOPE_TOTAL_NOTE = slot("HRBP 场景（业务单元范围合计行，暂无设计稿页面）", "范围合计 ⓘ");
 export const UNATTRIBUTED_AGENT_NOTE = slot("场景与时间轴 v2", "未归属部门 Agent ⓘ");
+/** 文件里的 N / M 和括号说明是模板。页面填上人数后再展示，不直接渲染这一句。 */
+export const NOFILL_LABEL_TEMPLATE = slot("HRBP / OD 场景时间轴（「离职未补位」标签含出缺不补时，当前示例状态未展示）", "离职未补位标签（含出缺不补）");
+export const SINGLE_DEPARTMENT_PLAN_NOTE = slot("OD 场景对比（手动加入单部门方案时，列头副标题和人 : AI 格，暂无设计稿页面）", "仅产品研发一部 ⓘ");
 export const HRBP_SCENARIO_TOTAL_NOTE = slot("HRBP 场景（业务单元范围的场景总成本，暂无设计稿页面）", "场景总成本（HRBP 版）");
 
 export function overviewCardNote(audience: "od" | "leader" | "hrbp", label: string): string | null {

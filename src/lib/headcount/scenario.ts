@@ -1,4 +1,5 @@
 import { formatIsoDate, quarterBounds, quarterIndex, yearDays, yearEnd, overlapDays, parseIsoDate } from "@/lib/headcount/calendar";
+import { NOFILL_LABEL_TEMPLATE } from "@/lib/headcount/copy";
 import { deptStat, subtreeIds, type PlanResult } from "@/lib/headcount/engine";
 import { formatWan, roundToHalfWan } from "@/lib/headcount/money";
 import { exclusiveServiceEnd, SCENARIO_NOTICE_PAY_DEFAULT } from "@/lib/headcount/policies";
@@ -510,10 +511,16 @@ export function gapWan(totalYuan: number, budgetYuan: number): number {
 
 export type QuarterChangeLabel = { text: string; note: string | null };
 
-/** 只挂在含出缺不补的「离职未补位」标签上。其余标签没有悬停。 */
+const NOFILL_LABEL_INSTRUCTION = "（同季还有按离职率估算的未补位时，句末加：其余 M 人按离职率估算。）";
+
+/** 只挂在含出缺不补的「离职未补位」标签上。其余标签没有悬停。文件里的 N / M 和括号是模板，这里填上人数。 */
 export function nofillLabelNote(nofill: number, rest: number): string | null {
   if (nofill <= 0) return null;
-  const lead = `含场景出缺不补 ${nofill} 人：岗位空出后不再补人，从该季第一天起按职级扣减；不算增员或减员，不产生经济补偿。`;
+  const template = NOFILL_LABEL_TEMPLATE;
+  if (!template.endsWith(NOFILL_LABEL_INSTRUCTION) || !template.includes("出缺不补 N 人")) {
+    throw new Error("出缺不补悬停模板无法填数");
+  }
+  const lead = template.slice(0, -NOFILL_LABEL_INSTRUCTION.length).replace("出缺不补 N 人", `出缺不补 ${nofill} 人`);
   return rest > 0 ? `${lead}其余 ${rest} 人按离职率估算。` : lead;
 }
 
