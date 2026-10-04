@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function LeaderPage({
   searchParams,
 }: {
-  searchParams: Promise<{ dept?: string; people?: string; page?: string; size?: string; agents?: string; agentPage?: string; agentSize?: string; open?: string }>;
+  searchParams: Promise<{ dept?: string; people?: string; types?: string; page?: string; size?: string; agents?: string; agentSort?: string; agentPage?: string; agentSize?: string; open?: string }>;
 }) {
   const user = await currentUser();
   if (!user) redirect("/headcount/login");
@@ -23,6 +23,13 @@ export default async function LeaderPage({
   } catch {
     screen = await openLeader(user, undefined, detail);
   }
-  if (screen.kind === "overview") return <ScopeOverviewBoard overview={screen.overview} />;
+  if (screen.kind === "overview") {
+    return (
+      <div className="space-y-5">
+        <ScopeOverviewBoard overview={screen.overview} />
+        <LeaderBoard view={screen.view} variant="roster" />
+      </div>
+    );
+  }
   return <LeaderBoard view={screen.view} />;
 }

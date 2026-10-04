@@ -45,6 +45,9 @@ describe("OD 总览告警和部门页", () => {
     );
     expect(overview.total?.roundingNote).toBe("各项分别取整到 0.5 万，合计按未取整金额加总后再取整，可能差 0.5 万。");
     expect(overview.total?.annual).toBe("16,095.5");
+    expect(overview.listTotal).toMatchObject({ label: "部门合计", quota: 507, onBoard: 486, inTransit: 11, vacancy: 10, annual: "16,071.0", budget: "15,970.0", gap: "+101.0" });
+    const leader = buildScopeOverview(result, DEPT.plat, "leader", true);
+    expect(leader.departments.find((row) => row.name === "数据平台组")).toMatchObject({ vacancy: 0, overstaff: "超编 1 人" });
   });
 });
 

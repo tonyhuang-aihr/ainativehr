@@ -60,6 +60,18 @@ export type ScopeOverview = {
   departments: OverviewDepartment[];
   footer: string | null;
   total: { label: string; annual: string; budget: string; gap: string; roundingNote: string | null } | null;
+  listTotal: {
+    label: string;
+    quota: number;
+    onBoard: number;
+    inTransit: number;
+    vacancy: number;
+    overstaff: string | null;
+    agents: string;
+    annual: string;
+    budget: string;
+    gap: string;
+  } | null;
   oneOff: { amount: string; budget: string; gap: string } | null;
 };
 
@@ -362,6 +374,29 @@ export function buildScopeOverview(result: PlanResult, rootId: string, audience:
             gap: formatSignedWan((oneOffGap ?? 0) * 10_000),
           }
         : null,
+    listTotal: listTotalOf(result, rootId, stat, company),
+  };
+}
+
+function listTotalOf(result: PlanResult, rootId: string, stat: ReturnType<typeof deptStat>, company: boolean) {
+  const children = result.plan.departments.filter((department) => department.parentId === rootId);
+  const budgetYuan = company
+    ? children.reduce((total, department) => total + (result.plan.budgets[department.id] ?? 0), 0)
+    : (result.plan.budgets[rootId] ?? null);
+  if (budgetYuan == null) return null;
+  const shown = presentVacancy(stat.vacancy);
+  const gap = gapWan(stat.yearDailyYuan, budgetYuan);
+  return {
+    label: company ? "部门合计" : `${stat.name}合计`,
+    quota: stat.quotaFormal,
+    onBoard: stat.onBoard,
+    inTransit: stat.inTransit,
+    vacancy: shown.slots,
+    overstaff: shown.over,
+    agents: `${stat.agentInUse} / ${stat.quotaAgent}`,
+    annual: formatWan(stat.yearDailyYuan),
+    budget: formatWan(budgetYuan),
+    gap: formatSignedWan(gap * 10_000),
   };
 }
 

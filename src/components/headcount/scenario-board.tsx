@@ -15,6 +15,13 @@ const field = "w-full rounded-xl border border-line px-3 py-2";
 
 const sticky = "sticky left-0 z-10 bg-white shadow-[1px_0_0_#E6E8EC]";
 
+function healthShort(name: string): string {
+  if (name.includes("拆组前")) return "方案 A 拆组前";
+  if (name.startsWith("激进")) return "激进";
+  if (name.startsWith("基准")) return "基准";
+  return name;
+}
+
 export function ScenarioBoardView({ board, notice }: { board: ScenarioBoard; notice?: string }) {
   return (
     <div className="space-y-4">
@@ -57,6 +64,7 @@ export function ScenarioBoardView({ board, notice }: { board: ScenarioBoard; not
         <Step n="3" title="看对比 / 体检" body={board.stepCheck} note={board.stepCheckNote} current />
       </section>
 
+      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
       <section id="scenario-compare" className="overflow-hidden rounded-2xl border border-line bg-white">
         <div className="flex items-center gap-2 px-4 py-3 text-sm">
           <b>场景对比</b>
@@ -104,37 +112,41 @@ export function ScenarioBoardView({ board, notice }: { board: ScenarioBoard; not
           </table>
         </div>
       </section>
-
-      <section id="health-checks" className="overflow-hidden rounded-2xl border border-line bg-white">
-        <h2 className="px-4 py-3 text-sm font-semibold">体检 · {board.healthName}</h2>
+      <aside id="health-checks" className="overflow-hidden rounded-2xl border border-line bg-white">
+        <h2 className="px-4 py-3 text-sm font-semibold">体检 · {board.health.length} 个场景 · {board.health[0]?.cells.length ?? 0} 项</h2>
         <div className="overflow-x-auto border-t border-line">
-          <table className="w-full min-w-[640px] border-collapse text-sm">
+          <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-muted">
-                <th className="px-4 py-2 font-medium">场景</th>
-                {board.health[0]?.cells.map((cell) => (
-                  <th key={cell.title} className="px-4 py-2 font-medium">
-                    {cell.title}
+                <th className="px-3 py-2 font-medium" />
+                {board.health.map((row) => (
+                  <th key={row.id} className="px-3 py-2 font-medium">
+                    {healthShort(row.name)}
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {board.health.map((row) => (
-                <tr key={row.id} className="border-t border-line">
-                  <td className="px-4 py-2">{row.name}</td>
-                  {row.cells.map((cell) => (
-                    <td key={cell.title} className={`px-4 py-2 ${cell.tone === "warn" ? "text-[#DC2626]" : ""} ${cell.tone === "compliance" ? "text-[#92400E]" : ""} ${cell.tone === "muted" ? "text-muted" : ""}`}>
-                      {cell.text}
-                    </td>
-                  ))}
+              {board.health[0]?.cells.map((cell, index) => (
+                <tr key={cell.title} className="border-t border-line">
+                  <td className="px-3 py-2 text-muted">{cell.title}</td>
+                  {board.health.map((row) => {
+                    const item = row.cells[index];
+                    return (
+                      <td key={row.id} className={`px-3 py-2 ${item?.tone === "warn" ? "text-[#DC2626]" : ""} ${item?.tone === "compliance" ? "text-[#92400E]" : ""} ${item?.tone === "muted" ? "text-muted" : ""}`}>
+                        {item?.text}
+                      </td>
+                    );
+                  })}
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+        {board.healthFootnote ? <p className="border-t border-line px-4 py-3 text-sm leading-6 text-muted">{board.healthFootnote}</p> : null}
         {board.incompleteRatioNote ? <p className="border-t border-line px-4 py-3 text-sm text-muted">{board.incompleteRatioNote}</p> : null}
-      </section>
+      </aside>
+      </div>
 
       <section id="scenario-timeline" className="overflow-hidden rounded-2xl border border-line bg-white">
         <details open>

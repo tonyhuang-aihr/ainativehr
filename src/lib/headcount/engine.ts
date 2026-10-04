@@ -225,9 +225,10 @@ export function computePlan(plan: PlanInput): PlanResult {
   for (const movement of plan.movements) {
     if (movement.kind !== "Agent 新增" && movement.kind !== "Agent 调整") continue;
     const instances = movement.instanceDelta ?? 0;
-    const annual = ((movement.seatMonthly ?? 0) + (movement.computeMonthly ?? 0)) * 12 * instances;
-    const share = prorate(plan.year, annual, parseIsoDate(movement.effectiveDate), end);
     const base = plan.agents.find((agent) => agent.name === movement.name && agent.departmentId === movement.departmentId);
+    const share = movement.kind === "Agent 调整"
+      ? agentAdjustmentShare(plan, movement)
+      : prorate(plan.year, ((movement.seatMonthly ?? 0) + (movement.computeMonthly ?? 0)) * 12 * instances, parseIsoDate(movement.effectiveDate), end);
     agents.push({
       id: movement.id,
       name: movement.name,
@@ -296,12 +297,27 @@ function impactOf(plan: PlanInput, movement: MovementSeed): MovementImpact {
     const quarters = share.quarters.map((value) => -value) as QuarterAmounts;
     return row(movement, quarters, -sum(share.quarters), null);
   }
+  if (movement.kind === "Agent 调整") {
+    const share = agentAdjustmentShare(plan, movement);
+    return row(movement, share.quarters, sum(share.quarters), movement.instanceDelta ?? 0);
+  }
   const instances = movement.instanceDelta ?? 0;
   const rate = ((movement.seatMonthly ?? 0) + (movement.computeMonthly ?? 0)) * 12 * Math.abs(instances);
   const share = prorate(plan.year, rate, when, end);
   const sign = instances < 0 ? -1 : 1;
   const quarters = share.quarters.map((value) => sign * value) as QuarterAmounts;
   return row(movement, quarters, sign * sum(share.quarters), instances);
+}
+
+/** 调整从生效日起按（新成本 − 旧成本）折算。新成本 = 调整后的全部实例 × 新单价，原实例也改用新单价。 */
+function agentAdjustmentShare(plan: PlanInput, movement: MovementSeed): { quarters: QuarterAmounts; days: QuarterAmounts } {
+  const base = plan.agents.find((agent) => agent.name === movement.name && agent.departmentId === movement.departmentId);
+  const oldInstances = base?.instances ?? 0;
+  const oldUnit = (base?.seatMonthly ?? 0) + (base?.computeMonthly ?? 0);
+  const nextInstances = oldInstances + (movement.instanceDelta ?? 0);
+  const nextUnit = (movement.seatMonthly ?? 0) + (movement.computeMonthly ?? 0);
+  const deltaAnnual = nextUnit * 12 * nextInstances - oldUnit * 12 * oldInstances;
+  return prorate(plan.year, deltaAnnual, parseIsoDate(movement.effectiveDate), yearEnd(plan.year));
 }
 
 function row(movement: MovementSeed, quarters: QuarterAmounts, annual: number, agentInstances: number | null): MovementImpact {

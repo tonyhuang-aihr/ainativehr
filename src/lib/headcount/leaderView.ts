@@ -1,7 +1,7 @@
 import { conclusionFacts, directChildFacts, templateConclusion, type ConclusionFacts } from "@/lib/headcount/conclusion";
 import { deptStat, subtreeIds, type PlanResult } from "@/lib/headcount/engine";
 import { formatSignedWan, formatWan, quarterBand, roundToHalfWan, roundingGapNote, roundingGapWan, yearBand } from "@/lib/headcount/money";
-import { collectAgentLines, collectPersonLines, defaultDetailQuery, pageAgents, pagePeople, type DetailQuery, type PagedAgents, type PagedPeople } from "@/lib/headcount/rosterPage";
+import { collectAgentLines, collectPersonLines, defaultDetailQuery, pageAgents, pagePeople, transitCrossLine, type DetailQuery, type PagedAgents, type PagedPeople } from "@/lib/headcount/rosterPage";
 import { DEMO_AI_RATIO } from "@/lib/headcount/sample";
 import { presentVacancy } from "@/lib/headcount/vacancy";
 
@@ -39,6 +39,9 @@ export type LeaderView = {
   quarterSummary: string;
   people: PagedPeople;
   agentsPage: PagedAgents;
+  transitNote: string | null;
+  showDepartment: boolean;
+  showMarks: boolean;
   openSection: "people" | "agents" | null;
   listBase: string;
   options: { id: string; name: string }[];
@@ -139,6 +142,8 @@ export function buildLeaderView(
     backHref?: string | null;
     listBase?: string;
     detail?: DetailQuery;
+    showMarks?: boolean;
+    companyScope?: boolean;
     conclusionText?: string;
     conclusionOrigin?: LeaderView["conclusion"]["origin"];
   },
@@ -156,8 +161,19 @@ export function buildLeaderView(
   const ownVacancy = presentVacancy(stat.vacancy);
   const quotaLine = `编制 ${facts.quotaPeople} 人、${facts.quotaAgents} 个 Agent · ${ownVacancy.over ? `空缺 0 · ${ownVacancy.over}` : `空缺 ${ownVacancy.slots}`}${overText ? ` · ${overText}` : ""}`;
   const detail = options.detail ?? defaultDetailQuery();
-  const peoplePage = pagePeople(collectPersonLines(result, departmentId), detail, { exact: exact && !mask, preciseSummary: !mask });
-  const agentsPage = pageAgents(collectAgentLines(result, departmentId), detail, { exact: exact && !mask });
+  const personLines = collectPersonLines(result, departmentId);
+  const agentLines = collectAgentLines(result, departmentId);
+  const showMarks = Boolean(options.showMarks) && !mask;
+  const peoplePage = pagePeople(personLines, detail, { exact: exact && !mask, companyScope: options.companyScope, showCompensation: showMarks });
+  const agentsPage = pageAgents(agentLines, detail, { exact: exact && !mask });
+  const transitAgents = agentLines.filter((line) => line.status !== "在用");
+  const transitNote = peoplePage.summary
+    ? transitCrossLine(
+        { count: peoplePage.summary.count, yearYuan: peoplePage.summary.yearYuan },
+        { count: transitAgents.length, yearYuan: transitAgents.reduce((total, line) => total + (line.yearImpact ?? 0), 0) },
+        peoplePage.summary.precise,
+      )
+    : null;
   const childFacts = directChildFacts(result, departmentId);
   const equation = mask ? { equation: null, roundingNote: null } : yearEndEquation(facts);
   return {
@@ -222,6 +238,9 @@ export function buildLeaderView(
       : facts.quartersYuan.map((value, index) => `Q${index + 1} ${formatWan(value)}`).join(" · ") + " 万 · 人工 + Agent",
     people: peoplePage,
     agentsPage,
+    transitNote,
+    showDepartment: new Set(personLines.map((line) => line.departmentName)).size > 1,
+    showMarks,
     openSection: detail.open,
     listBase: options.listBase ?? `/headcount/leader?dept=${departmentId}`,
     options: result.plan.departments.filter((department) => ids.has(department.id)).map((department) => ({ id: department.id, name: department.name })),

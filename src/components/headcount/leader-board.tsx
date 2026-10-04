@@ -2,12 +2,13 @@
 
 import { InfoMark } from "@/components/headcount/info-mark";
 import { RoundingMark } from "@/components/headcount/rounding-mark";
-import { PERSON_COST_HEADER, PERSON_COST_NOTE, YEAR_FORECAST_LEADER } from "@/lib/headcount/copy";
+import { AGENT_COST_NOTE, AGENT_COST_NOTE_OD, AGENT_STATUS_NOTE, AGENT_STATUS_NOTE_OD, COMP_MARK_NOTE, EMPLOYMENT_NOTE, PERSON_COST_HEADER, PERSON_COST_NOTE, PERSON_COST_NOTE_OD, PERSON_IMPACT_NOTE, PERSON_IMPACT_NOTE_OD, PERSON_SORT_NOTE, PERSON_STATUS_NOTE, PERSON_STATUS_NOTE_OD, SEAT_NOTE, TRANSIT_SUM_NOTE, YEAR_FORECAST_LEADER } from "@/lib/headcount/copy";
 import type { LeaderView } from "@/lib/headcount/leaderView";
-import { AGENT_TRANSIT, PERSON_TRANSIT, detailHref } from "@/lib/headcount/rosterPage";
+import { AGENT_TRANSIT, EMPLOYMENT_TYPES, PERSON_TRANSIT, detailHref } from "@/lib/headcount/rosterPage";
 
-const PEOPLE_CHIPS = ["全部", "在岗", "在途", "待入职", "待转入", "待离职", "待转出"] as const;
-const AGENT_CHIPS = ["全部", "在用", "在途", "待新增", "待扩容或调整", "待下线"] as const;
+const PEOPLE_CHIPS = ["全部", "在岗无变动", "在途", "待入职", "待转入", "待离职", "待转出"] as const;
+const AGENT_CHIPS = ["全部", "在用无变动", "在途", "待新增", "待扩容或调整", "待下线"] as const;
+const TYPE_CHIPS = ["全部", ...EMPLOYMENT_TYPES] as const;
 
 function toggleList(current: string[], chip: string, transit: readonly string[]): string[] {
   if (chip === "全部") return [];
@@ -25,10 +26,19 @@ function chipOn(current: string[], chip: string, transit: readonly string[]): bo
   return current.includes(chip);
 }
 
-export function LeaderBoard({ view }: { view: LeaderView }) {
+export function LeaderBoard({ view, variant = "full" }: { view: LeaderView; variant?: "full" | "roster" }) {
   const origin = view.conclusion.origin === "model" ? "模型" : view.conclusion.origin === "cache" ? "缓存" : "模板";
   const peopleHref = (patch: Record<string, string | null>) => detailHref(view.listBase, { open: "people", ...patch });
   const agentHref = (patch: Record<string, string | null>) => detailHref(view.listBase, { open: "agents", ...patch });
+
+  const roster = (
+    <>
+      <QuarterSection view={view} />
+      <PeopleSection view={view} hrefFor={peopleHref} />
+      <AgentSection view={view} hrefFor={agentHref} />
+    </>
+  );
+  if (variant === "roster") return <div className="space-y-4">{roster}</div>;
 
   return (
     <div className="space-y-5 pb-24">
@@ -124,10 +134,30 @@ export function LeaderBoard({ view }: { view: LeaderView }) {
         </article>
       </section>
 
-      <section className="overflow-hidden rounded-2xl border border-line bg-white">
-        <h2 className="border-b border-line px-4 py-3 font-medium">季度成本</h2>
-        <div className="px-4 py-4">
-          <p className="mb-3 text-sm text-muted">{view.quarterSummary}</p>
+      {roster}
+
+      <section className="rounded-2xl bg-[#F8F9FD] px-4 py-3 text-sm text-muted">
+        <p className="font-medium text-ink">依据可查</p>
+        <ul className="mt-2 space-y-1">
+          {view.basis.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
+      </section>
+    </div>
+  );
+}
+
+function QuarterSection({ view }: { view: LeaderView }) {
+  return (
+    <section className="overflow-hidden rounded-2xl border border-line bg-white">
+      <details>
+        <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3 text-sm [&::-webkit-details-marker]:hidden">
+          <b>季度成本</b>
+          <span className="text-muted">{view.quarterSummary}</span>
+          <span className="ml-auto text-primary">展开</span>
+        </summary>
+        <div className="border-t border-line px-4 py-4">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-muted">
@@ -149,133 +179,180 @@ export function LeaderBoard({ view }: { view: LeaderView }) {
             </tbody>
           </table>
         </div>
-      </section>
-
-      <PeopleSection view={view} hrefFor={peopleHref} />
-      <AgentSection view={view} hrefFor={agentHref} />
-
-      <section className="rounded-2xl bg-[#F8F9FD] px-4 py-3 text-sm text-muted">
-        <p className="font-medium text-ink">依据可查</p>
-        <ul className="mt-2 space-y-1">
-          {view.basis.map((line) => (
-            <li key={line}>{line}</li>
-          ))}
-        </ul>
-      </section>
-    </div>
+      </details>
+    </section>
   );
+}
+
+function peopleRosterLine(view: LeaderView): string {
+  const counts = view.people.counts;
+  const types = view.people.typeCounts;
+  const parts = PERSON_TRANSIT.filter((status) => counts[status] > 0).map((status) => `${status} ${counts[status]}`);
+  const typeText = EMPLOYMENT_TYPES.filter((type) => types[type] > 0).map((type) => `${type} ${types[type]}`).join(" · ");
+  const cost = view.exact ? "OD 看精确估算" : "成本为区间";
+  const mark = view.showMarks ? " · 补偿标记仅 OD / HR 可见" : "";
+  return `${counts.全部} 人 · 在岗 ${counts.在岗无变动} · 在途 ${counts.在途}${parts.length ? `（${parts.join(" · ")}）` : ""} · ${typeText} · ${cost}${mark}`;
+}
+
+function agentRosterLine(view: LeaderView): string {
+  const counts = view.agentsPage.counts;
+  const parts = (["待新增", "待扩容或调整", "待下线"] as const).filter((status) => counts[status] > 0).map((status) => `${status} ${counts[status]}`);
+  return `${counts.全部} 项 · 在用 ${counts.在用无变动} · 在途 ${counts.在途}${parts.length ? `（${parts.join(" · ")}）` : ""} · 全年 ${view.agentsPage.annualLabel} 万（席位 + 算力）`;
 }
 
 function PeopleSection({ view, hrefFor }: { view: LeaderView; hrefFor: (patch: Record<string, string | null>) => string }) {
   const page = view.people;
+  const opened = view.openSection === "people" || page.statuses.length > 0;
   return (
     <section id="people-detail" className="overflow-hidden rounded-2xl border border-line bg-white">
-      <h2 className="border-b border-line px-4 py-3 font-medium">人员明细</h2>
-      <div className="space-y-3 px-4 py-4">
-        <ChipRow
-          chips={PEOPLE_CHIPS}
-          counts={page.counts}
-          current={page.statuses}
-          transit={PERSON_TRANSIT}
-          hrefFor={(statuses) => hrefFor({ people: statuses.length ? statuses.join(",") : null, page: null, size: String(page.pageSize) })}
-        />
-        {page.summary ? (
-          <p className="text-sm text-muted">
-            在途 {page.summary.count} 笔 · 当季合计影响 {page.summary.quarter} 万 · 全年合计影响 {page.summary.year} 万
+      <details open={opened}>
+        <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3 text-sm [&::-webkit-details-marker]:hidden">
+          <b>人员明细</b>
+          <span className="text-muted">{peopleRosterLine(view)}</span>
+        </summary>
+        <div className="space-y-3 border-t border-line px-4 py-4">
+          <ChipRow chips={PEOPLE_CHIPS} counts={page.counts} current={page.statuses} transit={PERSON_TRANSIT} hrefFor={(statuses) => hrefFor({ people: statuses.length ? statuses.join(",") : null, page: null, open: "people" })} />
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm text-muted">
+              用工类型
+              <InfoMark note={EMPLOYMENT_NOTE} />
+            </span>
+            <ChipRow chips={TYPE_CHIPS} counts={page.typeCounts} current={page.types} transit={[]} hrefFor={(types) => hrefFor({ types: types.length ? types.join(",") : null, page: null, open: "people" })} />
+          </div>
+          <p className="text-xs text-muted">
+            {page.sort === "effective" ? "按生效日排序" : "按汇报层级排序"}
+            <InfoMark note={PERSON_SORT_NOTE} />
           </p>
-        ) : null}
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] text-sm">
-            <thead>
-              <tr className="text-left text-muted">
-                <th className="py-2">姓名</th>
-                <th>岗位</th>
-                <th>职级</th>
-                <th>用工类型</th>
-                <th>状态</th>
-                <th>生效日</th>
-                <th>
-                  {view.exact ? "全年成本估算" : PERSON_COST_HEADER}
-                  <InfoMark note={PERSON_COST_NOTE} />
-                </th>
-                <th>全年成本影响</th>
-              </tr>
-            </thead>
-            <tbody>
-              {page.rows.map((row) => (
-                <tr key={row.id} className="border-t border-line" title={row.quarters}>
-                  <td className="py-2">{row.name}</td>
-                  <td>{row.title}</td>
-                  <td>{row.grade}</td>
-                  <td>{row.employmentType}</td>
-                  <td>{row.status === "待离职" ? `待离职 · ${row.effectiveDate}` : row.status}</td>
-                  <td>{row.effectiveDate || "—"}</td>
-                  <td>
-                    {row.yearCost}
-                    <InfoMark note={row.quarters} />
-                  </td>
-                  <td>{row.yearImpact || "—"}</td>
+          {page.summary ? (
+            <div className="text-sm">
+              <p>
+                在途 {page.summary.count} 人 · 当季（Q1）合计 {page.summary.quarter} 万 · 全年合计 {page.summary.year} 万 · {page.summary.label}
+                <InfoMark note={TRANSIT_SUM_NOTE} />
+              </p>
+              {view.transitNote ? <p className="text-muted">{view.transitNote}</p> : null}
+            </div>
+          ) : null}
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px] text-sm">
+              <thead>
+                <tr className="text-left text-muted">
+                  <th className="py-2">姓名</th>
+                  {view.showDepartment ? <th>部门</th> : null}
+                  <th>岗位</th>
+                  <th>职级</th>
+                  <th>用工类型</th>
+                  <th>
+                    状态 · 生效日
+                    <InfoMark note={view.showMarks ? PERSON_STATUS_NOTE_OD : PERSON_STATUS_NOTE} />
+                  </th>
+                  {view.showMarks ? (
+                    <th>
+                      补偿标记
+                      <InfoMark note={COMP_MARK_NOTE} />
+                    </th>
+                  ) : null}
+                  <th>
+                    {view.exact ? "全年成本估算" : PERSON_COST_HEADER}
+                    <InfoMark note={view.exact ? PERSON_COST_NOTE_OD : PERSON_COST_NOTE} />
+                  </th>
+                  <th>
+                    全年成本影响
+                    <InfoMark note={view.exact ? PERSON_IMPACT_NOTE_OD : PERSON_IMPACT_NOTE} />
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {page.rows.map((row) => (
+                  <tr key={row.id} className="border-t border-line" title={row.quarters}>
+                    <td className="py-2">{row.name}</td>
+                    {view.showDepartment ? <td>{row.departmentName}</td> : null}
+                    <td>{row.title}</td>
+                    <td>{row.grade}</td>
+                    <td>{row.employmentType}</td>
+                    <td>{row.statusLabel}</td>
+                    {view.showMarks ? <td>{row.compMark}</td> : null}
+                    <td>
+                      {row.yearCost}
+                      <InfoMark note={row.quarters} />
+                    </td>
+                    <td>{row.yearImpact || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <Pager totalLabel={page.footer} page={page.page} pageCount={page.pageCount} pageSize={page.pageSize} hrefFor={(nextPage, size) => hrefFor({ people: page.statuses.join(",") || null, types: page.types.join(",") || null, page: String(nextPage), size: String(size), open: "people" })} />
         </div>
-        <Pager totalLabel={`共 ${page.total} 人`} page={page.page} pageSize={page.pageSize} hrefFor={(nextPage, size) => hrefFor({ people: page.statuses.join(",") || null, page: String(nextPage), size: String(size) })} />
-      </div>
+      </details>
     </section>
   );
 }
 
 function AgentSection({ view, hrefFor }: { view: LeaderView; hrefFor: (patch: Record<string, string | null>) => string }) {
   const page = view.agentsPage;
+  const opened = view.openSection === "agents" || page.statuses.length > 0;
   return (
     <section id="agent-detail" className="overflow-hidden rounded-2xl border border-line bg-white">
-      <h2 className="border-b border-line px-4 py-3 font-medium">Agent 明细</h2>
-      <div className="space-y-3 px-4 py-4">
-        <ChipRow
-          chips={AGENT_CHIPS}
-          counts={page.counts}
-          current={page.statuses}
-          transit={AGENT_TRANSIT}
-          hrefFor={(statuses) => hrefFor({ agents: statuses.length ? statuses.join(",") : null, agentPage: null, agentSize: String(page.pageSize) })}
-        />
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] text-sm">
-            <thead>
-              <tr className="text-left text-muted">
-                <th className="py-2">Agent 名称</th>
-                <th>类型</th>
-                <th>实例数</th>
-                <th>席位费</th>
-                <th>算力费</th>
-                <th>状态</th>
-                <th>生效日</th>
-                <th>全年成本</th>
-                <th>全年成本影响</th>
-              </tr>
-            </thead>
-            <tbody>
-              {page.rows.map((row) => (
-                <tr key={row.id} className="border-t border-line" title={row.quarters}>
-                  <td className="py-2">{row.name}</td>
-                  <td>{row.agentType}</td>
-                  <td>{row.instances}</td>
-                  <td>{row.seat}</td>
-                  <td>{row.compute}</td>
-                  <td>{row.status}</td>
-                  <td>{row.effectiveDate || "—"}</td>
-                  <td>
-                    {row.yearCost}
-                    <InfoMark note={row.quarters} />
-                  </td>
-                  <td>{row.yearImpact || "—"}</td>
+      <details open={opened}>
+        <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3 text-sm [&::-webkit-details-marker]:hidden">
+          <b>Agent 明细</b>
+          <span className="text-muted">{agentRosterLine(view)}</span>
+          <span className="ml-auto text-xs text-muted">{page.sort === "cost" ? "按全年成本从高到低" : page.sort === "effective" ? "按生效日排序" : "按名称排序"}</span>
+        </summary>
+        <div className="space-y-3 border-t border-line px-4 py-4">
+          <ChipRow chips={AGENT_CHIPS} counts={page.counts} current={page.statuses} transit={AGENT_TRANSIT} hrefFor={(statuses) => hrefFor({ agents: statuses.length ? statuses.join(",") : null, agentPage: null, open: "agents" })} />
+          <div className="flex gap-3 text-xs">
+            <a className={page.sort === "cost" ? "text-ink" : "text-primary"} href={hrefFor({ agentSort: "cost", agentPage: null, open: "agents" })}>
+              按全年成本从高到低
+            </a>
+            <a className={page.sort === "name" ? "text-ink" : "text-primary"} href={hrefFor({ agentSort: "name", agentPage: null, open: "agents" })}>
+              按名称
+            </a>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px] text-sm">
+              <thead>
+                <tr className="text-left text-muted">
+                  <th className="py-2">Agent 名称</th>
+                  {view.showDepartment ? <th>部门</th> : null}
+                  <th>类型</th>
+                  <th>实例数</th>
+                  <th>
+                    席位费
+                    <InfoMark note={SEAT_NOTE} />
+                  </th>
+                  <th>算力费</th>
+                  <th>
+                    状态 · 生效日
+                    <InfoMark note={view.showMarks ? AGENT_STATUS_NOTE_OD : AGENT_STATUS_NOTE} />
+                  </th>
+                  <th>
+                    全年成本
+                    <InfoMark note={view.exact ? AGENT_COST_NOTE_OD : AGENT_COST_NOTE} />
+                  </th>
+                  <th>全年成本影响</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {page.rows.map((row) => (
+                  <tr key={row.id} className="border-t border-line">
+                    <td className="py-2">{row.name}</td>
+                    {view.showDepartment ? <td>{row.departmentName}</td> : null}
+                    <td>{row.agentType}</td>
+                    <td>{row.instancesLabel}</td>
+                    <td>{row.seat}</td>
+                    <td>{row.compute}</td>
+                    <td>{row.statusLabel}</td>
+                    <td>{row.yearCost}</td>
+                    <td>{row.yearImpact || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <Pager totalLabel={page.footer} page={page.page} pageCount={page.pageCount} pageSize={page.pageSize} hrefFor={(nextPage, size) => hrefFor({ agents: page.statuses.join(",") || null, agentSort: page.sort, agentPage: String(nextPage), agentSize: String(size), open: "agents" })} />
         </div>
-        <Pager totalLabel={`共 ${page.total} 个`} page={page.page} pageSize={page.pageSize} hrefFor={(nextPage, size) => hrefFor({ agents: page.statuses.join(",") || null, agentPage: String(nextPage), agentSize: String(size) })} />
-      </div>
+      </details>
     </section>
   );
 }
@@ -307,15 +384,17 @@ function ChipRow({
   );
 }
 
-function Pager({ totalLabel, page, pageSize, hrefFor }: { totalLabel: string; page: number; pageSize: number; hrefFor: (page: number, size: number) => string }) {
+function Pager({ totalLabel, page, pageCount, pageSize, hrefFor }: { totalLabel: string; page: number; pageCount: number; pageSize: number; hrefFor: (page: number, size: number) => string }) {
   return (
     <div className="flex flex-wrap items-center gap-3 text-sm text-muted">
       <span>{totalLabel}</span>
       <a className="text-primary" href={hrefFor(Math.max(1, page - 1), pageSize)}>
         上一页
       </a>
-      <span>第 {page} 页</span>
-      <a className="text-primary" href={hrefFor(page + 1, pageSize)}>
+      <span>
+        第 {page}/{pageCount} 页
+      </span>
+      <a className="text-primary" href={hrefFor(Math.min(pageCount, page + 1), pageSize)}>
         下一页
       </a>
       {([10, 20, 50] as const).map((size) => (

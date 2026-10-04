@@ -155,7 +155,7 @@ export function presetScenarios(): ScenarioDefinition[] {
     },
     {
       id: "fa",
-      name: "沙盘方案 A",
+      name: "沙盘方案 A · 拆组前",
       source: "sandbox",
       compared: true,
       assumptions: defaultAssumptions(),

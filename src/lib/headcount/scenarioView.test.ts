@@ -29,7 +29,7 @@ const board = buildScenarioBoard(result, presetScenarios(), "jj", DEFAULT_PREFIL
 
 describe("场景页与沙盘导入", () => {
   it("三场景对比、时间轴和体检对齐稿面", () => {
-    expect(board.hero).toBe("对比的 3 个场景中，沙盘方案 A 成本最低（15,945.0 万），比预算总包结余 55.0 万，人 : AI 为 69 : 31；激进 · AI 加速结余 28.0 万，但要在 Q3 减员 8 人、产生 55.0 万经济补偿，人 : AI 未拆解；基准超预算总包 98.5 万。");
+    expect(board.hero).toBe("对比的 3 个场景中，沙盘方案 A · 拆组前成本最低（15,945.0 万），比预算总包结余 55.0 万，人 : AI 为 69 : 31，但数据组管理幅度 12 超过建议值 8；激进 · AI 加速结余 28.0 万，但要在 Q3 减员 8 人、产生 55.0 万经济补偿，人 : AI 未拆解；基准超预算总包 98.5 万。");
     expect(board.columns.map((column) => column.total)).toEqual(["16,095.5", "16,098.5", "15,972.0", "15,945.0"]);
     expect(board.columns.map((column) => column.gap)).toEqual(["超 95.5", "超 98.5", "结余 28.0", "结余 55.0"]);
     expect(board.timelineCaption).toBe("按季初生效");
@@ -44,22 +44,23 @@ describe("场景页与沙盘导入", () => {
     expect(opening.agents).toBe(15);
     expect(baseline.quarters.map((quarter) => quarter.agents)).toEqual([19, 22, 21, 21]);
     expect(aggressive.quarters.map((quarter) => quarter.agents)).toEqual([19, 34, 33, 33]);
-    expect(board.health.map((row) => row.name)).toEqual(["基线", "基准", "激进 · AI 加速", "沙盘方案 A"]);
+    expect(board.health.map((row) => row.name)).toEqual(["基准", "激进 · AI 加速", "沙盘方案 A · 拆组前"]);
     const cell = (name: string, title: string) => board.health.find((row) => row.name === name)?.cells.find((item) => item.title === title)?.text;
-    expect(cell("激进 · AI 加速", "超预算")).toBe("通过");
+    expect(cell("激进 · AI 加速", "超预算")).toBe("正常");
     expect(cell("激进 · AI 加速", "管理幅度")).toBe("—");
     expect(cell("基准", "管理幅度")).toBe("—");
     expect(cell("激进 · AI 加速", "人 : AI")).toBe("未拆解");
     expect(cell("激进 · AI 加速", "人 : AI")).not.toMatch(/\d/);
-    expect(cell("激进 · AI 加速", "第 41 条")).toBe("Q3 减员 8 人");
-    expect(cell("沙盘方案 A", "管理幅度")).toBe("12 > 8");
+    expect(cell("激进 · AI 加速", "第 41 条")).toBe("8 人 · 1.6%");
+    expect(cell("沙盘方案 A · 拆组前", "管理幅度")).toBe("12 > 8");
     expect(cell("基准", "超预算")).toBe("超 98.5");
+    expect(cell("沙盘方案 A · 拆组前", "第 41 条")).toBe("正常");
     expect(JSON.stringify(board.health)).not.toContain("一次性费用超出预留");
     expect(JSON.stringify(board.health)).not.toContain("基础架构组");
     expect(board.incompleteRatioNote).toBe("沙盘尚未拆解人 : AI。只标记数据不完整，不按 Agent 个数推算。");
     expect(board.cutSummary).toContain("质量与交付部 · P5 · 8 人 · 2027-07-01 · 补偿 55.0 万");
     expect(board.assumptionSummary).toContain("N+1 不计入");
-    expect(board.stepCheckNote).toBe("体检 5 条提示，1 条涉及合规");
+    expect(board.stepCheckNote).toBe("体检 4 条提示，1 条涉及合规");
     const blob = JSON.stringify(board);
     expect(blob).not.toMatch(/钱二|赵一|68750|每人|employeeNo/);
     expect(scenarioCutTextHasPerPerson(blob)).toBe(false);

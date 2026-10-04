@@ -11,7 +11,7 @@ export default async function BaselineDepartmentPage({
   searchParams,
 }: {
   params: Promise<{ deptId: string }>;
-  searchParams: Promise<{ people?: string; page?: string; size?: string; agents?: string; agentPage?: string; agentSize?: string; open?: string }>;
+  searchParams: Promise<{ people?: string; types?: string; page?: string; size?: string; agents?: string; agentSort?: string; agentPage?: string; agentSize?: string; open?: string }>;
 }) {
   const user = await currentUser();
   if (!user) redirect("/headcount/login");

@@ -1,19 +1,25 @@
 import { CURRENT_QUARTER_INDEX } from "@/lib/headcount/calendar";
-import { subtreeIds, type AgentRow, type MovementImpact, type PersonRow, type PlanResult } from "@/lib/headcount/engine";
+import { subtreeIds, type MovementImpact, type PlanResult } from "@/lib/headcount/engine";
 import { formatSignedWan, formatWan, quarterBand, yearBand } from "@/lib/headcount/money";
 import { sortByReporting } from "@/lib/headcount/sortPeople";
 
 export const PERSON_TRANSIT = ["待入职", "待转入", "待离职", "待转出"] as const;
 export const AGENT_TRANSIT = ["待新增", "待扩容或调整", "待下线"] as const;
+export const EMPLOYMENT_TYPES = ["正式", "外包", "实习", "顾问"] as const;
 export const PAGE_SIZES = [10, 20, 50] as const;
 
 export type PageSize = (typeof PAGE_SIZES)[number];
+export type AgentSort = "cost" | "name" | "effective";
+export type PersonStatus = "在岗" | "待入职" | "待转入" | "待离职" | "待转出";
+export type AgentChange = "在用" | "待新增" | "待扩容" | "待调整" | "待下线";
 
 export type DetailQuery = {
   peopleStatuses: string[];
+  peopleTypes: string[];
   peoplePage: number;
   peopleSize: PageSize;
   agentStatuses: string[];
+  agentSort: AgentSort;
   agentPage: number;
   agentSize: PageSize;
   open: "people" | "agents" | null;
@@ -22,10 +28,11 @@ export type DetailQuery = {
 export type PersonLine = {
   id: string;
   name: string;
+  departmentName: string;
   title: string;
   grade: string;
   employmentType: string;
-  status: "在岗" | "待入职" | "待转入" | "待离职" | "待转出";
+  status: PersonStatus;
   effectiveDate: string | null;
   managerId: string | null;
   isManager: boolean;
@@ -34,6 +41,7 @@ export type PersonLine = {
   yearCost: number;
   yearImpact: number | null;
   quarterImpact: number | null;
+  compMark: string | null;
   quarters: number[];
 };
 
@@ -42,69 +50,87 @@ export type AgentLine = {
   name: string;
   agentType: string;
   departmentName: string;
-  instances: number;
+  instancesLabel: string;
   seatMonthly: number;
   computeMonthly: number;
-  status: "在用" | "待新增" | "待扩容或调整" | "待下线";
+  seatBefore: number | null;
+  computeBefore: number | null;
+  status: AgentChange;
   effectiveDate: string | null;
   yearCost: number;
   yearImpact: number | null;
-  quarters: number[];
 };
 
 export type PersonTableRow = {
   id: string;
   name: string;
+  departmentName: string;
   title: string;
   grade: string;
   employmentType: string;
   status: string;
   effectiveDate: string;
+  statusLabel: string;
   yearCost: string;
   yearImpact: string;
+  compMark?: string;
   quarters: string;
 };
 
 export type AgentTableRow = {
   id: string;
   name: string;
+  departmentName: string;
   agentType: string;
-  instances: number;
+  instancesLabel: string;
   seat: string;
   compute: string;
-  status: string;
+  status: AgentChange;
   effectiveDate: string;
+  statusLabel: string;
   yearCost: string;
   yearImpact: string;
-  quarters: string;
 };
 
+export type PeopleCounts = Record<"全部" | "在岗无变动" | "在途" | "待入职" | "待转入" | "待离职" | "待转出", number>;
+export type TypeCounts = Record<"全部" | "正式" | "外包" | "实习" | "顾问", number>;
+export type AgentCounts = Record<"全部" | "在用无变动" | "在途" | "待新增" | "待扩容或调整" | "待下线", number>;
+
 export type PagedPeople = {
-  counts: Record<"全部" | "在岗" | "在途" | "待入职" | "待转入" | "待离职" | "待转出", number>;
+  counts: PeopleCounts;
+  typeCounts: TypeCounts;
   total: number;
   page: number;
+  pageCount: number;
   pageSize: PageSize;
   statuses: string[];
+  types: string[];
   sort: "reporting" | "effective";
+  footer: string;
   rows: PersonTableRow[];
-  summary: { count: number; quarter: string; year: string } | null;
+  summary: { count: number; quarter: string; year: string; yearYuan: number; precise: boolean; label: string } | null;
 };
 
 export type PagedAgents = {
-  counts: Record<"全部" | "在用" | "在途" | "待新增" | "待扩容或调整" | "待下线", number>;
+  counts: AgentCounts;
   total: number;
   page: number;
+  pageCount: number;
   pageSize: PageSize;
   statuses: string[];
-  sort: "name" | "effective";
+  sort: AgentSort;
+  footer: string;
+  annualLabel: string;
   rows: AgentTableRow[];
 };
 
 const EMPTY_DETAIL: DetailQuery = {
   peopleStatuses: [],
+  peopleTypes: [],
   peoplePage: 1,
   peopleSize: 10,
   agentStatuses: [],
+  agentSort: "cost",
   agentPage: 1,
   agentSize: 10,
   open: null,
@@ -129,40 +155,46 @@ export function detailHref(base: string, patch: Record<string, string | null>): 
 
 export function detailQueryFromSearch(query: {
   people?: string;
+  types?: string;
   page?: string;
   size?: string;
   agents?: string;
+  agentSort?: string;
   agentPage?: string;
   agentSize?: string;
   open?: string;
 }): DetailQuery {
+  const agentSort = query.agentSort === "name" || query.agentSort === "effective" ? query.agentSort : "cost";
   return {
     peopleStatuses: (query.people ?? "").split(",").map((item) => item.trim()).filter(Boolean),
+    peopleTypes: (query.types ?? "").split(",").map((item) => item.trim()).filter(Boolean),
     peoplePage: Math.max(1, Number(query.page) || 1),
     peopleSize: clampPageSize(query.size),
     agentStatuses: (query.agents ?? "").split(",").map((item) => item.trim()).filter(Boolean),
+    agentSort,
     agentPage: Math.max(1, Number(query.agentPage) || 1),
     agentSize: clampPageSize(query.agentSize),
     open: query.open === "people" || query.open === "agents" ? query.open : null,
   };
 }
 
-function expandPeople(statuses: string[]): Set<PersonLine["status"]> | null {
+function expandPeople(statuses: string[]): Set<PersonStatus> | null {
   if (statuses.length === 0 || statuses.includes("全部")) return null;
-  const selected = new Set<PersonLine["status"]>();
+  const selected = new Set<PersonStatus>();
   for (const status of statuses) {
     if (status === "在途") PERSON_TRANSIT.forEach((item) => selected.add(item));
-    else if ((PERSON_TRANSIT as readonly string[]).includes(status) || status === "在岗") selected.add(status as PersonLine["status"]);
+    else if (status === "在岗" || status === "在岗无变动") selected.add("在岗");
+    else if ((PERSON_TRANSIT as readonly string[]).includes(status)) selected.add(status as PersonStatus);
   }
   return selected;
 }
 
-function peopleTransitOnly(selected: Set<PersonLine["status"]> | null): boolean {
+function peopleTransitOnly(selected: Set<PersonStatus> | null): boolean {
   if (!selected || selected.size === 0) return false;
   return [...selected].every((status) => (PERSON_TRANSIT as readonly string[]).includes(status));
 }
 
-function personImpact(person: PersonRow, movements: MovementImpact[]): MovementImpact | undefined {
+function personImpact(person: { id: string; status: PersonStatus; employeeNo: string; departmentId: string }, movements: MovementImpact[]): MovementImpact | undefined {
   if (person.status === "待入职" || person.status === "待转入") return movements.find((movement) => movement.id === person.id);
   if (person.status === "待离职") return movements.find((movement) => movement.kind === "离职" && movement.employeeNo === person.employeeNo && movement.departmentId === person.departmentId);
   if (person.status === "待转出") return movements.find((movement) => movement.kind === "转出" && movement.employeeNo === person.employeeNo && movement.departmentId === person.departmentId);
@@ -175,9 +207,11 @@ export function collectPersonLines(result: PlanResult, departmentId: string): Pe
   const people = result.people.filter((person) => ids.has(person.departmentId));
   const lines: PersonLine[] = people.map((person) => {
     const impact = personImpact(person, result.movements);
+    const leaving = result.plan.movements.find((movement) => movement.kind === "离职" && movement.employeeNo === person.employeeNo && movement.departmentId === person.departmentId);
     return {
       id: person.id,
       name: person.name,
+      departmentName: names.get(person.departmentId) ?? person.departmentId,
       title: person.title,
       grade: person.grade,
       employmentType: person.employmentType,
@@ -190,6 +224,7 @@ export function collectPersonLines(result: PlanResult, departmentId: string): Pe
       yearCost: person.annual,
       yearImpact: impact ? impact.annual : null,
       quarterImpact: impact ? impact.quarters[CURRENT_QUARTER_INDEX] : null,
+      compMark: person.status === "待离职" ? (leaving?.compMark ?? "—") : null,
       quarters: [...person.quarters],
     };
   });
@@ -198,6 +233,7 @@ export function collectPersonLines(result: PlanResult, departmentId: string): Pe
     lines.push({
       id: `other:${seat.departmentId}:${seat.employmentType}`,
       name: `${seat.employmentType}（${names.get(seat.departmentId) ?? seat.departmentId}）`,
+      departmentName: names.get(seat.departmentId) ?? seat.departmentId,
       title: seat.employmentType,
       grade: "—",
       employmentType: seat.employmentType,
@@ -210,23 +246,53 @@ export function collectPersonLines(result: PlanResult, departmentId: string): Pe
       yearCost: seat.annual * seat.count,
       yearImpact: null,
       quarterImpact: null,
+      compMark: null,
       quarters: [0, 0, 0, 0],
     });
   }
   return lines;
 }
 
-function countPeople(lines: PersonLine[]): PagedPeople["counts"] {
-  const count = (status?: PersonLine["status"]) => lines.filter((line) => !status || line.status === status).reduce((total, line) => total + line.headcount, 0);
-  const transit = PERSON_TRANSIT.reduce((total, status) => total + count(status), 0);
-  return { 全部: count(), 在岗: count("在岗"), 在途: transit, 待入职: count("待入职"), 待转入: count("待转入"), 待离职: count("待离职"), 待转出: count("待转出") };
+function headcountOf(lines: PersonLine[], status?: PersonStatus): number {
+  return lines.filter((line) => !status || line.status === status).reduce((total, line) => total + line.headcount, 0);
 }
 
-function slicePage<T>(items: T[], page: number, pageSize: PageSize): { page: number; rows: T[] } {
-  const pages = Math.max(1, Math.ceil(items.length / pageSize));
-  const current = Math.min(page, pages);
+function countPeople(lines: PersonLine[]): PeopleCounts {
+  const steady = headcountOf(lines, "在岗");
+  const transit = PERSON_TRANSIT.reduce((total, status) => total + headcountOf(lines, status), 0);
+  return {
+    全部: headcountOf(lines),
+    在岗无变动: steady,
+    在途: transit,
+    待入职: headcountOf(lines, "待入职"),
+    待转入: headcountOf(lines, "待转入"),
+    待离职: headcountOf(lines, "待离职"),
+    待转出: headcountOf(lines, "待转出"),
+  };
+}
+
+function countTypes(lines: PersonLine[]): TypeCounts {
+  const of = (type?: string) => lines.filter((line) => !type || line.employmentType === type).reduce((total, line) => total + line.headcount, 0);
+  return { 全部: of(), 正式: of("正式"), 外包: of("外包"), 实习: of("实习"), 顾问: of("顾问") };
+}
+
+export function pairedTransfers(lines: PersonLine[]): number {
+  const outgoing = new Set(lines.filter((line) => line.status === "待转出" && line.employeeNo).map((line) => line.employeeNo));
+  return new Set(lines.filter((line) => line.status === "待转入" && outgoing.has(line.employeeNo)).map((line) => line.employeeNo)).size;
+}
+
+export function peopleFooterLabel(lines: PersonLine[], companyScope: boolean): string {
+  const rows = lines.reduce((total, line) => total + line.headcount, 0);
+  const pairs = pairedTransfers(lines);
+  if (companyScope && pairs > 0) return `共 ${rows} 行（${rows - pairs} 人，${pairs} 人内部转岗各占两行）`;
+  return `共 ${rows} 人`;
+}
+
+function slicePage<T>(items: T[], page: number, pageSize: PageSize): { page: number; pageCount: number; rows: T[] } {
+  const pageCount = Math.max(1, Math.ceil(items.length / pageSize));
+  const current = Math.min(page, pageCount);
   const start = (current - 1) * pageSize;
-  return { page: current, rows: items.slice(start, start + pageSize) };
+  return { page: current, pageCount, rows: items.slice(start, start + pageSize) };
 }
 
 function moneyText(exact: boolean, yuan: number, annual = true): string {
@@ -240,136 +306,262 @@ function signedText(exact: boolean, yuan: number): string {
   return formatSignedWan(yuan);
 }
 
-export function pagePeople(lines: PersonLine[], query: Pick<DetailQuery, "peopleStatuses" | "peoplePage" | "peopleSize">, options: { exact: boolean; preciseSummary?: boolean }): PagedPeople {
+function applyPeopleStatus(lines: PersonLine[], statuses: string[]): PersonLine[] {
+  const selected = expandPeople(statuses);
+  return selected ? lines.filter((line) => selected.has(line.status)) : [...lines];
+}
+
+function applyPeopleType(lines: PersonLine[], types: string[]): PersonLine[] {
+  if (types.length === 0 || types.includes("全部")) return [...lines];
+  const selected = new Set(types);
+  return lines.filter((line) => selected.has(line.employmentType));
+}
+
+export function pagePeople(
+  lines: PersonLine[],
+  query: Pick<DetailQuery, "peopleStatuses" | "peoplePage" | "peopleSize"> & { peopleTypes?: string[] },
+  options: { exact: boolean; preciseSummary?: boolean; companyScope?: boolean; showCompensation?: boolean },
+): PagedPeople {
+  const types = query.peopleTypes ?? [];
+  const statusBasis = applyPeopleType(lines, types);
+  const typeBasis = applyPeopleStatus(lines, query.peopleStatuses);
+  const filtered = applyPeopleStatus(statusBasis, query.peopleStatuses);
   const selected = expandPeople(query.peopleStatuses);
-  const filtered = selected ? lines.filter((line) => selected.has(line.status)) : [...lines];
   const byDate = peopleTransitOnly(selected);
   const ordered = byDate
     ? [...filtered].sort((left, right) => (left.effectiveDate ?? "9999").localeCompare(right.effectiveDate ?? "9999") || left.name.localeCompare(right.name, "zh"))
     : sortByReporting(filtered);
   const sliced = slicePage(ordered, query.peoplePage, query.peopleSize);
   const headcount = filtered.reduce((total, line) => total + line.headcount, 0);
-  const preciseSummary = options.exact || (options.preciseSummary !== false && headcount >= 5);
+  const precise = options.exact || (options.preciseSummary !== false && headcount >= 5);
   const quarterSum = filtered.reduce((total, line) => total + (line.quarterImpact ?? 0), 0);
   const yearSum = filtered.reduce((total, line) => total + (line.yearImpact ?? 0), 0);
+  const quarter = precise ? formatSignedWan(quarterSum) : yearBand(quarterSum);
+  const year = precise ? formatSignedWan(yearSum) : yearBand(yearSum);
   const summary = byDate
     ? {
         count: headcount,
-        quarter: preciseSummary ? formatSignedWan(quarterSum) : yearBand(quarterSum),
-        year: preciseSummary ? formatSignedWan(yearSum) : yearBand(yearSum),
+        quarter,
+        year,
+        yearYuan: yearSum,
+        precise,
+        label: options.exact ? "精确估算" : precise ? "精确合计" : "区间",
       }
     : null;
   return {
-    counts: countPeople(lines),
+    counts: countPeople(statusBasis),
+    typeCounts: countTypes(typeBasis),
     total: headcount,
     page: sliced.page,
+    pageCount: sliced.pageCount,
     pageSize: query.peopleSize,
     statuses: query.peopleStatuses,
+    types,
     sort: byDate ? "effective" : "reporting",
-    rows: sliced.rows.map((line) => ({
-      id: line.id,
-      name: line.name,
-      title: line.title,
-      grade: line.grade,
-      employmentType: line.employmentType,
-      status: line.status,
-      effectiveDate: line.status === "在岗" ? "" : (line.effectiveDate ?? ""),
-      yearCost: moneyText(options.exact, line.yearCost),
-      yearImpact: line.yearImpact == null ? "" : signedText(options.exact, line.yearImpact),
-      quarters: ["Q1", "Q2", "Q3", "Q4"].map((label, index) => `${label} ${moneyText(options.exact, line.quarters[index] ?? 0, false)}`).join(" · "),
-    })),
+    footer: peopleFooterLabel(filtered, Boolean(options.companyScope)),
+    rows: sliced.rows.map((line) => {
+      const row: PersonTableRow = {
+        id: line.id,
+        name: line.name,
+        departmentName: line.departmentName,
+        title: line.title,
+        grade: line.grade,
+        employmentType: line.employmentType,
+        status: line.status,
+        effectiveDate: line.status === "在岗" ? "" : (line.effectiveDate ?? ""),
+        statusLabel: line.status === "在岗" || !line.effectiveDate ? line.status : `${line.status} · ${line.effectiveDate}`,
+        yearCost: moneyText(options.exact, line.yearCost),
+        yearImpact: line.yearImpact == null ? "" : signedText(options.exact, line.yearImpact),
+        quarters: ["Q1", "Q2", "Q3", "Q4"].map((label, index) => `${label} ${moneyText(options.exact, line.quarters[index] ?? 0, false)}`).join(" · "),
+      };
+      if (options.showCompensation) row.compMark = line.compMark ?? "—";
+      return row;
+    }),
     summary,
   };
 }
 
-function agentStatus(status: AgentRow["status"]): AgentLine["status"] {
-  if (status === "待上线") return "待新增";
-  if (status === "待调整") return "待扩容或调整";
-  if (status === "待下线") return "待下线";
-  return "在用";
+function adjustmentChange(oldSeat: number, oldCompute: number, movement: { seatMonthly?: number; computeMonthly?: number; instanceDelta?: number }): "待扩容" | "待调整" {
+  const priceChanged = (movement.seatMonthly ?? oldSeat) !== oldSeat || (movement.computeMonthly ?? oldCompute) !== oldCompute;
+  const delta = movement.instanceDelta ?? 0;
+  if (!priceChanged && delta > 0) return "待扩容";
+  return "待调整";
 }
 
 export function collectAgentLines(result: PlanResult, departmentId: string): AgentLine[] {
   const ids = subtreeIds(result.plan, departmentId);
   const names = new Map(result.plan.departments.map((department) => [department.id, department.name]));
-  return result.agents
-    .filter((agent) => ids.has(agent.departmentId))
-    .map((agent) => {
-      const status = agentStatus(agent.status);
-      const own = result.movements.find((item) => item.id === agent.id);
-      const offline = result.movements.find((item) => item.kind === "Agent 下线" && item.name === agent.name && item.departmentId === agent.departmentId);
-      const movement = own ?? (status === "待下线" ? offline : undefined);
-      return {
+  const lines: AgentLine[] = [];
+  for (const agent of result.plan.agents.filter((item) => ids.has(item.departmentId))) {
+    const offline = result.plan.movements.find((movement) => movement.kind === "Agent 下线" && movement.name === agent.name && movement.departmentId === agent.departmentId);
+    const adjust = result.plan.movements.find((movement) => movement.kind === "Agent 调整" && movement.name === agent.name && movement.departmentId === agent.departmentId);
+    const baseRow = result.agents.find((row) => row.id === agent.id);
+    const departmentName = names.get(agent.departmentId) ?? agent.departmentId;
+    if (offline) {
+      const impact = result.movements.find((movement) => movement.id === offline.id);
+      lines.push({
         id: agent.id,
         name: agent.name,
         agentType: agent.agentType,
-        departmentName: names.get(agent.departmentId) ?? agent.departmentId,
-        instances: agent.instances,
+        departmentName,
+        instancesLabel: `${agent.instances} → 0`,
         seatMonthly: agent.seatMonthly,
         computeMonthly: agent.computeMonthly,
-        status,
-        effectiveDate: agent.effectiveDate,
-        yearCost: agent.annual,
-        yearImpact: movement ? movement.annual : null,
-        quarters: [...agent.quarters],
-      };
+        seatBefore: null,
+        computeBefore: null,
+        status: "待下线",
+        effectiveDate: offline.effectiveDate,
+        yearCost: baseRow?.annual ?? 0,
+        yearImpact: impact?.annual ?? null,
+      });
+      continue;
+    }
+    if (adjust) {
+      const deltaRow = result.agents.find((row) => row.id === adjust.id);
+      const next = agent.instances + (adjust.instanceDelta ?? 0);
+      lines.push({
+        id: agent.id,
+        name: agent.name,
+        agentType: agent.agentType,
+        departmentName,
+        instancesLabel: `${agent.instances} → ${next}`,
+        seatMonthly: adjust.seatMonthly ?? agent.seatMonthly,
+        computeMonthly: adjust.computeMonthly ?? agent.computeMonthly,
+        seatBefore: agent.seatMonthly,
+        computeBefore: agent.computeMonthly,
+        status: adjustmentChange(agent.seatMonthly, agent.computeMonthly, adjust),
+        effectiveDate: adjust.effectiveDate,
+        yearCost: (baseRow?.annual ?? 0) + (deltaRow?.annual ?? 0),
+        yearImpact: deltaRow?.annual ?? null,
+      });
+      continue;
+    }
+    lines.push({
+      id: agent.id,
+      name: agent.name,
+      agentType: agent.agentType,
+      departmentName,
+      instancesLabel: String(agent.instances),
+      seatMonthly: agent.seatMonthly,
+      computeMonthly: agent.computeMonthly,
+      seatBefore: null,
+      computeBefore: null,
+      status: "在用",
+      effectiveDate: null,
+      yearCost: baseRow?.annual ?? 0,
+      yearImpact: null,
     });
-}
-
-function expandAgents(statuses: string[]): Set<AgentLine["status"]> | null {
-  if (statuses.length === 0 || statuses.includes("全部")) return null;
-  const selected = new Set<AgentLine["status"]>();
-  for (const status of statuses) {
-    if (status === "在途") AGENT_TRANSIT.forEach((item) => selected.add(item));
-    else if (status === "在用" || (AGENT_TRANSIT as readonly string[]).includes(status)) selected.add(status as AgentLine["status"]);
   }
-  return selected;
+  for (const movement of result.plan.movements) {
+    if (movement.kind !== "Agent 新增" || !ids.has(movement.departmentId)) continue;
+    const row = result.agents.find((item) => item.id === movement.id);
+    lines.push({
+      id: movement.id,
+      name: movement.name,
+      agentType: movement.agentType ?? movement.title,
+      departmentName: names.get(movement.departmentId) ?? movement.departmentId,
+      instancesLabel: `0 → ${movement.instanceDelta ?? 0}`,
+      seatMonthly: movement.seatMonthly ?? 0,
+      computeMonthly: movement.computeMonthly ?? 0,
+      seatBefore: null,
+      computeBefore: null,
+      status: "待新增",
+      effectiveDate: movement.effectiveDate,
+      yearCost: row?.annual ?? 0,
+      yearImpact: row?.annual ?? null,
+    });
+  }
+  return lines;
 }
 
-function agentTransitOnly(selected: Set<AgentLine["status"]> | null): boolean {
-  if (!selected || selected.size === 0) return false;
-  return [...selected].every((status) => (AGENT_TRANSIT as readonly string[]).includes(status));
+function agentMatches(line: AgentLine, status: string): boolean {
+  if (status === "在用" || status === "在用无变动") return line.status === "在用";
+  if (status === "待新增") return line.status === "待新增";
+  if (status === "待下线") return line.status === "待下线";
+  if (status === "待扩容") return line.status === "待扩容";
+  if (status === "待调整") return line.status === "待调整";
+  if (status === "待扩容或调整") return line.status === "待扩容" || line.status === "待调整";
+  if (status === "在途") return line.status !== "在用";
+  return false;
 }
 
-export function pageAgents(lines: AgentLine[], query: Pick<DetailQuery, "agentStatuses" | "agentPage" | "agentSize">, options: { exact: boolean }): PagedAgents {
-  const selected = expandAgents(query.agentStatuses);
-  const filtered = selected ? lines.filter((line) => selected.has(line.status)) : [...lines];
-  const byDate = agentTransitOnly(selected);
-  const ordered = byDate
-    ? [...filtered].sort((left, right) => (left.effectiveDate ?? "9999").localeCompare(right.effectiveDate ?? "9999") || left.name.localeCompare(right.name, "zh"))
-    : [...filtered].sort((left, right) => left.departmentName.localeCompare(right.departmentName, "zh") || left.name.localeCompare(right.name, "zh"));
+function expandAgentFilter(statuses: string[]): ((line: AgentLine) => boolean) | null {
+  if (statuses.length === 0 || statuses.includes("全部")) return null;
+  return (line) => statuses.some((status) => agentMatches(line, status));
+}
+
+function countAgents(lines: AgentLine[]): AgentCounts {
+  const of = (status?: AgentChange | "待扩容或调整") => lines.filter((line) => {
+    if (!status) return true;
+    if (status === "待扩容或调整") return line.status === "待扩容" || line.status === "待调整";
+    return line.status === status;
+  }).length;
+  const added = of("待新增");
+  const changed = of("待扩容或调整");
+  const offline = of("待下线");
+  return { 全部: lines.length, 在用无变动: of("在用"), 在途: added + changed + offline, 待新增: added, "待扩容或调整": changed, 待下线: offline };
+}
+
+function priceLabel(before: number | null, after: number): string {
+  const afterText = after.toLocaleString("en-US");
+  if (before == null || before === after) return afterText;
+  return `${before.toLocaleString("en-US")} → ${afterText}`;
+}
+
+function agentStatusLabel(line: AgentLine): string {
+  if (line.status === "在用" || !line.effectiveDate) return "在用";
+  const name = line.status === "待扩容" || line.status === "待调整" || line.status === "待新增" || line.status === "待下线" ? line.status : line.status;
+  return `${name} · ${line.effectiveDate}`;
+}
+
+export function pageAgents(
+  lines: AgentLine[],
+  query: Pick<DetailQuery, "agentStatuses" | "agentPage" | "agentSize"> & { agentSort?: AgentSort },
+  options: { exact: boolean },
+): PagedAgents {
+  const selected = expandAgentFilter(query.agentStatuses);
+  const filtered = selected ? lines.filter(selected) : [...lines];
+  const sort = query.agentSort ?? "cost";
+  const ordered = [...filtered].sort((left, right) => {
+    if (sort === "effective") return (left.effectiveDate ?? "9999").localeCompare(right.effectiveDate ?? "9999") || left.name.localeCompare(right.name, "zh");
+    if (sort === "name") return left.departmentName.localeCompare(right.departmentName, "zh") || left.name.localeCompare(right.name, "zh");
+    return right.yearCost - left.yearCost || left.name.localeCompare(right.name, "zh");
+  });
   const sliced = slicePage(ordered, query.agentPage, query.agentSize);
-  const count = (status?: AgentLine["status"]) => lines.filter((line) => !status || line.status === status).reduce((total, line) => total + line.instances, 0);
   return {
-    counts: {
-      全部: count(),
-      在用: count("在用"),
-      在途: AGENT_TRANSIT.reduce((total, status) => total + count(status), 0),
-      待新增: count("待新增"),
-      "待扩容或调整": count("待扩容或调整"),
-      待下线: count("待下线"),
-    },
-    total: filtered.reduce((total, line) => total + line.instances, 0),
+    counts: countAgents(lines),
+    total: filtered.length,
     page: sliced.page,
+    pageCount: sliced.pageCount,
     pageSize: query.agentSize,
     statuses: query.agentStatuses,
-    sort: byDate ? "effective" : "name",
+    sort,
+    footer: `共 ${filtered.length} 项`,
+    annualLabel: formatWan(lines.reduce((total, line) => total + line.yearCost, 0)),
     rows: sliced.rows.map((line) => ({
       id: line.id,
       name: line.name,
+      departmentName: line.departmentName,
       agentType: line.agentType,
-      instances: line.instances,
-      seat: `${line.seatMonthly.toLocaleString("zh-CN")} 元/月`,
-      compute: `${line.computeMonthly.toLocaleString("zh-CN")} 元/月`,
+      instancesLabel: line.instancesLabel,
+      seat: priceLabel(line.seatBefore, line.seatMonthly),
+      compute: priceLabel(line.computeBefore, line.computeMonthly),
       status: line.status,
       effectiveDate: line.status === "在用" ? "" : (line.effectiveDate ?? ""),
+      statusLabel: agentStatusLabel(line),
       yearCost: moneyText(options.exact, line.yearCost),
       yearImpact: line.yearImpact == null || line.status === "在用" ? "" : signedText(options.exact, line.yearImpact),
-      quarters: ["Q1", "Q2", "Q3", "Q4"].map((label, index) => `${label} ${moneyText(options.exact, line.quarters[index] ?? 0, false)}`).join(" · "),
     })),
   };
 }
 
+export function transitCrossLine(people: { count: number; yearYuan: number }, agents: { count: number; yearYuan: number }, precise: boolean): string {
+  const totalYear = precise ? formatSignedWan(people.yearYuan + agents.yearYuan) : yearBand(people.yearYuan + agents.yearYuan);
+  if (agents.count === 0) return `本部门 Agent 无在途 · 全部在途 ${people.count} 笔 ${totalYear} 万`;
+  const agentYear = precise ? formatSignedWan(agents.yearYuan) : yearBand(agents.yearYuan);
+  return `加 Agent 在途 ${agents.count} 项 ${agentYear} 万 = 全部在途 ${people.count + agents.count} 笔 ${totalYear} 万`;
+}
+
 export function defaultDetailQuery(): DetailQuery {
-  return { ...EMPTY_DETAIL };
+  return { ...EMPTY_DETAIL, peopleStatuses: [], peopleTypes: [] };
 }

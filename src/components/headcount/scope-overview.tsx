@@ -1,6 +1,6 @@
 import { InfoMark } from "@/components/headcount/info-mark";
 import { RoundingMark } from "@/components/headcount/rounding-mark";
-import { YEAR_FORECAST_LEADER, YEAR_FORECAST_OD } from "@/lib/headcount/copy";
+import { BUDGET_NOTE, DEPT_TOTAL_NOTE, GAP_NOTE, VACANCY_NOTE, VACANCY_TOTAL_NOTE, YEAR_FORECAST_LEADER_DEPT, YEAR_FORECAST_OD } from "@/lib/headcount/copy";
 import { conclusionSourceLabel, type ScopeOverview } from "@/lib/headcount/overview";
 import Link from "next/link";
 
@@ -64,14 +64,23 @@ export function ScopeOverviewBoard({ overview }: { overview: ScopeOverview }) {
               <th>编制</th>
               <th>在岗</th>
               <th>在途</th>
-              <th>空缺</th>
+              <th>
+                空缺
+                <InfoMark note={VACANCY_NOTE} />
+              </th>
               <th>Agent</th>
               <th>
                 全年预计
-                <InfoMark note={overview.audience === "od" ? YEAR_FORECAST_OD : YEAR_FORECAST_LEADER} />
+                <InfoMark note={overview.audience === "od" ? YEAR_FORECAST_OD : YEAR_FORECAST_LEADER_DEPT} />
               </th>
-              <th>部门预算</th>
-              <th>差额</th>
+              <th>
+                部门预算
+                <InfoMark note={BUDGET_NOTE} />
+              </th>
+              <th>
+                差额
+                <InfoMark note={GAP_NOTE} />
+              </th>
               <th>状态</th>
               <th />
             </tr>
@@ -100,17 +109,25 @@ export function ScopeOverviewBoard({ overview }: { overview: ScopeOverview }) {
                 </td>
               </tr>
             ))}
-            {overview.total ? (
+            {overview.listTotal ? (
               <tr className="border-t border-line bg-[#F9FAFB] font-medium">
-                <td className="px-3 py-2">{overview.total.label}</td>
-                {overview.audience === "leader" ? <td /> : null}
-                <td colSpan={5} />
-                <td>
-                  {overview.total.annual}
-                  {overview.total.roundingNote ? <RoundingMark note={overview.total.roundingNote} /> : null}
+                <td className="px-3 py-2">
+                  {overview.listTotal.label}
+                  {overview.audience === "od" ? <InfoMark note={DEPT_TOTAL_NOTE} /> : null}
                 </td>
-                <td>{overview.total.budget}</td>
-                <td>{overview.total.gap}</td>
+                {overview.audience === "leader" ? <td /> : null}
+                <td>{overview.listTotal.quota}</td>
+                <td>{overview.listTotal.onBoard}</td>
+                <td>{overview.listTotal.inTransit}</td>
+                <td>
+                  {overview.listTotal.vacancy}
+                  {overview.listTotal.overstaff ? <span className="ml-1 rounded bg-[#FEE2E2] px-1.5 py-0.5 text-xs text-[#B91C1C]">{overview.listTotal.overstaff}</span> : null}
+                  {overview.audience === "leader" ? <InfoMark note={VACANCY_TOTAL_NOTE} /> : null}
+                </td>
+                <td>{overview.listTotal.agents}</td>
+                <td>{overview.listTotal.annual}</td>
+                <td>{overview.listTotal.budget}</td>
+                <td className={overview.listTotal.gap.startsWith("+") ? "text-[#B91C1C]" : "text-[#15803D]"}>{overview.listTotal.gap}</td>
                 <td colSpan={2} />
               </tr>
             ) : null}

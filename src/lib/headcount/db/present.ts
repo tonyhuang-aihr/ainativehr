@@ -43,7 +43,7 @@ export async function scopeFor(user: HeadcountUser) {
   return { db, departments, closure, visible: visibleDepartmentIds(user, departments, closure) };
 }
 
-export type LeaderScreen = { kind: "overview"; overview: ScopeOverview } | { kind: "detail"; view: LeaderView };
+export type LeaderScreen = { kind: "overview"; overview: ScopeOverview; view: LeaderView } | { kind: "detail"; view: LeaderView };
 
 export async function openLeader(user: SessionUser, requestedId?: string, detail?: DetailQuery): Promise<LeaderScreen> {
   if (!can(user, "viewLeader") && !can(user, "viewBusiness")) throw new Error("无权查看");
@@ -62,7 +62,15 @@ export async function openLeader(user: SessionUser, requestedId?: string, detail
   if (pageKind(departmentId, departments, visible) === "overview") {
     const ranges = user.role === "leader" && scopeHasSmallGroup(result, visible);
     const overview = buildScopeOverview(result, departmentId, user.role === "leader" ? "leader" : "od", ranges);
-    return { kind: "overview", overview };
+    const view = buildLeaderView(result, departmentId, {
+      exact: !ranges,
+      maskCosts: ranges,
+      showMarks: false,
+      companyScope: false,
+      listBase: `/headcount/leader?dept=${departmentId}`,
+      detail,
+    });
+    return { kind: "overview", overview, view };
   }
   const mask = user.role === "leader" && maskPageCosts(result, visible, departmentId);
   const names = plan.people.map((person) => person.name);
@@ -99,7 +107,7 @@ export async function openLeader(user: SessionUser, requestedId?: string, detail
   return { kind: "detail", view };
 }
 
-export async function openBaseline(user: HeadcountUser) {
+export async function openBaseline(user: HeadcountUser, detail?: DetailQuery) {
   if (!can(user, "viewBusiness") || user.role === "leader") throw new Error("无权查看底座");
   const { db, visible, departments } = await scopeFor(user);
   const plan = await loadPlan(db, { departmentIds: visible, sensitive: can(user, "viewOneOff") });
@@ -107,7 +115,14 @@ export async function openBaseline(user: HeadcountUser) {
   const root = scopeRoots(departments, visible)[0];
   if (!root) throw new Error("没有可查看的部门");
   const overview = buildScopeOverview(result, root, "od", false);
-  return { overview, asOf: plan.asOf, year: plan.year };
+  const view = buildLeaderView(result, root, {
+    exact: true,
+    showMarks: can(user, "viewCompensation"),
+    companyScope: true,
+    listBase: "/headcount/baseline",
+    detail,
+  });
+  return { overview, view, asOf: plan.asOf, year: plan.year };
 }
 
 export async function openDepartment(user: HeadcountUser, departmentId: string, detail?: DetailQuery) {
@@ -131,6 +146,8 @@ export async function openDepartment(user: HeadcountUser, departmentId: string, 
   const view = buildLeaderView(result, departmentId, {
     exact: true,
     maskCosts: false,
+    showMarks: can(user, "viewCompensation"),
+    companyScope: false,
     backHref: "/headcount/baseline",
     listBase: `/headcount/baseline/${departmentId}`,
     detail,

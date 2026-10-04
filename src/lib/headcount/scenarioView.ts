@@ -62,6 +62,7 @@ export type ScenarioBoard = {
   columns: CompareColumn[];
   healthName: string;
   health: HealthRow[];
+  healthFootnote: string | null;
   incompleteRatioNote: string | null;
   timelineTitle: string;
   timelineCaption: string;
@@ -141,29 +142,27 @@ function quarterOf(year: number, iso: string): number {
   return quarterIndex(year, parseIsoDate(iso)) + 1;
 }
 
-function articleText(year: number, definition: ScenarioDefinition): string | null {
+function articleText(result: PlanResult, definition: ScenarioDefinition): string | null {
   if (!definition.cuts.length) return null;
-  const byQuarter = new Map<number, number>();
-  for (const cut of definition.cuts) {
-    const quarter = quarterOf(year, cut.effectiveDate);
-    byQuarter.set(quarter, (byQuarter.get(quarter) ?? 0) + cut.count);
-  }
-  return [...byQuarter.entries()].map(([quarter, people]) => `Q${quarter} 减员 ${people} 人`).join("、");
+  const people = definition.cuts.reduce((total, cut) => total + cut.count, 0);
+  const base = deptStat(result, rootId(result)).onBoard;
+  const rate = base > 0 ? ((people / base) * 100).toFixed(1) : "0.0";
+  return `${people} 人 · ${rate}%`;
 }
 
 export function healthRow(result: PlanResult, scenario: ScenarioResult): HealthRow {
   const gap = roundToHalfWan(scenario.totalYuan) - roundToHalfWan(result.plan.companyBudget);
   const definition = scenario.definition;
-  const article = articleText(result.plan.year, definition);
+  const article = articleText(result, definition);
   const cells: HealthCell[] = [
-    gap > 0 ? { title: "超预算", text: `超 ${formatWan(gap * 10_000)}`, tone: "warn" } : { title: "超预算", text: "通过", tone: "ok" },
+    gap > 0 ? { title: "超预算", text: `超 ${formatWan(gap * 10_000)}`, tone: "warn" } : { title: "超预算", text: "正常", tone: "ok" },
     definition.spanAlert
       ? { title: "管理幅度", text: `${definition.spanAlert.span} > ${definition.spanAlert.limit}`, tone: "warn" }
       : definition.structureNote
-        ? { title: "管理幅度", text: "通过", tone: "ok" }
+        ? { title: "管理幅度", text: "正常", tone: "ok" }
         : { title: "管理幅度", text: "—", tone: "muted" },
-    definition.ratio === "未拆解" ? { title: "人 : AI", text: "未拆解", tone: "warn" } : { title: "人 : AI", text: "通过", tone: "ok" },
-    article ? { title: "第 41 条", text: article, tone: "compliance" } : { title: "第 41 条", text: "—", tone: "muted" },
+    definition.ratio === "未拆解" ? { title: "人 : AI", text: "未拆解", tone: "warn" } : { title: "人 : AI", text: "正常", tone: "ok" },
+    article ? { title: "第 41 条", text: article, tone: "compliance" } : { title: "第 41 条", text: "正常", tone: "ok" },
   ];
   return { id: definition.id, name: definition.name, cells };
 }
@@ -193,7 +192,8 @@ export function heroSentence(result: PlanResult, compared: ScenarioResult[]): st
   if (!lowest) return "还没有加入对比的场景。";
   const lowestGap = gapLabel(lowest.totalYuan, budgetYuan);
   const lowestRatio = lowest.definition.ratio === "未拆解" ? "人 : AI 未拆解" : `人 : AI 为 ${lowest.definition.ratio}`;
-  const bits = [`${lowest.definition.name} 成本最低（${formatWan(lowest.totalYuan)} 万），比预算总包${lowestGap.text} 万，${lowestRatio}`];
+  const span = lowest.definition.spanAlert ? `，但${lowest.definition.spanAlert.department}管理幅度 ${lowest.definition.spanAlert.span} 超过建议值 ${lowest.definition.spanAlert.limit}` : "";
+  const bits = [`${lowest.definition.name}成本最低（${formatWan(lowest.totalYuan)} 万），比预算总包${lowestGap.text} 万，${lowestRatio}${span}`];
   const rest = ranked.filter((item) => item.definition.id !== lowest.definition.id);
   for (const item of rest) {
     const gap = gapLabel(item.totalYuan, budgetYuan);
@@ -209,6 +209,18 @@ export function heroSentence(result: PlanResult, compared: ScenarioResult[]): st
     else bits.push(`${item.definition.name}${gap.text} 万，人 : AI 为 ${item.definition.ratio}`);
   }
   return `对比的 ${compared.length} 个场景中，${bits.join("；")}。`;
+}
+
+function healthFootnote(compared: ScenarioResult[]): string | null {
+  const span = compared.find((item) => item.definition.spanAlert)?.definition;
+  const incomplete = compared.some((item) => item.definition.ratio === "未拆解");
+  const bits: string[] = [];
+  if (span?.spanAlert) {
+    const demo = span.spanAlert.department === "数据组" && span.spanAlert.span === 12;
+    bits.push(`${span.spanAlert.department}管理幅度 ${span.spanAlert.span}，超过建议值 ${span.spanAlert.limit}（${span.name}）${demo ? "；最新版「方案 A」已拆成 6 + 6，导入后通过。基准、激进无结构调整，记「—」" : ""}。`);
+  }
+  if (incomplete) bits.push("人 : AI 未拆解只提示数据不全，不估算。第 41 条仅作提醒，请与法务确认是否需要报告。");
+  return bits.length ? bits.join("") : null;
 }
 
 function pendingCount(assumptions: ScenarioAssumptions): number {
@@ -242,7 +254,7 @@ export function buildScenarioBoard(result: PlanResult, definitions: ScenarioDefi
   const compared = definitions.filter((definition) => definition.compared).map((definition) => evaluated.get(definition.id)!);
   const lowest = [...compared].sort((left, right) => left.totalYuan - right.totalYuan)[0] ?? baseline;
   const within = compared.filter((item) => roundToHalfWan(item.totalYuan) <= roundToHalfWan(budgetYuan)).length;
-  const health = [baseline, ...compared].map((item) => healthRow(result, item));
+  const health = compared.map((item) => healthRow(result, item));
   const hints = health.flatMap((row) => row.cells).filter((cell) => cell.tone === "warn" || cell.tone === "compliance");
   const compliance = hints.filter((cell) => cell.tone === "compliance").length;
   const names = compared.map((item) => item.definition.name);
@@ -302,6 +314,7 @@ export function buildScenarioBoard(result: PlanResult, definitions: ScenarioDefi
     columns,
     healthName: "对比场景",
     health,
+    healthFootnote: healthFootnote(compared),
     incompleteRatioNote: health.some((row) => row.cells.some((cell) => cell.text === "未拆解")) ? INCOMPLETE_RATIO_NOTE : null,
     timelineTitle: `时间轴 · ${focus.definition.name}`,
     timelineCaption: TIMELINE_EFFECTIVE_CAPTION,
