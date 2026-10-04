@@ -1,4 +1,4 @@
-/** 悬停文案 v1.1。和 `tooltips-v1.1.md` 重合的条目必须逐字相同；末尾三条是页面文案，不在那份表里。 */
+/** 悬停文案 v1.1。每条都和 `tooltips-v1.1.md` 逐字相同，含补充区的三条。 */
 
 export const TOOLTIPS = [
   { page: "负责人视图 · 总览（多部门，赵一）", metric: "编制与人员", text: "编制、在岗、在途、空缺只算正式员工；外包、实习、顾问单列人数。空缺 = 编制 −（在岗 + 在途）。" },
@@ -37,7 +37,7 @@ export const TOOLTIPS = [
   { page: "OD 底座 · 总览", metric: "部门预算", text: "OD 手工录入，只对比人工和 Agent 日常成本；本页为示例数据。" },
   { page: "OD 底座 · 总览", metric: "差额", text: "全年预计 − 部门预算。正数为超出（红色），负数为结余。" },
   { page: "OD 底座 · 部门页", metric: "全年预计成本", text: "部门口径：只含人工成本和 Agent 日常成本（席位、算力）。本部门离职涉及的经济补偿计入公司一次性费用，由 HR/OD 统一管理，不摊到部门。" },
-  { page: "OD 底座 · 部门页", metric: "≈ ① + ②", text: "各项分别取整到 0.5 万，相加与合计差 0.5 万；合计按未取整金额加总后取整。" },
+  { page: "OD 底座 · 部门页", metric: "≈ ① + ②", text: "各项分别取整到 0.5 万，合计按未取整金额加总后再取整，可能差 0.5 万。" },
   { page: "OD 底座 · 部门页", metric: "当前成本（年化）", text: "在岗人员按职级均值（外包等按类型人均）+ 在用 Agent 的席位费和算力费，按全年 12 个月计算。" },
   { page: "OD 底座 · 部门页", metric: "接下来会变", text: "已确认、还没生效的变动，按生效日折算到当年，增加为正、减少为负。点任一行，打开对应明细并自动选中「在途」。" },
   { page: "OD 底座 · 部门页", metric: "年底预计", text: "年底人数 = 现在 + 加入 − 离开（正式员工）；全年成本 = 当前成本（年化）+ 在途影响，即 ① + ②。" },
@@ -53,9 +53,10 @@ export const TOOLTIPS = [
   { page: "OD 底座 · 部门页", metric: "在途合计", text: "合计先用未取整的金额加总，再取整到 0.5 万，可能和逐行相加略有差异。" },
   { page: "场景与时间轴 v2", metric: "场景总成本", text: "场景总成本 = 部门日常成本（人工 + Agent 席位、算力）+ 一次性费用（经济补偿、Agent 实施和培训费）。一次性费用由 HR/OD 统一管理，不摊到部门。" },
   { page: "场景与时间轴 v2", metric: "时间轴", text: "标签分四类：离职未补位、场景增员、场景减员、场景新增或下线 Agent，都是本场景在基线之上的变化。括号里是加上已确认在途后，季初到季末的实际变化；同一季有两条人数标签时只写在最后一条。都取自成本引擎；场景里的变动统一按该季第一天生效（P0）。" },
-  { page: "场景与时间轴 v2", metric: "未归属部门 Agent", text: "沙盘里没有岗位拆解的 Agent，只计入公司口径，不分到部门。" },
-  { page: "人员明细", metric: "外包（部门）", text: "外包只有座位数，按部门汇总，不列姓名" },
-  { page: "事业部底座 · 总览", metric: "范围合计", text: "范围合计只含日常成本（人工 + Agent），对比范围内部门预算之和；一次性费用（经济补偿、Agent 实施和培训费）由 HR 和 OD 统一管理，不计入。" },
+  { page: "场景与时间轴 v2", metric: "未归属部门 Agent ⓘ", text: "沙盘里没有岗位拆解的 Agent，只计入公司口径，不分到部门。" },
+  { page: "人员明细（外包汇总行，当前示例状态未展示）", metric: "外包（部门）", text: "外包只有座位数，按部门汇总，不列姓名" },
+  { page: "HRBP 场景（业务单元范围合计行，暂无设计稿页面）", metric: "范围合计 ⓘ", text: "范围合计只含日常成本（人工 + Agent），对比范围内部门预算之和；一次性费用（经济补偿、Agent 实施和培训费）由 HR 和 OD 统一管理，不计入。" },
+  { page: "HRBP 场景（业务单元范围的场景总成本，暂无设计稿页面）", metric: "场景总成本（HRBP 版）", text: "场景总成本 = 日常成本（人工 + Agent 席位、算力）。一次性费用（经济补偿、Agent 实施和培训费）由 HR 和 OD 统一管理，不计入。" },
 ] as const;
 
 export function tooltip(page: string, metric: string): string {
@@ -95,18 +96,13 @@ export const VACANCY_TOTAL_NOTE = slot("负责人视图 · 总览（多部门，
 export const BUDGET_NOTE = slot("OD 底座 · 总览", "部门预算");
 export const GAP_NOTE = slot("OD 底座 · 总览", "差额");
 export const ONE_OFF_NOTE = slot("OD 底座 · 总览", "一次性费用 vs 预留");
+export const ROUNDING_EQUATION_NOTE = slot("OD 底座 · 部门页", "≈ ① + ②");
 export const TIMELINE_CHANGE_NOTE = slot("场景与时间轴 v2", "时间轴");
 export const SCENARIO_TOTAL_NOTE = slot("场景与时间轴 v2", "场景总成本");
-export const OUTSOURCE_SEAT_NOTE = slot("人员明细", "外包（部门）");
-export const SCOPE_TOTAL_NOTE = slot("事业部底座 · 总览", "范围合计");
-export const UNATTRIBUTED_AGENT_NOTE = slot("场景与时间轴 v2", "未归属部门 Agent");
-
-/**
- * 悬停表没有 HRBP 版「场景总成本」。事业部合计不含一次性费用，所以不用上面那条（那条把一次性费用算进总成本）。
- * 不另加第 56 条。
- */
-export const HRBP_SCENARIO_TOTAL_NOTE =
-  "场景总成本 = 日常成本（人工 + Agent 席位、算力）。一次性费用（经济补偿、Agent 实施和培训费）由 HR 和 OD 统一管理，不计入。";
+export const OUTSOURCE_SEAT_NOTE = slot("人员明细（外包汇总行，当前示例状态未展示）", "外包（部门）");
+export const SCOPE_TOTAL_NOTE = slot("HRBP 场景（业务单元范围合计行，暂无设计稿页面）", "范围合计 ⓘ");
+export const UNATTRIBUTED_AGENT_NOTE = slot("场景与时间轴 v2", "未归属部门 Agent ⓘ");
+export const HRBP_SCENARIO_TOTAL_NOTE = slot("HRBP 场景（业务单元范围的场景总成本，暂无设计稿页面）", "场景总成本（HRBP 版）");
 
 export function overviewCardNote(audience: "od" | "leader" | "hrbp", label: string): string | null {
   if (audience === "hrbp") {

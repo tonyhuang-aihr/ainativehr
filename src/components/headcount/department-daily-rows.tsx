@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { InfoMark } from "@/components/headcount/info-mark";
-import { ROUNDING_GAP_NOTE } from "@/lib/headcount/money";
+import { ROUNDING_EQUATION_NOTE } from "@/lib/headcount/copy";
 import type { CompareColumn } from "@/lib/headcount/scenarioView";
 
 const sticky = "sticky left-0 z-10 bg-white shadow-[1px_0_0_#E6E8EC]";
@@ -31,7 +31,7 @@ export function DepartmentDailyRows({
         {columns.map((column) => (
           <td key={column.id} className={`px-4 py-2 ${column.lowest ? "bg-[#FAFAFF]" : ""}`}>
             {column.approx ? `≈ ${column.daily}` : column.daily}
-            {column.approx ? <InfoMark note={ROUNDING_GAP_NOTE} /> : null}
+            {column.approx ? <InfoMark note={ROUNDING_EQUATION_NOTE} /> : null}
           </td>
         ))}
       </tr>

@@ -15,13 +15,12 @@ function files(dir: string): string[] {
 const source = files(join(process.cwd(), "src")).map((path) => readFileSync(path, "utf8")).join("\n");
 
 describe("悬停文案都挂在页面上", () => {
-  it("除取整句与文案文件不一致外，每条都有 slot", () => {
+  it("每条都有 slot，取整句与页面上的说明相同", () => {
     const missing: string[] = [];
     for (const item of TOOLTIPS) {
       if (item.page === "OD 底座 · 部门页" && item.metric === "≈ ① + ②") {
-        expect(item.text).not.toBe(ROUNDING_GAP_NOTE);
+        expect(item.text).toBe(ROUNDING_GAP_NOTE);
         expect(source).toContain(ROUNDING_GAP_NOTE);
-        continue;
       }
       const call = `slot(${JSON.stringify(item.page)}, ${JSON.stringify(item.metric)})`;
       if (!source.includes(call)) missing.push(`${item.page} / ${item.metric}`);

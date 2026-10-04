@@ -5,11 +5,10 @@ import { DepartmentDailyRows } from "@/components/headcount/department-daily-row
 import { LeaderBoard } from "@/components/headcount/leader-board";
 import { ScenarioBoardView } from "@/components/headcount/scenario-board";
 import { ScopeOverviewBoard } from "@/components/headcount/scope-overview";
-import { HRBP_SCENARIO_TOTAL_NOTE, OUTSOURCE_SEAT_NOTE, SCOPE_TOTAL_NOTE, SCENARIO_TOTAL_NOTE, TIMELINE_CHANGE_NOTE, TOOLTIPS, UNATTRIBUTED_AGENT_NOTE } from "@/lib/headcount/copy";
+import { HRBP_SCENARIO_TOTAL_NOTE, SCOPE_TOTAL_NOTE, SCENARIO_TOTAL_NOTE, TIMELINE_CHANGE_NOTE, TOOLTIPS } from "@/lib/headcount/copy";
 import { loadTooltipFile } from "@/lib/headcount/tooltipFile";
 import { computePlan } from "@/lib/headcount/engine";
 import { buildLeaderView } from "@/lib/headcount/leaderView";
-import { ROUNDING_GAP_NOTE } from "@/lib/headcount/money";
 import { buildScopeOverview, scopeHasSmallGroup } from "@/lib/headcount/overview";
 import { defaultDetailQuery } from "@/lib/headcount/rosterPage";
 import { DEPT, samplePlan } from "@/lib/headcount/sample";
@@ -20,7 +19,6 @@ import { buildScenarioBoard, DEFAULT_PREFILL_NOTE } from "@/lib/headcount/scenar
 const result = computePlan(samplePlan());
 const tooltipFile = loadTooltipFile();
 const FILE_TIMELINE = tooltipFile.find((item) => item.page === "场景与时间轴 v2" && item.metric === "时间轴")?.text ?? "";
-const ALLOWED_OUTSIDE_FILE = new Set([ROUNDING_GAP_NOTE, HRBP_SCENARIO_TOTAL_NOTE, UNATTRIBUTED_AGENT_NOTE, OUTSOURCE_SEAT_NOTE, SCOPE_TOTAL_NOTE]);
 
 function labels(node: ReactElement): string[] {
   const html = renderToStaticMarkup(node);
@@ -86,9 +84,12 @@ describe("每个角色页面上的 ⓘ 都按悬停表原文渲染", () => {
     ],
   };
 
-  it("渲染出来的每条说明都能对上文件，HRBP 场景总成本除外", () => {
+  it("渲染出来的每条说明都能对上文件，文件里的每条也都有页面", () => {
     const file = new Set<string>(tooltipFile.map((item) => item.text));
+    expect(tooltipFile).toHaveLength(56);
+    expect(tooltipFile.at(-1)?.metric).toBe("场景总成本（HRBP 版）");
     expect(file.has("两个数都直接取成本引擎结果")).toBe(false);
+    expect(file.has("相加与合计差 0.5 万")).toBe(false);
     expect(FILE_TIMELINE).toBe("标签分四类：离职未补位、场景增员、场景减员、场景新增或下线 Agent，都是本场景在基线之上的变化。括号里是加上已确认在途后，季初到季末的实际变化；同一季有两条人数标签时只写在最后一条。都取自成本引擎；场景里的变动统一按该季第一天生效（P0）。");
     const mismatches = tooltipFile.flatMap((item) => {
       const code = TOOLTIPS.find((entry) => entry.page === item.page && entry.metric === item.metric);
@@ -96,9 +97,9 @@ describe("每个角色页面上的 ⓘ 都按悬停表原文渲染", () => {
     });
     expect(mismatches).toEqual([]);
     const onlyInCode = TOOLTIPS.filter((item) => !tooltipFile.some((entry) => entry.page === item.page && entry.metric === item.metric)).map((item) => item.metric);
-    expect(onlyInCode).toEqual(["未归属部门 Agent", "外包（部门）", "范围合计"]);
+    expect(onlyInCode).toEqual([]);
     for (const [role, notes] of Object.entries(rendered)) {
-      const unknown = notes.filter((note) => !file.has(note) && !ALLOWED_OUTSIDE_FILE.has(note) && !isRowFigure(note));
+      const unknown = notes.filter((note) => !file.has(note) && !isRowFigure(note));
       expect(unknown, role).toEqual([]);
     }
     expect(rendered.od).toContain(FILE_TIMELINE);
@@ -109,7 +110,7 @@ describe("每个角色页面上的 ⓘ 都按悬停表原文渲染", () => {
     expect(rendered.hrbp.join("\n")).not.toContain("场景总成本 = 部门日常成本（人工 + Agent 席位、算力）+ 一次性费用");
     expect(TIMELINE_CHANGE_NOTE).toBe(FILE_TIMELINE);
     const seen = new Set([...rendered.od, ...rendered.leader, ...rendered.hrbp]);
-    const missing = tooltipFile.filter((item) => item.metric !== "≈ ① + ②" && !seen.has(item.text)).map((item) => `${item.page} / ${item.metric}`);
+    const missing = tooltipFile.filter((item) => !seen.has(item.text)).map((item) => `${item.page} / ${item.metric}`);
     expect(missing).toEqual([]);
   });
 });
