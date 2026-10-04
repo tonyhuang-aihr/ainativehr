@@ -90,6 +90,8 @@ export type ScenarioBoard = {
   assumptionSummary: string;
   assumptionForm: { attrition: string; cycle: string; raise: string; ai: string; noticePay: boolean };
   cutSummary: string;
+  /** 出缺不补明细。没有这类事件时不显示这一行。 */
+  nofillSummary: string | null;
   prefillNote: string;
   scenarios: { id: string; name: string; compared: boolean; source: string }[];
   focusId: string;
@@ -268,16 +270,49 @@ export function heroSentence(result: PlanResult, compared: ScenarioResult[], opt
   return `对比的 ${compared.length} 个${kind}中，${bits.join("；")}。`;
 }
 
-function healthFootnote(compared: ScenarioResult[]): string | null {
+function comparisonShortName(name: string): string {
+  if (name.startsWith("激进")) return "激进";
+  if (name.startsWith("沙盘示例")) return "沙盘示例";
+  return name;
+}
+
+function singleDepartmentHealthNote(result: PlanResult, item: ScenarioResult): string {
+  const partial = partialBuName(item.definition) ?? "";
+  const department = result.plan.departments.find((entry) => entry.name === partial);
+  const buBudget = department ? (result.plan.budgets[department.id] ?? 0) : 0;
+  const bu = businessScenarioResult(result, item.definition, department?.id ?? "");
+  return `${comparisonShortName(item.definition.name)}只看${partial}：超预算对比部门预算 ${formatWan(buBudget)}（只含日常成本，全年 ${formatWan(bu.dailyYuan)}）；人 : AI 只代表${partial}已拆解的岗位。`;
+}
+
+function healthFootnote(result: PlanResult, compared: ScenarioResult[], company: boolean): string | null {
   const span = compared.find((item) => item.definition.spanAlert)?.definition;
   const incomplete = compared.some((item) => item.definition.ratio === "未拆解");
+  const partials = company ? compared.filter((item) => partialBuName(item.definition)) : [];
   const bits: string[] = [];
   if (span?.spanAlert) {
     const demo = span.spanAlert.department === "数据组" && span.spanAlert.span === 12;
-    bits.push(`${span.spanAlert.department}管理幅度 ${span.spanAlert.span}，超过建议值 ${span.spanAlert.limit}（${span.name}）${demo ? "；最新版「方案 A」已拆成 6 + 6，导入后通过。基准、激进无结构调整，记「—」" : ""}。`);
+    const quiet = compared.filter((item) => !item.definition.spanAlert).map((item) => comparisonShortName(item.definition.name)).join("、");
+    const quietNote = demo && quiet ? `；最新版「方案 A」已拆成 6 + 6，导入后通过。${quiet}无结构调整，记「—」` : "";
+    bits.push(`${span.spanAlert.department}管理幅度 ${span.spanAlert.span}，超过建议值 ${span.spanAlert.limit}（${span.name}）${quietNote}。`);
   }
-  if (incomplete) bits.push("人 : AI 未拆解只提示数据不全，不估算。第 41 条仅作提醒，请与法务确认是否需要报告。");
+  if (incomplete || partials.length) bits.push("人 : AI 未拆解只提示数据不全，不估算。第 41 条仅作提醒，请与法务确认是否需要报告。");
+  for (const item of partials) bits.push(singleDepartmentHealthNote(result, item));
   return bits.length ? bits.join("") : null;
+}
+
+function focusEventNote(year: number, definition: ScenarioDefinition): string | null {
+  const bits: string[] = [];
+  for (const item of definition.nofill ?? []) bits.push(`Q${quarterOf(year, item.effectiveDate)} 出缺不补 ${item.count} 人`);
+  for (const item of definition.agents) if (item.count > 0) bits.push(`Q${quarterOf(year, item.effectiveDate)} 场景新增 ${item.count} 个 Agent`);
+  for (const item of definition.hires) bits.push(`Q${quarterOf(year, item.effectiveDate)} 场景增员 ${item.count} 人`);
+  for (const item of definition.cuts) bits.push(`Q${quarterOf(year, item.effectiveDate)} 场景减员 ${item.count} 人`);
+  return bits.length ? bits.join(" · ") : null;
+}
+
+function nofillDetail(definition: ScenarioDefinition): string | null {
+  const rows = definition.nofill ?? [];
+  if (!rows.length) return null;
+  return rows.map((item) => `${item.departmentName} · ${item.grade} · ${item.count} 人 · ${item.effectiveDate} 起 · 不算减员，无经济补偿`).join("；");
 }
 
 function pendingCount(assumptions: ScenarioAssumptions): number {
@@ -360,18 +395,22 @@ export function buildScenarioBoard(result: PlanResult, definitions: ScenarioDefi
       ...row,
       id: item.definition.id,
       name: item.definition.name,
-      cells: row.cells.map((cell) => (cell.title === "人 : AI" ? { ...cell, text: `仅${partial}`, tone: "ok" as const } : cell)),
+      cells: row.cells.map((cell) => (cell.title === "人 : AI" ? { ...cell, text: displayedRatio(item.definition, true), tone: "muted" as const } : cell)),
     };
   });
   const hints = health.flatMap((row) => row.cells).filter((cell) => cell.tone === "warn" || cell.tone === "compliance");
   const compliance = hints.filter((cell) => cell.tone === "compliance").length;
   const names = compared.map((item) => item.definition.name);
-  const leftOut = definitions.filter((definition) => !definition.compared).map((definition) => `「${definition.name}」未加入对比`);
+  const leftOutNames = definitions.filter((definition) => !definition.compared).map((definition) => `「${definition.name}」`);
+  const leftOut = leftOutNames.length ? `${leftOutNames.join("、")}未加入对比` : "对比里的场景都已选上";
   const opening = deptStat(result, company ? rootId(result) : scopeRoot);
   const labelDetails = quarterChangeDetails(baseline, focus, { people: opening.onBoard, agents: opening.agentInUse });
   const labels = labelDetails.map((label) => label.text);
   const pending = pendingCount(focus.definition.assumptions);
   const assumptions = focus.definition.assumptions;
+  const focusPartial = Boolean(company && partialBuName(focus.definition));
+  const rates = `离职率 ${ratePercent(assumptions.attritionRate)}% · 招聘周期 ${assumptions.hiringCycleDays} 天`;
+  const focusEvents = focusPartial ? focusEventNote(year, focus.definition) : null;
   const sandbox = definitions.find((definition) => definition.source === "sandbox");
   const columns: CompareColumn[] = [baseline, ...compared].map((item) => {
     const gap = gapLabel(amountOf(item), budgetYuan);
@@ -432,15 +471,15 @@ export function buildScenarioBoard(result: PlanResult, definitions: ScenarioDefi
     percent: `${((roundToHalfWan(amountOf(lowest)) / roundToHalfWan(budgetYuan)) * 100).toFixed(1)}%`,
     usage: budgetYuan ? (roundToHalfWan(amountOf(lowest)) / roundToHalfWan(budgetYuan)) * 100 : 0,
     stepSelect: `基线 + ${compared.length} 个场景：${names.join("、") || "还没有"}`,
-    stepSelectNote: `${leftOut.join(" · ") || "对比里的场景都已选上"} · ${COMPARISON_CAP_ERROR}`,
-    stepAssume: `${focus.definition.name}：离职率 ${ratePercent(assumptions.attritionRate)}% · 招聘周期 ${assumptions.hiringCycleDays} 天`,
-    stepAssumeNote: `${labels.join(" · ") || "这一场景没有按季增减"} · ${pending ? `另有 ${pending} 项假设待定` : "假设都已填写"}`,
+    stepSelectNote: `${leftOut} · 最多对比 ${COMPARISON_CAP} 个`,
+    stepAssume: focusPartial ? rates : `${focus.definition.name}：${rates}`,
+    stepAssumeNote: focusEvents ?? `${labels.join(" · ") || "这一场景没有按季增减"} · ${pending ? `另有 ${pending} 项假设待定` : "假设都已填写"}`,
     stepCheck: `${within} / ${ranked.length} 个场景在预算内 · 最低：${lowest.definition.name}`,
-    stepCheckNote: `体检 ${hints.length} 条提示，${compliance} 条涉及合规`,
+    stepCheckNote: compliance > 0 ? `体检 ${hints.length} 条提示，${compliance} 条涉及合规` : `体检 ${hints.length} 条提示`,
     columns,
     healthName: "对比场景",
     health,
-    healthFootnote: healthFootnote(compared),
+    healthFootnote: healthFootnote(result, compared, company),
     incompleteRatioNote: health.some((row) => row.cells.some((cell) => cell.text === "未拆解")) ? INCOMPLETE_RATIO_NOTE : null,
     timelineTitle: `时间轴 · ${focus.definition.name}`,
     timelineCaption: TIMELINE_EFFECTIVE_CAPTION,
@@ -458,7 +497,8 @@ export function buildScenarioBoard(result: PlanResult, definitions: ScenarioDefi
       oneOff: formatWan(quarter.oneOff),
       total: formatWan(shownQuarter(quarter)),
     })),
-    assumptionSummary: `离职率 ${ratePercent(assumptions.attritionRate)}% · 招聘周期 ${assumptions.hiringCycleDays} 天 · ${assumptions.noticePay ? "N+1 计入" : "N+1 不计入"}${pending ? ` · ${pending} 项待定` : ""}`,
+    assumptionSummary: `离职率 ${ratePercent(assumptions.attritionRate)}% · 招聘周期 ${assumptions.hiringCycleDays} 天 · ${assumptions.noticePay ? "N+1 计入" : "N+1 不计入"}${pending && !focusPartial ? ` · ${pending} 项待定` : ""}`,
+    nofillSummary: nofillDetail(focus.definition),
     assumptionForm: {
       attrition: ratePercent(assumptions.attritionRate),
       cycle: String(assumptions.hiringCycleDays),

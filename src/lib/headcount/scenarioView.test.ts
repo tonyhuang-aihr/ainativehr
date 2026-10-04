@@ -76,6 +76,11 @@ describe("场景页与沙盘导入", () => {
     expect(board.assumptionSummary).toContain("N+1 不计入");
     expect(board.stepCheck).toBe("2 / 3 个场景在预算内 · 最低：沙盘方案 A · 拆组前");
     expect(board.stepCheckNote).toBe("体检 4 条提示，1 条涉及合规");
+    expect(board.stepSelectNote).toBe("「保守」未加入对比 · 最多对比 3 个");
+    expect(board.stepAssume).toBe("激进 · AI 加速：离职率 8% · 招聘周期 60 天");
+    expect(board.healthFootnote).toBe("数据组管理幅度 12，超过建议值 8（沙盘方案 A · 拆组前）；最新版「方案 A」已拆成 6 + 6，导入后通过。基准、激进无结构调整，记「—」。人 : AI 未拆解只提示数据不全，不估算。第 41 条仅作提醒，请与法务确认是否需要报告。");
+    expect(board.assumptionSummary).toContain("· 2 项待定");
+    expect(board.nofillSummary).toBeNull();
     const blob = JSON.stringify(board);
     expect(blob).not.toMatch(/钱二|赵一|68750|每人|employeeNo/);
     expect(scenarioCutTextHasPerPerson(blob)).toBe(false);

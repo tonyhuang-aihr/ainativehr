@@ -28,6 +28,7 @@ function healthShort(name: string): string {
   if (name.includes("拆组前")) return "方案 A 拆组前";
   if (name.startsWith("激进")) return "激进";
   if (name.startsWith("基准")) return "基准";
+  if (name.startsWith("沙盘示例")) return "沙盘示例";
   return name;
 }
 
@@ -245,10 +246,18 @@ export function ScenarioBoardView({
           <b className="text-ink">基础假设</b>
           <span className="ml-3">{board.assumptionSummary}</span>
         </div>
-        <div className="border-t border-line px-4 py-3 text-sm text-muted">
-          <b className="text-ink">场景减员</b>
-          <span className="ml-3">{board.cutSummary}</span>
-        </div>
+        {board.nofillSummary ? (
+          <div className="border-t border-line px-4 py-3 text-sm text-muted">
+            <b className="text-ink">出缺不补</b>
+            <span className="ml-3">{board.nofillSummary}</span>
+          </div>
+        ) : null}
+        {board.nofillSummary && board.cutSummary === "这一场景没有减员" ? null : (
+          <div className="border-t border-line px-4 py-3 text-sm text-muted">
+            <b className="text-ink">场景减员</b>
+            <span className="ml-3">{board.cutSummary}</span>
+          </div>
+        )}
       </section>
 
       <p id="assumption-prefill" className="text-sm text-muted">

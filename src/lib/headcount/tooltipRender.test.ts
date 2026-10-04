@@ -5,7 +5,7 @@ import { DepartmentDailyRows } from "@/components/headcount/department-daily-row
 import { LeaderBoard } from "@/components/headcount/leader-board";
 import { ScenarioBoardView } from "@/components/headcount/scenario-board";
 import { ScopeOverviewBoard } from "@/components/headcount/scope-overview";
-import { HRBP_SCENARIO_TOTAL_NOTE, NOFILL_LABEL_TEMPLATE, SCOPE_TOTAL_NOTE, SCENARIO_TOTAL_NOTE, SINGLE_DEPARTMENT_PLAN_NOTE, TIMELINE_CHANGE_NOTE, TOOLTIPS } from "@/lib/headcount/copy";
+import { HRBP_SCENARIO_TOTAL_NOTE, NOFILL_LABEL_TEMPLATE, NOFILL_Q2_NOTE, SCOPE_TOTAL_NOTE, SCENARIO_TOTAL_NOTE, SINGLE_DEPARTMENT_PLAN_NOTE, TIMELINE_CHANGE_NOTE, TOOLTIPS } from "@/lib/headcount/copy";
 import { loadTooltipFile } from "@/lib/headcount/tooltipFile";
 import { computePlan } from "@/lib/headcount/engine";
 import { buildLeaderView } from "@/lib/headcount/leaderView";
@@ -37,9 +37,9 @@ function isRowFigure(note: string): boolean {
   return note.startsWith("Q1 ");
 }
 
-/** 出缺不补那一行是模板：页面填上人数，不渲染括号说明，也不渲染字面的 N / M。 */
-function isFilledNofillNote(note: string): boolean {
-  return /^含场景出缺不补 \d+ 人：/.test(note);
+/** 模板按填好的人数对上。字面的 N / M 和括号说明不会出现。 */
+function matchesNofillTemplate(note: string): boolean {
+  return /^含场景出缺不补 \d+ 人：岗位空出后不再补人，从该季第一天起按职级扣减；不算增员或减员，不产生经济补偿。(其余 \d+ 人按离职率估算。)?$/.test(note);
 }
 
 const NOFILL_TEMPLATE_METRIC = "离职未补位标签（含出缺不补）";
@@ -102,7 +102,7 @@ describe("每个角色页面上的 ⓘ 都按悬停表原文渲染", () => {
 
   it("渲染出来的每条说明都能对上文件，文件里的每条也都有页面", () => {
     const file = new Set<string>(tooltipFile.map((item) => item.text));
-    expect(tooltipFile).toHaveLength(58);
+    expect(tooltipFile).toHaveLength(59);
     expect(tooltipFile.at(-1)?.metric).toBe("场景总成本（HRBP 版）");
     expect(file.has("两个数都直接取成本引擎结果")).toBe(false);
     expect(file.has("相加与合计差 0.5 万")).toBe(false);
@@ -115,7 +115,7 @@ describe("每个角色页面上的 ⓘ 都按悬停表原文渲染", () => {
     const onlyInCode = TOOLTIPS.filter((item) => !tooltipFile.some((entry) => entry.page === item.page && entry.metric === item.metric)).map((item) => item.metric);
     expect(onlyInCode).toEqual([]);
     for (const [role, notes] of Object.entries(rendered)) {
-      const unknown = notes.filter((note) => !file.has(note) && !isRowFigure(note) && !isFilledNofillNote(note));
+      const unknown = notes.filter((note) => !file.has(note) && !isRowFigure(note) && !matchesNofillTemplate(note));
       expect(unknown, role).toEqual([]);
       expect(notes.filter((note) => note.includes("出缺不补 N 人") || note.includes("其余 M 人") || note.includes("同季还有按离职率估算的未补位时")), role).toEqual([]);
     }
@@ -127,10 +127,13 @@ describe("每个角色页面上的 ⓘ 都按悬停表原文渲染", () => {
     expect(rendered.hrbp.join("\n")).not.toContain("场景总成本 = 部门日常成本（人工 + Agent 席位、算力）+ 一次性费用");
     expect(TIMELINE_CHANGE_NOTE).toBe(FILE_TIMELINE);
     const seen = new Set([...rendered.od, ...rendered.leader, ...rendered.hrbp]);
-    const missing = tooltipFile.filter((item) => item.metric !== NOFILL_TEMPLATE_METRIC && !seen.has(item.text)).map((item) => `${item.page} / ${item.metric}`);
+    const missing = tooltipFile
+      .filter((item) => (item.metric === NOFILL_TEMPLATE_METRIC ? ![...seen].some(matchesNofillTemplate) : !seen.has(item.text)))
+      .map((item) => `${item.page} / ${item.metric}`);
     expect(missing).toEqual([]);
     expect(seen.has(NOFILL_LABEL_TEMPLATE)).toBe(false);
+    expect(seen.has(NOFILL_Q2_NOTE)).toBe(true);
     expect(seen.has(SINGLE_DEPARTMENT_PLAN_NOTE)).toBe(true);
-    expect([...seen].some((note) => note.startsWith("含场景出缺不补 2 人：") && !note.includes("其余"))).toBe(true);
+    expect([...seen].some(matchesNofillTemplate)).toBe(true);
   });
 });

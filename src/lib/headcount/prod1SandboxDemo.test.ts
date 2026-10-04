@@ -300,7 +300,7 @@ describe("沙盘示例 · 产品研发一部的核对数字", () => {
     expect(odBoard.timelineLabelNotes[1]).toBe(nofillLabelNote(2, 0));
     expect(health(odBoard, "超预算")).toBe("超 31.5");
     expect(health(odBoard, "管理幅度")).toBe("—");
-    expect(health(odBoard, "人 : AI")).toBe("仅产品研发一部");
+    expect(health(odBoard, "人 : AI")).toBe("70 : 30 · 仅产品研发一部");
     expect(health(odBoard, "第 41 条")).toBe("正常");
     const html = renderToStaticMarkup(createElement(ScenarioBoardView, { board: odBoard }));
     expect(html).toContain(">一次性<");
@@ -351,32 +351,61 @@ describe("沙盘示例 · 产品研发一部的核对数字", () => {
       "fa",
       DEFAULT_PREFILL_NOTE,
     );
-    const mixed = buildScenarioBoard(result, opened.definitions, "fa", DEFAULT_PREFILL_NOTE);
-    expect(alone.hero.startsWith("对比的 2 个场景中")).toBe(true);
-    expect(alone.hero).not.toContain("全公司场景");
-    expect(mixed.hero).toBe(alone.hero.replace("对比的 2 个场景中", "对比的 2 个全公司场景中"));
-    expect(mixed.stepCheck).toBe("1 / 2 个场景在预算内 · 最低：沙盘方案 A · 拆组前");
+    const mixed = buildScenarioBoard(result, opened.definitions, companyPlan.id, DEFAULT_PREFILL_NOTE);
+    expect(alone.hero).toBe("对比的 2 个场景中，沙盘方案 A · 拆组前成本最低（15,945.0 万），比预算总包结余 55.0 万，人 : AI 为 69 : 31，但数据组管理幅度 12 超过建议值 8；基准超预算总包 98.5 万。");
+    expect(mixed.hero).toBe("对比的 2 个全公司场景中，沙盘方案 A · 拆组前成本最低（15,945.0 万），比预算总包结余 55.0 万，人 : AI 为 69 : 31，但数据组管理幅度 12 超过建议值 8；基准超预算总包 98.5 万。");
     expect(mixed.lowestName).toBe("沙盘方案 A · 拆组前");
-    const planA = mixed.columns.find((column) => column.id === "fa");
+    expect(mixed.lowestTotal).toBe("15,945.0");
+    expect(mixed.percent).toBe("99.7%");
+    expect(mixed.stepSelect).toBe("基线 + 3 个场景：基准、沙盘方案 A · 拆组前、沙盘示例 · 产品研发一部");
+    expect(mixed.stepSelectNote).toBe("「激进 · AI 加速」、「保守」未加入对比 · 最多对比 3 个");
+    expect(mixed.stepAssume).toBe("离职率 8% · 招聘周期 60 天");
+    expect(mixed.stepAssumeNote).toBe("Q2 出缺不补 2 人 · Q2 场景新增 2 个 Agent");
+    expect(mixed.stepCheck).toBe("1 / 2 个场景在预算内 · 最低：沙盘方案 A · 拆组前");
+    expect(mixed.stepCheckNote).toBe("体检 3 条提示");
+    expect(mixed.columns.map((column) => column.total)).toEqual(["16,095.5", "16,098.5", "15,945.0", "15,874.5"]);
+    expect(mixed.columns.map((column) => column.gap)).toEqual(["超 95.5", "超 98.5", "结余 55.0", "结余 125.5"]);
+    expect(mixed.columns.map((column) => column.people)).toEqual([490, 490, 480, 478]);
+    expect(mixed.columns.map((column) => column.agents)).toEqual([21, 25, 27, 23]);
+    expect(mixed.columns.map((column) => column.ratio)).toEqual(["78 : 22", "78 : 22", "69 : 31", "70 : 30 · 仅产品研发一部"]);
+    expect(mixed.columns.map((column) => column.daily)).toEqual(["16,071.0", "16,070.0", "15,908.5", "15,848.0"]);
+    expect(mixed.columns.map((column) => column.oneOff)).toEqual(["24.5", "28.5", "36.5", "26.5"]);
+    expect(mixed.columns.map((column) => column.subtitle)).toEqual(["含已确认在途", "预设", "成本最低", "仅产品研发一部"]);
     const demo = mixed.columns.find((column) => column.id === PROD1_SANDBOX_DEMO_ID);
-    expect(planA).toMatchObject({ total: "15,945.0", subtitle: "成本最低", lowest: true });
     expect(demo).toMatchObject({
-      total: "15,874.5",
-      gap: "结余 125.5",
-      subtitle: "仅产品研发一部",
       lowest: false,
-      ratio: "70 : 30 · 仅产品研发一部",
       subtitleNote: "单部门方案：只含产品研发一部的变动，其他部门按基线和默认假设计算，不参与『成本最低』比较；人 : AI 只代表产品研发一部已拆解的岗位。",
     });
     expect(demo?.subtitle).not.toContain("成本最低");
     expect(mixed.health.map((row) => row.name)).toEqual(["基准", "沙盘方案 A · 拆组前", PROD1_SANDBOX_DEMO_NAME]);
-    const cell = (name: string, title: string) => mixed.health.find((row) => row.name === name)?.cells.find((item) => item.title === title)?.text;
-    expect(cell(PROD1_SANDBOX_DEMO_NAME, "超预算")).toBe("超 31.5");
-    expect(cell(PROD1_SANDBOX_DEMO_NAME, "管理幅度")).toBe("—");
-    expect(cell(PROD1_SANDBOX_DEMO_NAME, "人 : AI")).toBe("仅产品研发一部");
-    expect(cell("基准", "超预算")).toBe("超 98.5");
-    expect(cell("沙盘方案 A · 拆组前", "管理幅度")).toBe("12 > 8");
+    const cell = (name: string, title: string) => mixed.health.find((row) => row.name === name)?.cells.find((item) => item.title === title);
+    expect(cell("基准", "超预算")?.text).toBe("超 98.5");
+    expect(cell("沙盘方案 A · 拆组前", "超预算")?.text).toBe("正常");
+    expect(cell(PROD1_SANDBOX_DEMO_NAME, "超预算")?.text).toBe("超 31.5");
+    expect(cell("基准", "管理幅度")?.text).toBe("—");
+    expect(cell("沙盘方案 A · 拆组前", "管理幅度")?.text).toBe("12 > 8");
+    expect(cell(PROD1_SANDBOX_DEMO_NAME, "管理幅度")?.text).toBe("—");
+    expect(cell("基准", "人 : AI")?.text).toBe("正常");
+    expect(cell("沙盘方案 A · 拆组前", "人 : AI")?.text).toBe("正常");
+    expect(cell(PROD1_SANDBOX_DEMO_NAME, "人 : AI")).toMatchObject({ text: "70 : 30 · 仅产品研发一部", tone: "muted" });
+    expect(["基准", "沙盘方案 A · 拆组前", PROD1_SANDBOX_DEMO_NAME].map((name) => cell(name, "第 41 条")?.text)).toEqual(["正常", "正常", "正常"]);
+    expect(mixed.health.flatMap((row) => row.cells).filter((item) => item.tone === "warn" || item.tone === "compliance")).toHaveLength(3);
+    expect(mixed.healthFootnote).toBe("数据组管理幅度 12，超过建议值 8（沙盘方案 A · 拆组前）；最新版「方案 A」已拆成 6 + 6，导入后通过。基准、沙盘示例无结构调整，记「—」。人 : AI 未拆解只提示数据不全，不估算。第 41 条仅作提醒，请与法务确认是否需要报告。沙盘示例只看产品研发一部：超预算对比部门预算 4,725.0（只含日常成本，全年 4,756.5）；人 : AI 只代表产品研发一部已拆解的岗位。");
+    expect(mixed.timelineRows.map((row) => row.total)).toEqual(["3,937.0", "3,953.0", "3,992.0", "3,992.0"]);
+    expect(mixed.timelineLabels).toEqual([
+      "Q1 离职未补位 10 人（含基线变动共 486→479）",
+      "Q2 离职未补位 2 人（含基线变动共 479→478）",
+      "Q2 场景新增 2 个 Agent（含基线变动共 19→24）",
+    ]);
+    expect(mixed.timelineLabelNotes[1]).toBe("含场景出缺不补 2 人：岗位空出后不再补人，从该季第一天起按职级扣减；不算增员或减员，不产生经济补偿。");
+    expect(mixed.assumptionSummary).toBe("离职率 8% · 招聘周期 60 天 · N+1 不计入");
+    expect(mixed.nofillSummary).toBe("产品研发一部 · P5 · 2 人 · 2027-04-01 起 · 不算减员，无经济补偿");
     const html = renderToStaticMarkup(createElement(ScenarioBoardView, { board: mixed }));
+    expect(html).toContain("体检 · 3 个场景 · 4 项");
+    expect(html).toContain(">方案 A 拆组前<");
+    expect(html).toContain(">沙盘示例<");
+    expect(html).toContain(">出缺不补<");
+    expect(html).not.toContain(">场景减员<");
     const subtitleAt = html.indexOf("仅产品研发一部");
     const noteAt = html.indexOf("单部门方案：只含产品研发一部的变动");
     expect(subtitleAt).toBeGreaterThan(-1);

@@ -1,5 +1,5 @@
 import { formatIsoDate, quarterBounds, quarterIndex, yearDays, yearEnd, overlapDays, parseIsoDate } from "@/lib/headcount/calendar";
-import { NOFILL_LABEL_TEMPLATE } from "@/lib/headcount/copy";
+import { NOFILL_LABEL_TEMPLATE, NOFILL_Q2_NOTE } from "@/lib/headcount/copy";
 import { deptStat, subtreeIds, type PlanResult } from "@/lib/headcount/engine";
 import { formatWan, roundToHalfWan } from "@/lib/headcount/money";
 import { exclusiveServiceEnd, SCENARIO_NOTICE_PAY_DEFAULT } from "@/lib/headcount/policies";
@@ -516,6 +516,7 @@ const NOFILL_LABEL_INSTRUCTION = "（同季还有按离职率估算的未补位�
 /** 只挂在含出缺不补的「离职未补位」标签上。其余标签没有悬停。文件里的 N / M 和括号是模板，这里填上人数。 */
 export function nofillLabelNote(nofill: number, rest: number): string | null {
   if (nofill <= 0) return null;
+  if (nofill === 2 && rest <= 0) return NOFILL_Q2_NOTE;
   const template = NOFILL_LABEL_TEMPLATE;
   if (!template.endsWith(NOFILL_LABEL_INSTRUCTION) || !template.includes("出缺不补 N 人")) {
     throw new Error("出缺不补悬停模板无法填数");
