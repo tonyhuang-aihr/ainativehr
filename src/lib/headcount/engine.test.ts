@@ -84,6 +84,36 @@ describe("示例公司按含最后工作日折算", () => {
     expectDept(DEPT.direct, { on: 1, transit: 0, cur: "140.0", daily: "140.0", oneOff: "0.0" });
   });
 
+  it("公司步骤②按项取整后仍等于日常全年", () => {
+    const center = deptStat(result, DEPT.center);
+    const moves = result.movements.filter((movement) => movement.departmentId);
+    const hires = moves.filter((movement) => movement.kind === "入职");
+    const leaves = moves.filter((movement) => movement.kind === "离职");
+    const agents = moves.filter((movement) => movement.kind.startsWith("Agent"));
+    const hireWan = wan(hires.reduce((total, movement) => total + movement.annual, 0));
+    const leaveWan = wan(leaves.reduce((total, movement) => total + movement.annual, 0));
+    const agentWan = wan(agents.reduce((total, movement) => total + movement.annual, 0));
+    expect(hires).toHaveLength(11);
+    expect(leaves).toHaveLength(7);
+    expect(hireWan).toBe(294);
+    expect(leaveWan).toBe(-142);
+    expect(agentWan).toBe(22.5);
+    expect(wan(center.currentYuan)).toBe(15896.5);
+    expect(15896.5 + 294 - 142 + 22.5).toBe(16071);
+    expect(wan(center.yearDailyYuan)).toBe(16071);
+    const quarters = [0, 1, 2, 3].map(
+      (index) =>
+        center.quarterFormal[index] +
+        center.quarterOther[index] +
+        center.quarterAgent[index] +
+        center.quarterSeverance[index] +
+        center.quarterAgentOneOff[index],
+    );
+    expect(quarters.map((value) => wan(value))).toEqual([3975, 4013, 4053.5, 4053.5]);
+    expect(3975 + 4013 + 4053.5 + 4053.5).toBe(16095);
+    expect(wan(center.yearTotalYuan)).toBe(16095.5);
+  });
+
   it("在途驱动项按组汇总，不把一次性费用算进日常", () => {
     const ids = subtreeIds(result.plan, DEPT.plat);
     const moves = result.movements.filter((movement) => ids.has(movement.departmentId));

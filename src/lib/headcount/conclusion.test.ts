@@ -10,8 +10,10 @@ import {
   modelUnits,
   templateConclusion,
   validateConclusion,
+  roundedSumMismatch,
 } from "@/lib/headcount/conclusion";
 import { computePlan } from "@/lib/headcount/engine";
+import { sumWithinHalfWan } from "@/lib/headcount/money";
 import { DEPT, samplePlan } from "@/lib/headcount/sample";
 
 const result = computePlan(samplePlan());
@@ -108,5 +110,30 @@ describe("负责人结论的小部门规则", () => {
 
   it("抽出的数字能认出带千分位的金额", () => {
     expect(extractNumbers("2027 年预计 2,075.5 万，超出 25.5 万")).toEqual([2027, 2075.5, 25.5]);
+  });
+
+  it("分项取整后与合计差 0.5 不算不一致，但 0.5 本身不能当新数字引用", () => {
+    const prod1 = conclusionFacts(result, DEPT.prod1);
+    const hero = "超 120.5 万（现有人员多 66.0，在途再加 54.0）。现有 4,791.0，入职 112.0，离职 58.0，全年 4,845.5。";
+    expect(sumWithinHalfWan(120.5, [66, 54])).toBe(true);
+    expect(sumWithinHalfWan(4845.5, [4791, 112, -58])).toBe(true);
+    expect(roundedSumMismatch(hero, prod1)).toBeNull();
+    expect(validateConclusion(hero, prod1, secrets)).toEqual({ ok: true });
+    expect(validateConclusion("全年预计 4,845.0 万。", prod1, secrets).ok).toBe(false);
+    const drifted = {
+      ...prod1,
+      annualYuan: 1_012_000,
+      currentYuan: 802_000,
+      joinYuan: 202_000,
+      leaveYuan: 0,
+      agentYuan: 0,
+      inFlightYuan: 210_000,
+      budgetYuan: null,
+    };
+    const apart = "预计 101.0 万，现有 80.0，加入 20.0。";
+    expect(validateConclusion(apart, drifted, secrets).ok).toBe(false);
+    const within = { ...drifted, annualYuan: 1_005_000, inFlightYuan: 203_000 };
+    expect(validateConclusion("预计 100.5 万，现有 80.0，加入 20.0。", within, secrets)).toEqual({ ok: true });
+    expect(validateConclusion("预计 100.0 万，现有 80.0，加入 20.0。", within, secrets).ok).toBe(false);
   });
 });

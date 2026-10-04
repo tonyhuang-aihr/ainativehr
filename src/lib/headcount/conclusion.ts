@@ -1,7 +1,7 @@
 import { SMALL_GROUP, groupSizePhrase, scrubText } from "@/lib/ai/desensitize";
 import type { ChatTurn } from "@/lib/ai/desensitize";
 import { deptStat, subtreeIds, type PlanResult } from "@/lib/headcount/engine";
-import { formatSignedWan, formatWan, roundToHalfWan } from "@/lib/headcount/money";
+import { formatSignedWan, formatWan, roundToHalfWan, roundingGapWan, sumWithinHalfWan } from "@/lib/headcount/money";
 
 export type ConclusionFacts = {
   id: string;
@@ -180,7 +180,11 @@ export function allowedNumbers(facts: ConclusionFacts): number[] {
   ];
   if (facts.budgetYuan != null) {
     const budgetWan = roundToHalfWan(facts.budgetYuan);
+    const currentWan = roundToHalfWan(facts.currentYuan);
     values.push(budgetWan, Math.abs(Number((annualWan - budgetWan).toFixed(1))));
+    values.push(Math.abs(Number((currentWan - budgetWan).toFixed(1))));
+    values.push(Math.abs(roundToHalfWan(facts.currentYuan - facts.budgetYuan)));
+    values.push(Math.abs(roundToHalfWan(facts.annualYuan - facts.budgetYuan)));
     if (budgetWan !== 0) values.push(Math.round((annualWan / budgetWan) * 1000) / 10);
   }
   return values;
@@ -230,6 +234,42 @@ function numberAllowed(value: number, allowed: number[]): boolean {
   return allowed.some((item) => Math.abs(item - value) < 0.011);
 }
 
+function quotes(quoted: number[], wan: number): boolean {
+  return quoted.some((value) => Math.abs(value - Math.abs(wan)) < 0.011);
+}
+
+/**
+ * 句子里如果同时出现引擎取整后的分项和合计，分项相加与合计差在 0.5 万以内不算不一致。
+ * 差本身不能当成一个新数字写进句子：每个被引用的数仍然必须等于某个引擎取整值。
+ */
+export function roundedSumMismatch(sentence: string, facts: ConclusionFacts): string | null {
+  if (facts.headcount < SMALL_GROUP) return null;
+  const quoted = extractNumbers(sentence);
+  const annual = roundToHalfWan(facts.annualYuan);
+  const current = roundToHalfWan(facts.currentYuan);
+  if (quotes(quoted, annual) && quotes(quoted, current)) {
+    const drivers = [facts.joinYuan, facts.leaveYuan, facts.agentYuan].map((yuan) => roundToHalfWan(yuan)).filter((wan) => wan !== 0);
+    if (drivers.length > 0 && drivers.every((wan) => quotes(quoted, wan))) {
+      const gap = roundingGapWan(annual, [current, ...drivers]);
+      if (!sumWithinHalfWan(annual, [current, ...drivers])) {
+        return `分项相加与合计差 ${Math.abs(gap).toFixed(1)} 万，超过 0.5`;
+      }
+    }
+  }
+  if (facts.budgetYuan == null) return null;
+  const budget = roundToHalfWan(facts.budgetYuan);
+  const over = Number((annual - budget).toFixed(1));
+  const currentOver = Number((current - budget).toFixed(1));
+  const inFlight = roundToHalfWan(facts.inFlightYuan);
+  if ([over, currentOver, inFlight].every((wan) => wan !== 0 && quotes(quoted, wan))) {
+    const gap = roundingGapWan(over, [currentOver, inFlight]);
+    if (!sumWithinHalfWan(over, [currentOver, inFlight])) {
+      return `现有差额与在途相加，和超出预算差 ${Math.abs(gap).toFixed(1)} 万，超过 0.5`;
+    }
+  }
+  return null;
+}
+
 export function validateConclusion(
   sentence: string,
   facts: ConclusionFacts,
@@ -244,6 +284,8 @@ export function validateConclusion(
   for (const value of extractNumbers(text)) {
     if (!numberAllowed(value, allowed)) return { ok: false, reason: `数字 ${value} 对不上成本引擎` };
   }
+  const summed = roundedSumMismatch(text, facts);
+  if (summed) return { ok: false, reason: summed };
   return { ok: true };
 }
 

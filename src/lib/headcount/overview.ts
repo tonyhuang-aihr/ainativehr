@@ -1,6 +1,6 @@
 import { conclusionFacts, templateConclusion } from "@/lib/headcount/conclusion";
 import { deptStat, subtreeIds, type PlanResult } from "@/lib/headcount/engine";
-import { formatSignedWan, formatWan, roundToHalfWan, yearBand } from "@/lib/headcount/money";
+import { formatSignedWan, formatWan, roundToHalfWan, roundingGapNote, roundingGapWan, yearBand } from "@/lib/headcount/money";
 import { DEMO_AI_RATIO } from "@/lib/headcount/sample";
 
 const SMALL = 5;
@@ -32,7 +32,7 @@ export type OverviewDepartment = {
   href: string;
 };
 
-export type OverviewCard = { label: string; value: string; sub: string };
+export type OverviewCard = { label: string; value: string; sub: string; roundingNote?: string | null; extra?: string | null };
 
 export type ConclusionOrigin = "template" | "model" | "cache";
 
@@ -56,7 +56,7 @@ export type ScopeOverview = {
   alerts: AlertItem[];
   departments: OverviewDepartment[];
   footer: string | null;
-  total: { label: string; annual: string; budget: string; gap: string } | null;
+  total: { label: string; annual: string; budget: string; gap: string; roundingNote: string | null } | null;
   oneOff: { amount: string; budget: string; gap: string } | null;
 };
 
@@ -85,6 +85,19 @@ export function pageKind(departmentId: string, departments: DeptLike[], visibleI
   const visible = new Set(visibleIds);
   const children = departments.filter((department) => department.parentId === departmentId && visible.has(department.id));
   return children.length > 0 ? "overview" : "detail";
+}
+
+/** 公司四个季度含一次性，各自取整。和全年合计取整可能差 0.5 万。 */
+export function companyQuarterRollup(stat: ReturnType<typeof deptStat>): { wan: number[]; label: string; note: string | null } {
+  const wan = [0, 1, 2, 3].map((index) =>
+    roundToHalfWan(stat.quarterFormal[index] + stat.quarterOther[index] + stat.quarterAgent[index] + stat.quarterSeverance[index] + stat.quarterAgentOneOff[index]),
+  );
+  const total = roundToHalfWan(stat.yearTotalYuan);
+  return {
+    wan,
+    label: wan.map((value, index) => `Q${index + 1} ${formatWan(value * 10_000)}`).join(" · ") + " 万 · 含一次性",
+    note: roundingGapNote(roundingGapWan(total, wan)),
+  };
 }
 
 function gapWan(actualYuan: number, budgetYuan: number): number {
@@ -282,6 +295,14 @@ export function buildScopeOverview(result: PlanResult, rootId: string, audience:
 
   const facts = conclusionFacts(result, rootId);
   const conclusion = company ? companySentence(result, alerts) : templateConclusion(facts);
+  const quarterRollup = company ? companyQuarterRollup(stat) : null;
+  if (quarterRollup) {
+    const yearCard = cards.find((card) => card.label.startsWith("全年"));
+    if (yearCard) {
+      yearCard.roundingNote = quarterRollup.note;
+      yearCard.extra = quarterRollup.label;
+    }
+  }
 
   return {
     audience,
@@ -318,12 +339,14 @@ export function buildScopeOverview(result: PlanResult, rootId: string, audience:
           annual: yearTotal,
           budget: formatWan(result.plan.companyBudget),
           gap: formatSignedWan(gapWan(stat.yearTotalYuan, result.plan.companyBudget) * 10_000),
+          roundingNote: quarterRollup?.note ?? null,
         }
       : {
           label: `${stat.name}合计`,
           annual: yearDaily,
           budget: budgetYuan == null ? "未设置" : formatWan(budgetYuan),
           gap: gap == null ? "未设置" : formatSignedWan(gap * 10_000),
+          roundingNote: null,
         },
     oneOff:
       company && oneOffBudget != null

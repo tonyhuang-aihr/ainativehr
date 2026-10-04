@@ -1,3 +1,4 @@
+import { RoundingMark } from "@/components/headcount/rounding-mark";
 import { conclusionSourceLabel, type ScopeOverview } from "@/lib/headcount/overview";
 import Link from "next/link";
 
@@ -20,8 +21,12 @@ export function ScopeOverviewBoard({ overview }: { overview: ScopeOverview }) {
         {overview.cards.map((card) => (
           <article key={card.label} className="rounded-2xl border border-line bg-white p-4">
             <p className="text-sm text-muted">{card.label}</p>
-            <p className="mt-2 text-2xl font-semibold tracking-tight">{card.value}</p>
+            <p className="mt-2 text-2xl font-semibold tracking-tight">
+              {card.value}
+              {card.roundingNote ? <RoundingMark note={card.roundingNote} /> : null}
+            </p>
             <p className="mt-1 text-sm text-muted">{card.sub}</p>
+            {card.extra ? <p className="mt-1 text-xs text-muted">{card.extra}</p> : null}
           </article>
         ))}
       </section>
@@ -107,7 +112,10 @@ export function ScopeOverviewBoard({ overview }: { overview: ScopeOverview }) {
                 <td className="px-3 py-2">{overview.total.label}</td>
                 {overview.audience === "leader" ? <td /> : null}
                 <td colSpan={5} />
-                <td>{overview.total.annual}</td>
+                <td>
+                  {overview.total.annual}
+                  {overview.total.roundingNote ? <RoundingMark note={overview.total.roundingNote} /> : null}
+                </td>
                 <td>{overview.total.budget}</td>
                 <td>{overview.total.gap}</td>
                 <td colSpan={2} />

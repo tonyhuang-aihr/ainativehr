@@ -1,5 +1,6 @@
 "use client";
 
+import { RoundingMark } from "@/components/headcount/rounding-mark";
 import type { LeaderView } from "@/lib/headcount/leaderView";
 import { useState } from "react";
 
@@ -73,7 +74,7 @@ export function LeaderBoard({ view, marks }: { view: LeaderView; marks?: Record<
 
       <section className="grid gap-3 md:grid-cols-3">
         <article className="rounded-2xl border border-line bg-white p-4">
-          <p className="text-sm text-muted">现在</p>
+          <p className="text-sm text-muted">① 现在</p>
           <p className="mt-2 text-xl font-semibold">{view.now.currentLabel} 万</p>
           <p className="mt-2 text-sm text-muted">
             在岗 {view.now.people} 人 · Agent {view.now.agents}
@@ -81,7 +82,7 @@ export function LeaderBoard({ view, marks }: { view: LeaderView; marks?: Record<
           <p className="text-sm text-muted">{view.now.quotaLine}</p>
         </article>
         <article className="rounded-2xl border border-line bg-white p-4">
-          <p className="text-sm text-muted">接下来会变</p>
+          <p className="text-sm text-muted">② 接下来会变</p>
           <p className="mt-2 text-xl font-semibold">{view.next.netLabel} 万</p>
           {view.drivers.map((line) => (
             <p key={line.detail} className="mt-2 text-sm text-muted">
@@ -90,8 +91,16 @@ export function LeaderBoard({ view, marks }: { view: LeaderView; marks?: Record<
           ))}
         </article>
         <article className="rounded-2xl border border-line bg-white p-4">
-          <p className="text-sm text-muted">年底预计</p>
-          <p className="mt-2 text-xl font-semibold">{view.yearEnd.annualLabel} 万</p>
+          <p className="text-sm text-muted">③ 年底预计</p>
+          <p className="mt-2 text-xl font-semibold">
+            {view.yearEnd.annualLabel} 万
+            {view.yearEnd.equation ? (
+              <span className="ml-2 text-sm font-normal text-muted">
+                {view.yearEnd.equation}
+                {view.yearEnd.roundingNote ? <RoundingMark note={view.yearEnd.roundingNote} /> : null}
+              </span>
+            ) : null}
+          </p>
           <p className="mt-2 text-sm text-muted">
             人员 {view.yearEnd.people} · Agent {view.yearEnd.agents}
           </p>

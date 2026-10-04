@@ -1,6 +1,6 @@
 import { conclusionFacts, directChildFacts, templateConclusion, type ConclusionFacts } from "@/lib/headcount/conclusion";
 import { deptStat, formalPeople, subtreeIds, type MovementImpact, type PersonRow, type PlanResult } from "@/lib/headcount/engine";
-import { formatSignedWan, formatWan, quarterBand, roundToHalfWan, yearBand } from "@/lib/headcount/money";
+import { formatSignedWan, formatWan, quarterBand, roundToHalfWan, roundingGapNote, roundingGapWan, yearBand } from "@/lib/headcount/money";
 import { DEMO_AI_RATIO } from "@/lib/headcount/sample";
 import { sortByReporting } from "@/lib/headcount/sortPeople";
 
@@ -25,7 +25,15 @@ export type LeaderView = {
     leaves: { count: number; detail: string; label: string };
     agents: { detail: string; label: string };
   };
-  yearEnd: { people: number; agents: number; annualLabel: string; budgetLine: string };
+  yearEnd: {
+    people: number;
+    agents: number;
+    annualLabel: string;
+    budgetLine: string;
+    /** ③ 与 ①、② 各项取整后是否还能对齐。掩码区间不写这句。 */
+    equation: "= ① + ②" | "≈ ① + ②" | null;
+    roundingNote: string | null;
+  };
   quarters: { label: string; labor: string; agent: string; total: string }[];
   quarterSummary: string;
   movements: {
@@ -117,6 +125,28 @@ function groupedBasis(facts: ConclusionFacts): string[] {
   ];
 }
 
+/** 页面上实际写出的取整金额：现在，以及每一条在途驱动。 */
+export function displayedStepWan(facts: ConclusionFacts): number[] {
+  const parts = [roundToHalfWan(facts.currentYuan)];
+  if (personnelIsSmall(facts)) {
+    if (facts.joins + facts.leaves > 0) parts.push(roundToHalfWan(facts.joinYuan + facts.leaveYuan));
+  } else {
+    if (facts.joins) parts.push(roundToHalfWan(facts.joinYuan));
+    if (facts.leaves) parts.push(roundToHalfWan(facts.leaveYuan));
+  }
+  if (facts.agentAdded || facts.agentExpanded || facts.agentOffline) parts.push(roundToHalfWan(facts.agentYuan));
+  return parts;
+}
+
+export function yearEndEquation(facts: ConclusionFacts): { equation: "= ① + ②" | "≈ ① + ②"; roundingNote: string | null } {
+  const annual = roundToHalfWan(facts.annualYuan);
+  const gap = roundingGapWan(annual, displayedStepWan(facts));
+  return {
+    equation: Math.abs(gap) < 0.05 ? "= ① + ②" : "≈ ① + ②",
+    roundingNote: roundingGapNote(gap),
+  };
+}
+
 function driverLines(facts: ConclusionFacts, mask: boolean): { detail: string; label: string }[] {
   const moneyOf = (yuan: number) => shownMoney(mask, yuan, true);
   const personnelSmall = personnelIsSmall(facts);
@@ -188,6 +218,7 @@ export function buildLeaderView(
   const agentRows = result.agents.filter((agent) => ids.has(agent.departmentId));
   const otherCounts = stat.other;
   const childFacts = directChildFacts(result, departmentId);
+  const equation = mask ? { equation: null, roundingNote: null } : yearEndEquation(facts);
   return {
     departmentId,
     departmentName: facts.name,
@@ -236,6 +267,8 @@ export function buildLeaderView(
       agents: facts.yearEndAgents,
       annualLabel: mask ? yearBand(facts.annualYuan) : formatWan(facts.annualYuan),
       budgetLine: budgetWan == null ? "本组未单独设置预算" : mask ? "本组金额为区间" : `比预算 ${formatWan(facts.budgetYuan ?? 0)} 万${gap != null && gap > 0 ? "多" : "少"} ${Math.abs(gap ?? 0).toFixed(1)} 万`,
+      equation: equation.equation,
+      roundingNote: equation.roundingNote,
     },
     quarters: ["Q1", "Q2", "Q3", "Q4"].map((label, index) => ({
       label,

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildClosure, visibleDepartmentIds } from "@/lib/headcount/authz";
 import { computePlan, deptStat } from "@/lib/headcount/engine";
 import { buildLeaderView } from "@/lib/headcount/leaderView";
+import { conclusionFacts } from "@/lib/headcount/conclusion";
 import { roundToHalfWan } from "@/lib/headcount/money";
 import { parseBudgetBatch, parseQuotaBatch } from "@/lib/headcount/configBatch";
 import { buildScopeOverview, collectAlerts, conclusionSourceLabel, maskPageCosts, pageKind, scopeHasSmallGroup } from "@/lib/headcount/overview";
@@ -39,6 +40,11 @@ describe("OD 总览告警和部门页", () => {
     expect(overview.oneOff).toMatchObject({ amount: "24.5", budget: "30.0", gap: "−5.5" });
     expect(overview.conclusion).toContain("95.5");
     expect(JSON.stringify(overview)).not.toContain("1,110.5");
+    expect(overview.cards.find((card) => card.label.startsWith("全年"))?.extra).toBe(
+      "Q1 3,975.0 · Q2 4,013.0 · Q3 4,053.5 · Q4 4,053.5 万 · 含一次性",
+    );
+    expect(overview.total?.roundingNote).toContain("各项分别取整，合计可能差 0.5");
+    expect(overview.total?.annual).toBe("16,095.5");
   });
 });
 
@@ -97,12 +103,30 @@ describe("负责人按范围进入，小组成本在接口里就是区间", () =
     expect(view.drivers.map((line) => `${line.detail} ${line.label}`)).toEqual(["3 人变动 −5.5", "Agent 新增 2 · 扩容 2 · 下线 1 +14.0"]);
     expect(view.yearEnd.people).toBe(33);
     expect(view.yearEnd.agents).toBe(7);
+    expect(view.yearEnd.equation).toBe("= ① + ②");
+    expect(view.yearEnd.roundingNote).toBeNull();
     expect(view.aiRatio).toBe("72 : 28");
     const blob = JSON.stringify(view);
     expect(blob).not.toContain("1 人入职");
     expect(blob).not.toContain("1 人加入");
     expect(blob).not.toContain("+29.0");
     expect(blob).not.toContain("−35.0");
+  });
+
+  it("产品研发一部步骤③保留 0.5 的取整差，结论句子不改写", () => {
+    const view = buildLeaderView(result, DEPT.prod1, { exact: true });
+    const facts = conclusionFacts(result, DEPT.prod1);
+    expect(view.now.currentLabel).toBe("4,791.0");
+    expect(view.drivers.map((line) => line.label)).toEqual(["+112.0", "−58.0"]);
+    expect(view.yearEnd.annualLabel).toBe("4,845.5");
+    expect(view.yearEnd.equation).toBe("≈ ① + ②");
+    expect(view.yearEnd.roundingNote).toContain("各项分别取整，合计可能差 0.5");
+    expect(view.yearEnd.roundingNote).toContain("差 0.5 万");
+    expect(view.conclusion.text).toContain("4,845.5 万");
+    expect(view.conclusion.text).toContain("120.5");
+    expect(view.conclusion.text).toContain("4,791.0 万");
+    expect(view.conclusion.text).not.toContain("4,845.0");
+    expect(facts.headcount).toBeGreaterThan(0);
   });
 });
 
