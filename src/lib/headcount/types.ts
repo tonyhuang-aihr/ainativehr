@@ -80,6 +80,8 @@ export type PlanInput = {
   oneOffBudget: number | null;
   departments: DepartmentNode[];
   gradeAnnual: Record<string, number>;
+  /** 月工资基数（元）。空着时经济补偿和代通知金退回年成本 ÷ 12。 */
+  gradeMonthly?: Record<string, number | null>;
   people: PersonSeed[];
   movements: MovementSeed[];
   agents: AgentSeed[];

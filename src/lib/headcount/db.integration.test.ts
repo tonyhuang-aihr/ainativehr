@@ -5,6 +5,7 @@ import { seedSample } from "@/lib/headcount/db/seed";
 import { leaderProjectionKeys, loadClosure, loadDepartments, loadPlan } from "@/lib/headcount/db/queries";
 import { computePlan, deptStat } from "@/lib/headcount/engine";
 import { buildLeaderView, forbiddenLeaderPaths } from "@/lib/headcount/leaderView";
+import { buildScopeOverview, scopeHasSmallGroup } from "@/lib/headcount/overview";
 import { roundToHalfWan } from "@/lib/headcount/money";
 import { DEPT } from "@/lib/headcount/sample";
 
@@ -31,6 +32,14 @@ describe("数据库里的负责人范围", () => {
     expect(roundToHalfWan(deptStat(result, DEPT.plat).yearDailyYuan)).toBe(2075.5);
     const view = buildLeaderView(result, DEPT.plat, { exact: false });
     expect(forbiddenLeaderPaths(view)).toEqual([]);
+    expect(scopeHasSmallGroup(result, zhao)).toBe(true);
+    const overview = buildScopeOverview(result, DEPT.plat, "leader", true);
+    const payload = JSON.stringify(overview);
+    expect(payload).toContain("2,075.5");
+    expect(payload).toContain("1,110–1,120");
+    expect(payload).not.toContain("1,110.5");
+    const child = buildLeaderView(result, DEPT.infra, { exact: false, maskCosts: true });
+    expect(JSON.stringify(child)).not.toContain("1,110.5");
     const fanPlan = await loadPlan(db, { departmentIds: fan, sensitive: false });
     expect(fanPlan.people.some((person) => person.name === "赵一")).toBe(false);
     expect(fanPlan.people.every((person) => person.departmentId === DEPT.prod1)).toBe(true);

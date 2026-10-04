@@ -57,13 +57,13 @@ export async function setDepartmentBudget(db: AppDatabase, departmentId: string,
   await bump(db, userId, userName, "部门预算", `${departmentId} ${amount}`);
 }
 
-export async function setGradeAnnual(db: AppDatabase, grade: string, annualCost: number, userId: string, userName: string) {
+export async function setGradeAnnual(db: AppDatabase, grade: string, annualCost: number, userId: string, userName: string, monthlyBaseWage: number | null = null) {
   const settings = await loadSettings(db);
   await db
     .insert(schema.gradeBands)
-    .values({ grade, annualCost, year: settings.year, source: "manual", version: 1 })
-    .onConflictDoUpdate({ target: schema.gradeBands.grade, set: { annualCost } });
-  await bump(db, userId, userName, "职级成本", `${grade} ${annualCost}`);
+    .values({ grade, annualCost, monthlyBaseWage, year: settings.year, source: "manual", version: 1 })
+    .onConflictDoUpdate({ target: schema.gradeBands.grade, set: { annualCost, monthlyBaseWage } });
+  await bump(db, userId, userName, "职级成本", `${grade} 年 ${annualCost} 月工资基数 ${monthlyBaseWage ?? "空"}`);
 }
 
 export async function setCityWage(db: AppDatabase, city: string, monthlyAvg: number, userId: string, userName: string) {

@@ -238,6 +238,7 @@ export async function loadPlan(db: AppDatabase, input: { departmentIds: string[]
     oneOffBudget: input.sensitive ? settings.oneOffBudget : null,
     departments: visibleDepartments,
     gradeAnnual: Object.fromEntries(grades.map((row) => [row.grade, row.annualCost])),
+    gradeMonthly: Object.fromEntries(grades.map((row) => [row.grade, row.monthlyBaseWage])),
     people,
     movements,
     agents,

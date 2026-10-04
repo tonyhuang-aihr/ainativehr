@@ -10,7 +10,7 @@ const SECTIONS = [
   ["agents", "Agent 与外包 / 实习 / 顾问"],
 ] as const;
 
-export function LeaderBoard({ view }: { view: LeaderView }) {
+export function LeaderBoard({ view, marks }: { view: LeaderView; marks?: Record<string, string> }) {
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const anyOpen = Object.values(open).some(Boolean);
   const origin = view.conclusion.origin === "model" ? "模型" : view.conclusion.origin === "cache" ? "缓存" : "模板";
@@ -19,11 +19,17 @@ export function LeaderBoard({ view }: { view: LeaderView }) {
     <div className="space-y-5 pb-24">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-sm text-muted">
-            {view.scopeLabel} · 截至 {view.asOf}
-          </p>
+          {view.backHref ? (
+            <a href={view.backHref} className="text-sm text-primary">
+              返回总览
+            </a>
+          ) : (
+            <p className="text-sm text-muted">{view.scopeLabel}</p>
+          )}
           <h1 className="mt-1 text-2xl font-semibold">{view.departmentName}</h1>
+          <p className="text-sm text-muted">截至 {view.asOf}</p>
         </div>
+        {view.options.length > 1 && !view.backHref ? (
         <form action="/headcount/leader" method="get" className="flex items-center gap-2 text-sm">
           <label htmlFor="dept">部门</label>
           <select id="dept" name="dept" defaultValue={view.departmentId} className="min-h-10 rounded-xl border border-line bg-white px-3" onChange={(event) => event.currentTarget.form?.requestSubmit()}>
@@ -34,11 +40,12 @@ export function LeaderBoard({ view }: { view: LeaderView }) {
             ))}
           </select>
         </form>
+        ) : null}
       </div>
 
       <section className="rounded-3xl border border-line bg-white p-6 shadow-card">
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
-          <span className="rounded-full bg-primarySoft px-2 py-1 text-primary">人 : AI</span>
+          <span className="rounded-full bg-primarySoft px-2 py-1 text-primary">人 : AI {view.aiRatio}</span>
           <span>结论来自{origin}</span>
         </div>
         <p className="mt-4 text-lg leading-8">{view.conclusion.text}</p>
@@ -76,13 +83,11 @@ export function LeaderBoard({ view }: { view: LeaderView }) {
         <article className="rounded-2xl border border-line bg-white p-4">
           <p className="text-sm text-muted">接下来会变</p>
           <p className="mt-2 text-xl font-semibold">{view.next.netLabel} 万</p>
-          <p className="mt-2 text-sm text-muted">
-            加入 {view.next.joins.count} 人 {view.next.joins.label} 万
-          </p>
-          <p className="text-sm text-muted">
-            离开 {view.next.leaves.count} 人 {view.next.leaves.label} 万
-          </p>
-          <p className="text-sm text-muted">Agent {view.next.agents.label} 万</p>
+          {view.drivers.map((line) => (
+            <p key={line.detail} className="mt-2 text-sm text-muted">
+              {line.detail} {line.label} 万
+            </p>
+          ))}
         </article>
         <article className="rounded-2xl border border-line bg-white p-4">
           <p className="text-sm text-muted">年底预计</p>
@@ -103,9 +108,9 @@ export function LeaderBoard({ view }: { view: LeaderView }) {
             onClick={() => setOpen((current) => ({ ...current, [key]: !current[key] }))}
           >
             <span className="font-medium">{label}</span>
-            <span className="text-sm text-muted">{open[key] ? "收起" : "展开"}</span>
+            <span className="text-sm text-muted">{open[key] ? "收起" : key === "moves" ? `查看全部 ${view.next.count} 条` : "展开"}</span>
           </button>
-          {open[key] ? <div className="border-t border-line px-4 py-4">{sectionBody(key, view)}</div> : null}
+          {open[key] ? <div className="border-t border-line px-4 py-4">{sectionBody(key, view, marks)}</div> : null}
         </section>
       ))}
 
@@ -122,7 +127,7 @@ export function LeaderBoard({ view }: { view: LeaderView }) {
   );
 }
 
-function sectionBody(key: (typeof SECTIONS)[number][0], view: LeaderView) {
+function sectionBody(key: (typeof SECTIONS)[number][0], view: LeaderView, marks?: Record<string, string>) {
   if (key === "quarters") {
     return (
       <div>
@@ -158,6 +163,7 @@ function sectionBody(key: (typeof SECTIONS)[number][0], view: LeaderView) {
             <th className="py-2">姓名</th>
             <th>岗位</th>
             <th>类型</th>
+            {marks ? <th>补偿标记</th> : null}
             <th>当季</th>
             <th>全年</th>
           </tr>
@@ -170,6 +176,7 @@ function sectionBody(key: (typeof SECTIONS)[number][0], view: LeaderView) {
                 {row.title} · {row.grade}
               </td>
               <td>{row.typeLabel}</td>
+              {marks ? <td>{marks[`${row.name}|${row.typeLabel}`] ?? "—"}</td> : null}
               <td>{row.quarter}</td>
               <td>{row.year}</td>
             </tr>

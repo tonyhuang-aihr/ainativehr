@@ -15,7 +15,7 @@ export function HeadcountChrome({
 }) {
   const links = [
     role === "od" ? { href: "/headcount/import", label: "导入" } : null,
-    role === "od" || role === "hr_admin" ? { href: "/headcount/baseline", label: "底座" } : null,
+    role === "od" || role === "hr_admin" || role === "hrbp" ? { href: "/headcount/baseline", label: "底座" } : null,
     role && role !== "sys_admin" ? { href: "/headcount/leader", label: "负责人" } : null,
     role === "hr_admin" || role === "sys_admin" ? { href: "/headcount/admin", label: "管理" } : null,
     { href: "/headcount/explain", label: "数据说明" },

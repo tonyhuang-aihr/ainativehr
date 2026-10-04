@@ -72,25 +72,36 @@ export function resolveTenureMonths(
   throw new SeveranceInputError("缺少可用的部门职级平均司龄");
 }
 
-/** 代通知金多出来的那一个月，用封顶后的月基数，还是用未封顶的月工资。产品只改这一处。 */
+/** 代通知金多出来的那一个月，用封顶后的月基数，还是用未封顶的月工资基数。产品只改这一处。 */
 export type NoticePayBase = "capped" | "uncapped";
 
-/** 默认沿用 PRD 伪代码：先封顶，再把封顶后的月基数加进代通知金。 */
-export const NOTICE_PAY_BASE: NoticePayBase = "capped";
+/**
+ * 第 40 条代通知金（N+1 里的「+1」）按月工资基数加一个月，不吃 3 倍封顶。
+ * 3 倍当地月平均工资只封第 47 条经济补偿（N）。
+ */
+export const NOTICE_PAY_BASE: NoticePayBase = "uncapped";
 
-export function noticePayMonthly(gradeAnnual: number, cappedMonthly: number, choice: NoticePayBase = NOTICE_PAY_BASE): number {
-  return choice === "uncapped" ? gradeAnnual / 12 : cappedMonthly;
+/** 职级表填了月工资基数就用它；空着则退回年成本 ÷ 12。 */
+export function monthlyWage(gradeAnnual: number, monthlyWageBase?: number | null): number {
+  if (monthlyWageBase == null) return gradeAnnual / 12;
+  return monthlyWageBase;
+}
+
+export function noticePayMonthly(uncappedMonthly: number, cappedMonthly: number, choice: NoticePayBase = NOTICE_PAY_BASE): number {
+  return choice === "uncapped" ? uncappedMonthly : cappedMonthly;
 }
 
 /**
- * 《劳动合同法》第 47 条。输入是补偿标记，不是离职类型。
- * 月基数高于当地上年度职工月平均工资 3 倍时，基数按 3 倍封顶，年限最多 12 年。
+ * 《劳动合同法》第 47 条经济补偿，外加可选的第 40 条代通知金。输入是补偿标记，不是离职类型。
+ * 月工资基数高于当地上年度职工月平均工资 3 倍时，第 47 条的基数按 3 倍封顶，年限最多 12 年。
  * 正好等于 3 倍时不封顶。没有城市工资配置时不封顶，并给出提示。
- * 代通知金的基数由 NOTICE_PAY_BASE 决定，不散落在别的计算里。
+ * 代通知金用未封顶的月工资基数，不随第 47 条的封顶走。
  */
 export function estimateSeverance(input: {
   mark: CompMark;
   gradeAnnual: number;
+  /** 职级成本表上的月工资基数。空着则用年成本 ÷ 12。 */
+  monthlyWageBase?: number | null;
   hireDate?: string | null;
   effectiveDate?: string;
   averageMonths?: number;
@@ -110,7 +121,8 @@ export function estimateSeverance(input: {
     complete = completeMonths(input.hireDate, input.effectiveDate);
   }
   let months = compensationMonths(complete);
-  let base = input.gradeAnnual / 12;
+  const wage = monthlyWage(input.gradeAnnual, input.monthlyWageBase);
+  let base = wage;
   let capped = false;
   let warning: string | null = null;
   if (input.cityMonthly == null) {
@@ -124,6 +136,6 @@ export function estimateSeverance(input: {
     }
   }
   let amount = base * months;
-  if (input.mark === "N+1" || input.noticePay) amount += noticePayMonthly(input.gradeAnnual, base, input.noticePayBase);
+  if (input.mark === "N+1" || input.noticePay) amount += noticePayMonthly(wage, base, input.noticePayBase);
   return { amount, compensationMonths: months, monthlyBase: base, capped, warning };
 }

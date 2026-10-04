@@ -95,6 +95,8 @@ export const agents = pgTable("agents", {
 export const gradeBands = pgTable("grade_bands", {
   grade: text("grade").primaryKey(),
   annualCost: integer("annual_cost").notNull(),
+  /** 月工资基数。空着则用年成本 ÷ 12。 */
+  monthlyBaseWage: integer("monthly_base_wage"),
   year: integer("year").notNull(),
   source: text("source").notNull().default("manual"),
   version: integer("version").notNull().default(1),
@@ -119,6 +121,8 @@ export const cityWages = pgTable("city_wages", {
 
 export const otherRates = pgTable("other_rates", {
   employmentType: text("employment_type").primaryKey(),
+  /** 元/人/月，由 OD 设定。年成本 = 月单价 × 12。 */
+  monthlyCost: integer("monthly_cost"),
   annualCost: integer("annual_cost").notNull(),
 });
 

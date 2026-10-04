@@ -1,4 +1,5 @@
 import { LeaderBoard } from "@/components/headcount/leader-board";
+import { ScopeOverviewBoard } from "@/components/headcount/scope-overview";
 import { openLeader } from "@/lib/headcount/db/present";
 import { currentUser } from "@/lib/headcount/session";
 import { redirect } from "next/navigation";
@@ -10,11 +11,12 @@ export default async function LeaderPage({ searchParams }: { searchParams: Promi
   if (!user) redirect("/headcount/login");
   if (user.role === "sys_admin") redirect("/headcount/admin");
   const query = await searchParams;
-  let view;
+  let screen;
   try {
-    view = await openLeader(user, query.dept);
+    screen = await openLeader(user, query.dept);
   } catch {
-    view = await openLeader(user);
+    screen = await openLeader(user);
   }
-  return <LeaderBoard view={view} />;
+  if (screen.kind === "overview") return <ScopeOverviewBoard overview={screen.overview} />;
+  return <LeaderBoard view={screen.view} />;
 }

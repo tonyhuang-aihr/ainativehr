@@ -66,6 +66,7 @@ export default async function ImportPage({ searchParams }: { searchParams: Promi
           <h2 className="font-medium">职级年成本（元）</h2>
           <input name="grade" placeholder="例如 P6" className="w-full rounded-xl border border-line px-3 py-2" />
           <input name="amount" inputMode="numeric" placeholder="年成本" className="w-full rounded-xl border border-line px-3 py-2" />
+          <input name="monthly" inputMode="numeric" placeholder="月工资基数，可空。空着则用年成本 ÷ 12" className="w-full rounded-xl border border-line px-3 py-2" />
           <Button type="submit" variant="secondary">
             保存职级
           </Button>

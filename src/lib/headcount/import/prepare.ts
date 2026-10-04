@@ -1,3 +1,4 @@
+import { agentChangeConfirmed, offerIsAccepted, offerIsPending } from "@/lib/headcount/policies";
 import { completeMonths } from "@/lib/headcount/severance";
 import type { CompMark } from "@/lib/headcount/severance";
 
@@ -82,8 +83,6 @@ export type ImportContext = {
   asOf: string;
   parentOf: (department: string) => string | null;
 };
-
-const CONFIRMED = new Set(["已接受的 offer", "已审批的调动", "已提交的离职", "已确认"]);
 
 function indexHeaders(headers: string[]): Map<string, number> {
   const map = new Map<string, number>();
@@ -235,8 +234,10 @@ export function validateImport(roster: RosterDraft[], movements: MovementDraft[]
     }
   });
   movements.forEach((row) => {
-    if (!CONFIRMED.has(row.confirmStatus)) {
-      issues.push({ id: `status-${row.row}`, level: "error", sheet: "在途变动", row: row.row, message: `确认状态不是已接受的 offer、已审批的调动或已提交的离职，已跳过` });
+    const accepted = row.kind.startsWith("Agent") ? agentChangeConfirmed(row.confirmStatus) : offerIsAccepted(row.confirmStatus);
+    if (offerIsPending(row.confirmStatus) || !accepted) {
+      const why = offerIsPending(row.confirmStatus) ? "已发未接受的 offer 不进入编制和成本" : "确认状态不是已接受的 offer、已审批的调动、已提交的离职，或 Agent 上线尚未批准";
+      issues.push({ id: `status-${row.row}`, level: "error", sheet: "在途变动", row: row.row, message: `${why}，已跳过` });
     }
     if (row.kind === "离职" && !row.compMark) {
       issues.push({ id: `mark-${row.row}`, level: "error", sheet: "在途变动", row: row.row, message: "离职行缺少可识别的离职类型，不导入" });

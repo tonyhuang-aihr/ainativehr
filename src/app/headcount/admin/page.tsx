@@ -31,7 +31,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
       {can(user, "toggleExact") ? (
         <form action={exactAction} className="rounded-2xl border border-line bg-white p-4 text-sm">
           <h2 className="font-medium">负责人视图的精确估算</h2>
-          <p className="mt-1 text-muted">关闭时人员行显示区间。部门和 Agent 合计始终是精确值。开关会写入日志。</p>
+          <p className="mt-1 text-muted">关闭时人员行显示区间。管辖范围内有不足 5 人的组时，各组成本也改成区间，只有范围合计保持精确。开关会写入日志。</p>
           <label className="mt-3 flex items-center gap-2">
             <input type="checkbox" name="enabled" defaultChecked={settings.exactForLeaders} />
             让负责人看到精确估算
@@ -65,7 +65,8 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
             <input name="password" type="password" placeholder="密码，至少 8 位且含字母和数字" className="rounded-xl border border-line px-3 py-2" />
             <select name="role" className="rounded-xl border border-line px-3 py-2">
               <option value="leader">业务负责人</option>
-              <option value="od">OD / HRBP</option>
+              <option value="od">OD</option>
+              <option value="hrbp">HRBP</option>
               <option value="hr_admin">HR 管理员</option>
               <option value="sys_admin">系统管理员</option>
             </select>

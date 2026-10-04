@@ -3,7 +3,7 @@ import { buildClosure } from "@/lib/headcount/authz";
 import type { AppDatabase } from "@/lib/headcount/db/client";
 import * as schema from "@/lib/headcount/db/schema";
 import { hashPassword } from "@/lib/headcount/password";
-import { DEMO_ACCOUNTS, DEMO_PASSWORD, OTHER_ANNUAL, samplePlan } from "@/lib/headcount/sample";
+import { DEMO_ACCOUNTS, DEMO_PASSWORD, OTHER_ANNUAL, OTHER_MONTHLY, samplePlan } from "@/lib/headcount/sample";
 
 export const SAMPLE_VERSION = "sample-2027-1";
 
@@ -152,6 +152,7 @@ export async function seedSample(db: AppDatabase, options?: { replaceUsers?: boo
     Object.entries(plan.gradeAnnual).map(([grade, annualCost]) => ({
       grade,
       annualCost,
+      monthlyBaseWage: plan.gradeMonthly?.[grade] ?? null,
       year: plan.year,
       source: "manual",
       version: 1,
@@ -187,7 +188,11 @@ export async function seedSample(db: AppDatabase, options?: { replaceUsers?: boo
     })),
   );
   await db.insert(schema.otherRates).values(
-    (Object.entries(OTHER_ANNUAL) as [string, number][]).map(([employmentType, annualCost]) => ({ employmentType, annualCost })),
+    (Object.entries(OTHER_MONTHLY) as [keyof typeof OTHER_MONTHLY, number][]).map(([employmentType, monthlyCost]) => ({
+      employmentType,
+      monthlyCost,
+      annualCost: OTHER_ANNUAL[employmentType],
+    })),
   );
   await db.insert(schema.otherSeats).values(
     plan.others.map((seat) => ({

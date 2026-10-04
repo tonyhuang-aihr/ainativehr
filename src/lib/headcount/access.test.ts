@@ -23,6 +23,11 @@ describe("角色与部门树", () => {
     expect(visibleDepartmentIds(fan, plan.departments, closure)).not.toContain(DEPT.plat);
     expect(visibleDepartmentIds(huang, plan.departments, closure)).toHaveLength(plan.departments.length);
     expect(visibleDepartmentIds(admin, plan.departments, closure)).toEqual([]);
+    const lin: HeadcountUser = { id: "lin", role: "hrbp", departmentIds: [DEPT.prod1] };
+    expect(visibleDepartmentIds(lin, plan.departments, closure)).toEqual([DEPT.prod1]);
+    expect(can(lin, "viewBusiness")).toBe(true);
+    expect(can(lin, "viewCompensation")).toBe(false);
+    expect(can(lin, "import")).toBe(false);
   });
 
   it("越权动作按角色拒绝", () => {

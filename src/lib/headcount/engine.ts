@@ -247,6 +247,7 @@ export function computePlan(plan: PlanInput): PlanResult {
     const result = estimateSeverance({
       mark: movement.compMark,
       gradeAnnual: annualOf(plan, movement.grade),
+      monthlyWageBase: plan.gradeMonthly?.[movement.grade],
       hireDate: movement.hireDate,
       effectiveDate: movement.effectiveDate,
       cityMonthly: movement.city ? plan.cityMonthly[movement.city] : null,

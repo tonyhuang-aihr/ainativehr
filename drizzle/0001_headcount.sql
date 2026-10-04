@@ -87,6 +87,7 @@ create table if not exists agents (
 create table if not exists grade_bands (
   grade text primary key,
   annual_cost integer not null,
+  monthly_base_wage integer,
   year integer not null,
   source text not null default 'manual',
   version integer not null default 1
@@ -111,6 +112,7 @@ create table if not exists city_wages (
 
 create table if not exists other_rates (
   employment_type text primary key,
+  monthly_cost integer,
   annual_cost integer not null
 );
 
@@ -193,3 +195,6 @@ create table if not exists ai_conclusions (
 
 create index if not exists access_logs_created_at_idx on access_logs (created_at);
 create index if not exists operation_logs_created_at_idx on operation_logs (created_at);
+
+alter table grade_bands add column if not exists monthly_base_wage integer;
+alter table other_rates add column if not exists monthly_cost integer;

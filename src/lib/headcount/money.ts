@@ -25,8 +25,10 @@ export function formatSignedWan(yuan: number): string {
 }
 
 function wanLabel(yuanStep: number): string {
-  const wan = yuanStep / 10000;
-  return String(Number(wan.toFixed(4)));
+  const rounded = Number((yuanStep / 10000).toFixed(4));
+  const [whole, frac] = String(rounded).split(".");
+  const grouped = Number(whole).toLocaleString("en-US");
+  return frac ? `${grouped}.${frac}` : grouped;
 }
 
 /**

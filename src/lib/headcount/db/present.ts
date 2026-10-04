@@ -3,8 +3,8 @@ import "server-only";
 import { resolveLlmConfig } from "@/lib/ai/llmConfig";
 import type { ChatTurn } from "@/lib/ai/desensitize";
 import { can, visibleDepartmentIds, type HeadcountUser } from "@/lib/headcount/authz";
-import { buildBaselineRows, companyCards } from "@/lib/headcount/baselineView";
 import { chooseConclusion, conclusionFacts, directChildFacts } from "@/lib/headcount/conclusion";
+import { buildScopeOverview, maskPageCosts, pageKind, scopeHasSmallGroup, scopeRoots, type ScopeOverview } from "@/lib/headcount/overview";
 import { getDb } from "@/lib/headcount/db/client";
 import { recordAccess, saveConclusion } from "@/lib/headcount/db/mutate";
 import { loadCachedConclusion, loadClosure, loadDepartments, loadPlan, loadSettings } from "@/lib/headcount/db/queries";
@@ -42,49 +42,102 @@ export async function scopeFor(user: HeadcountUser) {
   return { db, departments, closure, visible: visibleDepartmentIds(user, departments, closure) };
 }
 
-export async function openLeader(user: SessionUser, requestedId?: string): Promise<LeaderView> {
+export type LeaderScreen = { kind: "overview"; overview: ScopeOverview } | { kind: "detail"; view: LeaderView };
+
+export async function openLeader(user: SessionUser, requestedId?: string): Promise<LeaderScreen> {
   if (!can(user, "viewLeader") && !can(user, "viewBusiness")) throw new Error("无权查看");
   if (user.role === "sys_admin") throw new Error("无权查看");
   const { db, departments, visible } = await scopeFor(user);
   const requested = requestedId && visible.includes(requestedId) ? requestedId : null;
   if (requestedId && !requested) throw new Error("部门不在授权范围");
-  const departmentId = requested ?? user.departmentIds.find((id) => visible.includes(id)) ?? visible.find((id) => id === "plat") ?? visible[0];
+  const roots = scopeRoots(departments, visible);
+  const departmentId = requested ?? roots[0] ?? visible[0];
   if (!departmentId) throw new Error("没有可查看的部门");
   const settings = await loadSettings(db);
-  const exact = settings.exactForLeaders;
   const plan = await loadPlan(db, { departmentIds: visible, sensitive: false });
+  const result = computePlan(plan);
+  const facts = conclusionFacts(result, departmentId);
+  await recordAccess(db, user.id, user.name, departmentId, facts.name);
+  if (pageKind(departmentId, departments, visible) === "overview") {
+    const ranges = user.role === "leader" && scopeHasSmallGroup(result, visible);
+    const overview = buildScopeOverview(result, departmentId, user.role === "leader" ? "leader" : "od", ranges);
+    return { kind: "overview", overview };
+  }
+  const mask = user.role === "leader" && maskPageCosts(result, visible, departmentId);
+  const names = plan.people.map((person) => person.name);
+  const employeeNos = plan.people.map((person) => person.employeeNo);
+  const departmentNames = departments.map((department) => department.name);
+  const cached = mask ? null : await loadCachedConclusion(db, departmentId, settings.dataVersion);
+  const config = resolveLlmConfig({ LLM_API_KEY: process.env.LLM_API_KEY });
+  const chosen = mask
+    ? { text: "", origin: "template" as const }
+    : await chooseConclusion({
+        root: facts,
+        children: directChildFacts(result, departmentId),
+        names,
+        employeeNos,
+        departmentNames,
+        cached,
+        complete: config.enabled ? completeWithModel : null,
+      });
+  if (chosen.origin === "model") await saveConclusion(db, departmentId, settings.dataVersion, chosen.text, chosen.origin);
+  const back = roots.length === 1 && roots[0] !== departmentId ? "/headcount/leader" : null;
+  const view = buildLeaderView(result, departmentId, {
+    exact: settings.exactForLeaders && !mask,
+    maskCosts: mask,
+    backHref: back,
+    conclusionText: chosen.text || undefined,
+    conclusionOrigin: chosen.origin,
+  });
+  view.options = visible
+    .map((id) => departments.find((department) => department.id === id))
+    .filter((department): department is NonNullable<typeof department> => Boolean(department))
+    .map((department) => ({ id: department.id, name: department.name }));
+  return { kind: "detail", view };
+}
+
+export async function openBaseline(user: HeadcountUser) {
+  if (!can(user, "viewBusiness") || user.role === "leader") throw new Error("无权查看底座");
+  const { db, visible, departments } = await scopeFor(user);
+  const plan = await loadPlan(db, { departmentIds: visible, sensitive: can(user, "viewOneOff") });
+  const result = computePlan(plan);
+  const root = scopeRoots(departments, visible)[0];
+  if (!root) throw new Error("没有可查看的部门");
+  const overview = buildScopeOverview(result, root, "od", false);
+  return { overview, asOf: plan.asOf, year: plan.year };
+}
+
+export async function openDepartment(user: HeadcountUser, departmentId: string) {
+  if (!can(user, "viewBusiness") || user.role === "leader") throw new Error("无权查看底座");
+  const { db, visible, departments } = await scopeFor(user);
+  if (!visible.includes(departmentId)) throw new Error("部门不在授权范围");
+  const plan = await loadPlan(db, { departmentIds: visible, sensitive: can(user, "viewOneOff") });
   const result = computePlan(plan);
   const facts = conclusionFacts(result, departmentId);
   const names = plan.people.map((person) => person.name);
   const employeeNos = plan.people.map((person) => person.employeeNo);
-  const departmentNames = departments.map((department) => department.name);
-  const cached = await loadCachedConclusion(db, departmentId, settings.dataVersion);
-  const config = resolveLlmConfig({ LLM_API_KEY: process.env.LLM_API_KEY });
   const chosen = await chooseConclusion({
     root: facts,
     children: directChildFacts(result, departmentId),
     names,
     employeeNos,
-    departmentNames,
-    cached,
-    complete: config.enabled ? completeWithModel : null,
+    departmentNames: departments.map((department) => department.name),
+    cached: null,
+    complete: null,
   });
-  if (chosen.origin === "model") await saveConclusion(db, departmentId, settings.dataVersion, chosen.text, chosen.origin);
-  await recordAccess(db, user.id, user.name, departmentId, facts.name);
-  const view = buildLeaderView(result, departmentId, { exact, conclusionText: chosen.text, conclusionOrigin: chosen.origin });
+  const view = buildLeaderView(result, departmentId, { exact: true, maskCosts: false, backHref: "/headcount/baseline", conclusionText: chosen.text, conclusionOrigin: chosen.origin });
   view.options = visible
     .map((id) => departments.find((department) => department.id === id))
     .filter((department): department is NonNullable<typeof department> => Boolean(department))
     .map((department) => ({ id: department.id, name: department.name }));
-  return view;
-}
-
-export async function openBaseline(user: HeadcountUser) {
-  if (!can(user, "viewBusiness") || user.role === "leader") throw new Error("无权查看底座");
-  const { db, visible } = await scopeFor(user);
-  const plan = await loadPlan(db, { departmentIds: visible, sensitive: can(user, "viewOneOff") });
-  const result = computePlan(plan);
-  return { rows: buildBaselineRows(result), cards: companyCards(result), asOf: plan.asOf, year: plan.year };
+  const marks: Record<string, string> = {};
+  if (can(user, "viewCompensation")) {
+    for (const movement of plan.movements) {
+      if (movement.kind !== "离职") continue;
+      marks[`${movement.name}|离职 · ${movement.effectiveDate}`] = movement.compMark ?? "—";
+    }
+  }
+  return { view, marks, showMarks: can(user, "viewCompensation") };
 }
 
 export async function importContext(user: HeadcountUser) {

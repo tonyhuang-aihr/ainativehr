@@ -13,7 +13,22 @@ export const GRADE_ANNUAL: Record<string, number> = {
   M5: 1_400_000,
 };
 
-export const OTHER_ANNUAL = { 外包: 216_000, 实习: 72_000, 顾问: 360_000 } as const;
+/** 元/人/月。年成本 = 月单价 × 12，和设计师脚本里的年单价一致。 */
+export const OTHER_MONTHLY = { 外包: 18_000, 实习: 6_000, 顾问: 30_000 } as const;
+export const OTHER_ANNUAL = {
+  外包: OTHER_MONTHLY.外包 * 12,
+  实习: OTHER_MONTHLY.实习 * 12,
+  顾问: OTHER_MONTHLY.顾问 * 12,
+} as const;
+
+/** 来自沙盘拆解的人 : AI。没有拆解的部门写「未拆解」。 */
+export const DEMO_AI_RATIO: Record<string, string> = {
+  rd: "78 : 22",
+  plat: "72 : 28",
+  "plat-infra": "72 : 28",
+  "plat-data": "72 : 28",
+  "plat-direct": "72 : 28",
+};
 
 const SRC = { source: "import" as const, version: 1 };
 
@@ -225,7 +240,7 @@ export function samplePlan(): PlanInput {
     year: PLAN_YEAR,
     asOf: AS_OF,
     companyBudget: 160_000_000,
-    oneOffBudget: null,
+    oneOffBudget: 300_000,
     departments,
     gradeAnnual: GRADE_ANNUAL,
     people,
@@ -233,7 +248,14 @@ export function samplePlan(): PlanInput {
     agents,
     others,
     cityMonthly: { 北京: 12_500, 上海: 12_300, 杭州: 10_600, 成都: 8_900 },
-    budgets: { [DEPT.plat]: 20_500_000 },
+    budgets: {
+      [DEPT.direct]: 1_450_000,
+      [DEPT.prod1]: 47_250_000,
+      [DEPT.prod2]: 42_100_000,
+      [DEPT.plat]: 20_500_000,
+      [DEPT.qa]: 26_000_000,
+      [DEPT.ai]: 22_400_000,
+    },
     tenure: [{ departmentId: DEPT.qa, grade: "P5", averageMonths: 3.4 * 12, count: 28 }],
   };
 }
@@ -241,9 +263,11 @@ export function samplePlan(): PlanInput {
 export const DEMO_PASSWORD = "Demo2026!";
 
 export const DEMO_ACCOUNTS = [
-  { username: "huang", name: "黄", role: "od" as const, departmentIds: [] as string[], blurb: "OD / HRBP · 全公司" },
-  { username: "zhao", name: "赵一", role: "leader" as const, departmentIds: [DEPT.plat], blurb: "业务负责人 · 平台部" },
-  { username: "fan", name: "范四十", role: "leader" as const, departmentIds: [DEPT.prod1], blurb: "业务负责人 · 产品研发一部" },
+  { username: "huang", name: "黄", role: "od" as const, departmentIds: [] as string[], blurb: "OD · 全公司" },
+  { username: "zhao", name: "赵一", role: "leader" as const, departmentIds: [DEPT.plat], blurb: "业务负责人 · 平台部（多个部门）" },
+  { username: "qian", name: "钱二", role: "leader" as const, departmentIds: [DEPT.infra], blurb: "业务负责人 · 基础架构组（单个部门）" },
+  { username: "fan", name: "范四十", role: "leader" as const, departmentIds: [DEPT.prod1], blurb: "业务负责人 · 产品研发一部（单个部门）" },
+  { username: "lin", name: "林", role: "hrbp" as const, departmentIds: [DEPT.prod1], blurb: "HRBP · 只看产品研发一部" },
   { username: "hradmin", name: "韩管理", role: "hr_admin" as const, departmentIds: [] as string[], blurb: "HR 管理员 · 精确估算开关" },
   { username: "admin", name: "系统管理员", role: "sys_admin" as const, departmentIds: [] as string[], blurb: "系统管理员 · 账号与日志" },
 ];

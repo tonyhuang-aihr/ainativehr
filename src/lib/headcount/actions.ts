@@ -72,8 +72,10 @@ export async function gradeAction(formData: FormData) {
   if (!user || !can(user, "editConfig")) notice("/headcount/login", "需要登录");
   const grade = String(formData.get("grade") ?? "").trim();
   const amount = Number(formData.get("amount") ?? "");
-  if (!grade || !Number.isFinite(amount)) notice("/headcount/import", "职级成本没有写成数字");
-  await setGradeAnnual(await getDb(), grade, Math.round(amount), user.id, user.name);
+  const monthlyRaw = String(formData.get("monthly") ?? "").trim();
+  const monthly = monthlyRaw === "" ? null : Number(monthlyRaw);
+  if (!grade || !Number.isFinite(amount) || (monthly != null && !Number.isFinite(monthly))) notice("/headcount/import", "职级成本没有写成数字");
+  await setGradeAnnual(await getDb(), grade, Math.round(amount), user.id, user.name, monthly == null ? null : Math.round(monthly));
   notice("/headcount/import", "职级成本已保存");
 }
 
@@ -119,7 +121,7 @@ export async function createUserAction(formData: FormData) {
   const user = await currentUser();
   if (!user || !can(user, "manageUsers")) notice("/headcount/admin", "只有系统管理员可以建账号");
   const role = String(formData.get("role") ?? "") as HeadcountRole;
-  if (role !== "od" && role !== "leader" && role !== "hr_admin" && role !== "sys_admin") notice("/headcount/admin", "角色不对");
+  if (role !== "od" && role !== "hrbp" && role !== "leader" && role !== "hr_admin" && role !== "sys_admin") notice("/headcount/admin", "角色不对");
   const issue = await createAccount(
     await getDb(),
     {
