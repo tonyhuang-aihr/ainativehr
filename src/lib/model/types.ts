@@ -181,6 +181,12 @@ export type AppSettings = {
   revealPay?: boolean;
 };
 
+export type ScenarioRevision = {
+  name: string;
+  savedAt: string;
+  snapshot: OrgSnapshot;
+};
+
 export type Scenario = {
   id: string;
   name: string;
@@ -188,6 +194,9 @@ export type Scenario = {
   snapshot: OrgSnapshot;
   decompositions: Record<string, RoleDecomposition>;
   ignoredCodes: RuleCode[];
+  /** 这份快照的保存时间。导入时和 revisions 一起比，取最新一份。 */
+  savedAt?: string;
+  revisions?: ScenarioRevision[];
 };
 
 export type AuditEntry = {

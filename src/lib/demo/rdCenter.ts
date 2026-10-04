@@ -13,6 +13,7 @@ export const RD_DEPT = {
   quality: "D-QA",
   intelligence: "D-AI",
   dataGroup: "D-DATA",
+  metric: "D-METRIC",
   appCell: "D-APP",
 } as const;
 
@@ -35,6 +36,7 @@ const DPLAT = ["研发中心", "平台部", "数据平台组"];
 const QA = ["研发中心", "质量与交付部"];
 const AI = ["研发中心", "数据智能部"];
 const DATA = ["研发中心", "数据智能部", "数据组"];
+const METRIC = ["研发中心", "数据智能部", "指标组"];
 const APP = ["研发中心", "产品研发一部", "应用分析小组"];
 
 export const APP_CELL_NAME = "应用分析小组";
@@ -119,7 +121,7 @@ function rangeFillers(prefix: string, start: number, count: number, title: strin
   });
 }
 
-function departments(plan: boolean): Department[] {
+function departments(plan: boolean, split = false, metricHeadId = JIANG.id): Department[] {
   const rows: Array<[string, string, string[], string | null, string]> = [
     [RD_DEPT.center, "研发中心", CENTER, null, CTO.id],
     [RD_DEPT.product1, "产品研发一部", P1, RD_DEPT.center, SU.id],
@@ -132,6 +134,7 @@ function departments(plan: boolean): Department[] {
     [RD_DEPT.dataGroup, "数据组", DATA, RD_DEPT.intelligence, JIANG.id],
   ];
   if (!plan) rows.push([RD_DEPT.appCell, APP_CELL_NAME, APP, RD_DEPT.product1, APP_MEMBERS[0].id]);
+  if (plan && split) rows.push([RD_DEPT.metric, "指标组", METRIC, RD_DEPT.intelligence, metricHeadId]);
   return rows.map(([id, name, path, parentId, headId]) => ({ id, name, path, parentId, headId }));
 }
 
@@ -192,12 +195,29 @@ function roleSlots(plan: boolean): Map<string, Slot[]> {
   return grouped;
 }
 
-/** 方案 A 把应用分析岗并进来之后，数据组组长的直接下级是 12。基线停在上限上，不触发过宽。 */
-function dataGroupPeople(plan: boolean, grouped: Map<string, Slot[]>): Person[] {
+/** 拆组前：应用分析岗并入后，数据组组长直接下级是 12。基线停在上限上。拆组后组长和指标组各 6 人。 */
+function dataGroupPeople(plan: boolean, grouped: Map<string, Slot[]>, split = false): Person[] {
   const leads = grouped.get("数据组组长") ?? [];
   const head = leads[0];
   const subleads = leads.slice(1);
   const ics = [...(grouped.get("数据开发工程师") ?? []), ...(grouped.get("数据治理工程师") ?? []), ...(grouped.get("应用分析岗") ?? [])];
+  if (plan && split && subleads[0]) {
+    const metricLead = subleads[0];
+    const staying = subleads.slice(1);
+    const stayIcCount = Math.max(0, 6 - staying.length - 1);
+    const stayIcs = ics.slice(0, stayIcCount);
+    const metricIcs = ics.slice(stayIcCount, stayIcCount + 6);
+    const rest = ics.slice(stayIcCount + 6);
+    const people = [person(head, DATA, CTO.id, CTO.name)];
+    for (const slot of [...staying, ...stayIcs]) people.push(person(slot, DATA, head.id, head.name));
+    people.push(person(metricLead, METRIC, head.id, head.name));
+    for (const slot of metricIcs) people.push(person(slot, METRIC, metricLead.id, metricLead.name));
+    rest.forEach((slot, index) => {
+      const manager = staying[index % Math.max(1, staying.length)] ?? head;
+      people.push(person(slot, DATA, manager.id, manager.name));
+    });
+    return people;
+  }
   const directIcCount = plan ? Math.max(0, 12 - subleads.length) : Math.min(5, ics.length);
   const directIcs = ics.slice(0, directIcCount);
   const indirect = ics.slice(directIcCount);
@@ -210,6 +230,10 @@ function dataGroupPeople(plan: boolean, grouped: Map<string, Slot[]>): Person[] 
   return people;
 }
 
+function metricLeadId(): string {
+  return roleSlots(true).get("数据组组长")?.[1]?.id ?? JIANG.id;
+}
+
 function restIntelligencePeople(grouped: Map<string, Slot[]>): Person[] {
   const slots = ["算法工程师", "数据产品经理", "分析工程师", "数据运营", "平台分析师"].flatMap((title) => grouped.get(title) ?? []);
   const lead = slots.find((slot) => slot.id === INTEL_LEAD.id) ?? slots[0];
@@ -218,9 +242,9 @@ function restIntelligencePeople(grouped: Map<string, Slot[]>): Person[] {
   );
 }
 
-function intelligencePeople(plan: boolean): Person[] {
+function intelligencePeople(plan: boolean, split = false): Person[] {
   const grouped = roleSlots(plan);
-  return [...dataGroupPeople(plan, grouped), ...restIntelligencePeople(grouped)];
+  return [...dataGroupPeople(plan, grouped, split), ...restIntelligencePeople(grouped)];
 }
 
 function appCellPeople(): Person[] {
@@ -237,7 +261,7 @@ function flatTeam(head: Slot, path: string[], count: number, title: string, idSt
   ];
 }
 
-function snapshotPeople(plan: boolean): Person[] {
+function snapshotPeople(plan: boolean, split = false): Person[] {
   const product1 = flatTeam(SU, P1, plan ? 144 : 146, "产品研发工程师", 21001, plan ? [] : [CHEN, CHU]);
   const product2 = flatTeam(HE, P2, 131, "产品研发工程师", 22001);
   const quality = flatTeam(ZHENG, QA, 77, "测试工程师", 23001);
@@ -248,7 +272,7 @@ function snapshotPeople(plan: boolean): Person[] {
     ...product2,
     ...platformPeople(plan),
     ...quality,
-    ...intelligencePeople(plan),
+    ...intelligencePeople(plan, split),
   ];
 }
 
@@ -392,9 +416,13 @@ export function appCellMergeLead(baseline: OrgSnapshot, current: OrgSnapshot): s
 
 export function buildRdCenterWorkspace(importedAt = new Date().toISOString()): Workspace {
   const baselinePeople = snapshotPeople(false);
-  const planPeople = snapshotPeople(true);
+  const priorPeople = snapshotPeople(true, false);
+  const splitPeople = snapshotPeople(true, true);
   const baselineDepts = departments(false);
-  const planDepts = departments(true);
+  const priorDepts = departments(true, false);
+  const splitDepts = departments(true, true, metricLeadId());
+  const savedAt = importedAt;
+  const priorAt = new Date(Date.parse(importedAt) - 86_400_000).toISOString();
   const workspace = createWorkspace(
     { people: baselinePeople, departments: baselineDepts },
     {
@@ -422,9 +450,11 @@ export function buildRdCenterWorkspace(importedAt = new Date().toISOString()): W
       if (scenario.id === "scenario-a") {
         return {
           ...scenario,
-          snapshot: { people: planPeople, departments: planDepts },
+          savedAt,
+          snapshot: { people: splitPeople, departments: splitDepts },
           decompositions,
           ignoredCodes: [...planIgnored],
+          revisions: [{ name: "方案 A · 拆组前", savedAt: priorAt, snapshot: { people: priorPeople, departments: priorDepts } }],
         };
       }
       return { ...scenario, ignoredCodes: [...quiet] };
