@@ -8,7 +8,8 @@ import {
   toggleScenarioAction,
 } from "@/lib/headcount/actions";
 import { ScenarioFileField } from "@/components/headcount/scenario-file-field";
-import { COMPARE_SCROLL_HINT } from "@/lib/headcount/copy";
+import { InfoMark } from "@/components/headcount/info-mark";
+import { COMPARE_SCROLL_HINT, SCENARIO_TOTAL_NOTE, TIMELINE_CHANGE_NOTE } from "@/lib/headcount/copy";
 import type { ScenarioBoard } from "@/lib/headcount/scenarioView";
 
 const field = "w-full rounded-xl border border-line px-3 py-2";
@@ -38,7 +39,10 @@ export function ScenarioBoardView({ board, notice }: { board: ScenarioBoard; not
 
       <section className="grid gap-6 rounded-2xl border border-line bg-white p-6 lg:grid-cols-[1fr_280px]">
         <div>
-          <p className="text-xs text-[#7C3AED]">AI 生成 · 依据可查</p>
+          <p className="text-xs text-[#7C3AED]">
+            AI 生成 · 依据可查
+            <InfoMark note={SCENARIO_TOTAL_NOTE} />
+          </p>
           <p className="mt-3 text-base leading-8">{board.hero}</p>
           <p className="mt-4 text-xs text-muted">一次性费用（经济补偿、Agent 实施 / 培训）按公司统一管理计入总成本，不摊到部门</p>
         </div>
@@ -112,15 +116,15 @@ export function ScenarioBoardView({ board, notice }: { board: ScenarioBoard; not
           </table>
         </div>
       </section>
-      <aside id="health-checks" className="overflow-hidden rounded-2xl border border-line bg-white">
+      <aside id="health-checks" className="min-w-0 overflow-hidden rounded-2xl border border-line bg-white">
         <h2 className="px-4 py-3 text-sm font-semibold">体检 · {board.health.length} 个场景 · {board.health[0]?.cells.length ?? 0} 项</h2>
         <div className="overflow-x-auto border-t border-line">
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[640px] border-separate border-spacing-0 whitespace-nowrap text-sm">
             <thead>
               <tr className="text-left text-muted">
-                <th className="px-3 py-2 font-medium" />
+                <th className={`border-b border-line px-3 py-2 font-medium ${sticky}`} />
                 {board.health.map((row) => (
-                  <th key={row.id} className="px-3 py-2 font-medium">
+                  <th key={row.id} className="border-b border-line px-3 py-2 font-medium">
                     {healthShort(row.name)}
                   </th>
                 ))}
@@ -128,12 +132,12 @@ export function ScenarioBoardView({ board, notice }: { board: ScenarioBoard; not
             </thead>
             <tbody>
               {board.health[0]?.cells.map((cell, index) => (
-                <tr key={cell.title} className="border-t border-line">
-                  <td className="px-3 py-2 text-muted">{cell.title}</td>
+                <tr key={cell.title}>
+                  <td className={`border-b border-line px-3 py-2 text-muted ${sticky}`}>{cell.title}</td>
                   {board.health.map((row) => {
                     const item = row.cells[index];
                     return (
-                      <td key={row.id} className={`px-3 py-2 ${item?.tone === "warn" ? "text-[#DC2626]" : ""} ${item?.tone === "compliance" ? "text-[#92400E]" : ""} ${item?.tone === "muted" ? "text-muted" : ""}`}>
+                      <td key={row.id} className={`border-b border-line px-3 py-2 ${item?.tone === "warn" ? "text-[#DC2626]" : ""} ${item?.tone === "compliance" ? "text-[#92400E]" : ""} ${item?.tone === "muted" ? "text-muted" : ""}`}>
                         {item?.text}
                       </td>
                     );
@@ -155,17 +159,10 @@ export function ScenarioBoardView({ board, notice }: { board: ScenarioBoard; not
               <b>{board.timelineTitle}</b>
               <span className="text-muted">{board.timelineSummary}</span>
             </span>
-            <span className="mt-1 block text-xs text-muted">{board.timelineCaption}</span>
-            {board.timelineLabels.length ? (
-              <span className="mt-2 block text-sm text-ink">
-                {board.timelineLabels.map((label) => (
-                  <span key={label} className="mr-3 inline-block">
-                    {label}
-                  </span>
-                ))}
-              </span>
-            ) : null}
-            <span className="mt-1 block text-xs text-muted">{board.timelineChangeNote}</span>
+            <span className="mt-1 block text-xs text-muted">
+              {board.timelineCaption}
+              <InfoMark note={TIMELINE_CHANGE_NOTE} />
+            </span>
           </summary>
           <div className="overflow-x-auto border-t border-line">
             <table className="w-full min-w-[680px] border-collapse text-sm">

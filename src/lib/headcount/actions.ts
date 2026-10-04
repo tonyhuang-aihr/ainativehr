@@ -7,6 +7,7 @@ import { signIn, signOut } from "@/auth";
 import { can, type HeadcountRole } from "@/lib/headcount/authz";
 import { parseBudgetBatch, parseQuotaBatch } from "@/lib/headcount/configBatch";
 import { getDb } from "@/lib/headcount/db/client";
+import { scopeFor } from "@/lib/headcount/db/present";
 import { loadPlan } from "@/lib/headcount/db/queries";
 import { loadScenarioDefinitions, saveScenarioDefinition } from "@/lib/headcount/db/scenarios";
 import { computePlan } from "@/lib/headcount/engine";
@@ -15,6 +16,7 @@ import { parseScenarioFile } from "@/lib/data/scenarioFile";
 import { buildRdCenterWorkspace } from "@/lib/demo/rdCenter";
 import { scenarioFromSandbox } from "@/lib/headcount/sandboxImport";
 import { defaultAssumptions, type ScenarioAssumptions, type ScenarioDefinition } from "@/lib/headcount/scenario";
+import { scenarioFitsScope, seesCompany } from "@/lib/headcount/scopeGuard";
 import { assumptionUnits, copyScenario, quarterDate, resolvePrefill, setCompared } from "@/lib/headcount/scenarioView";
 import {
   bindAccount,
@@ -234,6 +236,17 @@ async function scenarioActor() {
   return user;
 }
 
+async function scenarioScope(user: { id: string; role: HeadcountRole; departmentIds: string[] }) {
+  const scoped = await scopeFor(user);
+  const companyWide = seesCompany(user);
+  const allowed = new Set(scoped.departments.filter((department) => scoped.visible.includes(department.id)).map((department) => department.name));
+  return { ...scoped, companyWide, allowed, names: scoped.departments.map((department) => department.name) };
+}
+
+function visibleDefinitions(definitions: ScenarioDefinition[], scope: Awaited<ReturnType<typeof scenarioScope>>) {
+  return definitions.filter((definition) => scenarioFitsScope(definition, scope.allowed, scope.names, scope.companyWide));
+}
+
 function quarterValue(value: FormDataEntryValue | null): 1 | 2 | 3 | 4 {
   const quarter = Number(value ?? 2);
   if (quarter === 1 || quarter === 2 || quarter === 3 || quarter === 4) return quarter;
@@ -243,9 +256,10 @@ function quarterValue(value: FormDataEntryValue | null): 1 | 2 | 3 | 4 {
 export async function copyScenarioAction(formData: FormData) {
   const user = await scenarioActor();
   const db = await getDb();
-  const definitions = await loadScenarioDefinitions(db);
+  const scope = await scenarioScope(user);
+  const definitions = visibleDefinitions(await loadScenarioDefinitions(db), scope);
   const copy = copyScenario(definitions, String(formData.get("id") ?? ""), `copy-${Date.now()}`);
-  if (!copy) scenarioNotice("没有这个场景");
+  if (!copy || !scenarioFitsScope(copy, scope.allowed, scope.names, scope.companyWide)) scenarioNotice("无权查看");
   await saveScenarioDefinition(db, copy);
   await recordOperation(db, user.id, user.name, "复制场景", copy.name);
   scenarioNotice(`已复制为${copy.name}`, copy.id);
@@ -254,12 +268,12 @@ export async function copyScenarioAction(formData: FormData) {
 export async function toggleScenarioAction(formData: FormData) {
   const user = await scenarioActor();
   const db = await getDb();
-  const definitions = await loadScenarioDefinitions(db);
+  const definitions = visibleDefinitions(await loadScenarioDefinitions(db), await scenarioScope(user));
   const id = String(formData.get("id") ?? "");
   const next = setCompared(definitions, id, formData.get("compared") === "on");
   if (next.error) scenarioNotice(next.error, id);
   const updated = next.definitions.find((item) => item.id === id);
-  if (!updated) scenarioNotice("没有这个场景");
+  if (!updated) scenarioNotice("无权查看");
   await saveScenarioDefinition(db, updated);
   await recordOperation(db, user.id, user.name, "场景对比", `${updated.name} ${updated.compared ? "加入" : "移出"}`);
   scenarioNotice(updated.compared ? `${updated.name}已加入对比` : `${updated.name}已移出对比`, id);
@@ -268,10 +282,10 @@ export async function toggleScenarioAction(formData: FormData) {
 export async function saveAssumptionsAction(formData: FormData) {
   const user = await scenarioActor();
   const db = await getDb();
-  const definitions = await loadScenarioDefinitions(db);
+  const definitions = visibleDefinitions(await loadScenarioDefinitions(db), await scenarioScope(user));
   const id = String(formData.get("id") ?? "");
   const current = definitions.find((item) => item.id === id);
-  if (!current) scenarioNotice("没有这个场景");
+  if (!current) scenarioNotice("无权查看");
   const attrition = Number(formData.get("attrition") ?? "");
   const cycle = Number(formData.get("cycle") ?? "");
   const raise = Number(formData.get("raise") ?? "");
@@ -294,10 +308,11 @@ export async function saveAssumptionsAction(formData: FormData) {
 export async function addScenarioChangeAction(formData: FormData) {
   const user = await scenarioActor();
   const db = await getDb();
-  const definitions = await loadScenarioDefinitions(db);
+  const scope = await scenarioScope(user);
+  const definitions = visibleDefinitions(await loadScenarioDefinitions(db), scope);
   const id = String(formData.get("id") ?? "");
   const current = definitions.find((item) => item.id === id);
-  if (!current) scenarioNotice("没有这个场景");
+  if (!current) scenarioNotice("无权查看");
   const kind = String(formData.get("kind") ?? "");
   const count = Number(formData.get("count") ?? "");
   const effectiveDate = quarterDate(quarterValue(formData.get("quarter")));
@@ -325,6 +340,7 @@ export async function addScenarioChangeAction(formData: FormData) {
       groupSize: count,
     });
   } else scenarioNotice("变动类型不对", id);
+  if (!scenarioFitsScope(next, scope.allowed, scope.names, scope.companyWide)) scenarioNotice("无权查看");
   await saveScenarioDefinition(db, next);
   await recordOperation(db, user.id, user.name, "按季调整场景", `${current.name} ${kind} ${effectiveDate}`);
   scenarioNotice("这一季的变动已记入场景", id);
@@ -343,6 +359,8 @@ async function storeImported(user: { id: string; name: string }, definition: Sce
 export async function importSampleSandboxAction(formData: FormData) {
   const user = await scenarioActor();
   const definition = scenarioFromSandbox(buildRdCenterWorkspace(), quarterValue(formData.get("quarter")));
+  const scope = await scenarioScope(user);
+  if (!scenarioFitsScope(definition, scope.allowed, scope.names, scope.companyWide)) scenarioNotice("无权查看");
   await storeImported(user, definition);
 }
 
@@ -352,17 +370,21 @@ export async function importSandboxFileAction(formData: FormData) {
   if (!(file instanceof File) || file.size === 0) scenarioNotice("请选择沙盘导出的方案文件");
   const workspace = parseScenarioFile(await file.text());
   if (!workspace) scenarioNotice("这不是沙盘导出的方案文件");
-  await storeImported(user, scenarioFromSandbox(workspace, quarterValue(formData.get("quarter"))));
+  const definition = scenarioFromSandbox(workspace, quarterValue(formData.get("quarter")));
+  const scope = await scenarioScope(user);
+  if (!scenarioFitsScope(definition, scope.allowed, scope.names, scope.companyWide)) scenarioNotice("无权查看");
+  await storeImported(user, definition);
 }
 
 export async function prefillAssumptionsAction(formData: FormData) {
   const user = await scenarioActor();
   const db = await getDb();
+  const scope = await scenarioScope(user);
   const id = String(formData.get("id") ?? "");
-  const definitions = await loadScenarioDefinitions(db);
+  const definitions = visibleDefinitions(await loadScenarioDefinitions(db), scope);
   const current = definitions.find((item) => item.id === id);
-  if (!current) scenarioNotice("没有这个场景");
-  const plan = await loadPlan(db, { departmentIds: null, sensitive: true });
+  if (!current) scenarioNotice("无权查看");
+  const plan = await loadPlan(db, { departmentIds: scope.companyWide ? null : scope.visible, sensitive: can(user, "viewOneOff") });
   const units = assumptionUnits(computePlan(plan));
   const resolved = await resolvePrefill(units, modelConfigured() ? askHeadcountModel : null);
   await saveScenarioDefinition(db, { ...current, assumptions: resolved.assumptions, assumptionOrigin: resolved.origin });

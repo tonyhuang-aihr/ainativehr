@@ -315,10 +315,7 @@ export function buildScopeOverview(result: PlanResult, rootId: string, audience:
   const quarterRollup = company ? companyQuarterRollup(stat) : null;
   if (quarterRollup) {
     const yearCard = cards.find((card) => card.label.startsWith("全年"));
-    if (yearCard) {
-      yearCard.roundingNote = quarterRollup.note;
-      yearCard.extra = quarterRollup.label;
-    }
+    if (yearCard) yearCard.extra = quarterRollup.label;
   }
 
   return {

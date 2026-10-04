@@ -42,6 +42,7 @@ export type LeaderView = {
   transitNote: string | null;
   showDepartment: boolean;
   showMarks: boolean;
+  copyAudience: "od" | "leader";
   openSection: "people" | "agents" | null;
   listBase: string;
   options: { id: string; name: string }[];
@@ -144,6 +145,7 @@ export function buildLeaderView(
     detail?: DetailQuery;
     showMarks?: boolean;
     companyScope?: boolean;
+    copyAudience?: "od" | "leader";
     conclusionText?: string;
     conclusionOrigin?: LeaderView["conclusion"]["origin"];
   },
@@ -241,6 +243,7 @@ export function buildLeaderView(
     transitNote,
     showDepartment: new Set(personLines.map((line) => line.departmentName)).size > 1,
     showMarks,
+    copyAudience: options.copyAudience ?? "leader",
     openSection: detail.open,
     listBase: options.listBase ?? `/headcount/leader?dept=${departmentId}`,
     options: result.plan.departments.filter((department) => ids.has(department.id)).map((department) => ({ id: department.id, name: department.name })),

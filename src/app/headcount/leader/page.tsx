@@ -2,8 +2,9 @@ import { LeaderBoard } from "@/components/headcount/leader-board";
 import { ScopeOverviewBoard } from "@/components/headcount/scope-overview";
 import { openLeader } from "@/lib/headcount/db/present";
 import { detailQueryFromSearch } from "@/lib/headcount/rosterPage";
+import { ScopeDenied } from "@/lib/headcount/scopeGuard";
 import { currentUser } from "@/lib/headcount/session";
-import { redirect } from "next/navigation";
+import { forbidden, redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,8 @@ export default async function LeaderPage({
   let screen;
   try {
     screen = await openLeader(user, query.dept, detail);
-  } catch {
+  } catch (error) {
+    if (error instanceof ScopeDenied) forbidden();
     screen = await openLeader(user, undefined, detail);
   }
   if (screen.kind === "overview") {

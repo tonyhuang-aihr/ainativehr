@@ -43,6 +43,7 @@ describe("OD 总览告警和部门页", () => {
     expect(overview.cards.find((card) => card.label.startsWith("全年"))?.extra).toBe(
       "Q1 3,975.0 · Q2 4,013.0 · Q3 4,053.5 · Q4 4,053.5 万 · 含一次性",
     );
+    expect(overview.cards.find((card) => card.label.startsWith("全年"))?.roundingNote ?? null).toBeNull();
     expect(overview.total?.roundingNote).toBe("各项分别取整到 0.5 万，合计按未取整金额加总后再取整，可能差 0.5 万。");
     expect(overview.total?.annual).toBe("16,095.5");
     expect(overview.listTotal).toMatchObject({ label: "部门合计", quota: 507, onBoard: 486, inTransit: 11, vacancy: 10, annual: "16,071.0", budget: "15,970.0", gap: "+101.0" });

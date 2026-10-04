@@ -4,7 +4,7 @@ import { conclusionFacts, directChildFacts, modelUnits, type ModelUnit } from "@
 import { deptStat, type PlanResult } from "@/lib/headcount/engine";
 import { TIMELINE_CHANGE_NOTE } from "@/lib/headcount/copy";
 import { formatWan, roundToHalfWan } from "@/lib/headcount/money";
-import { defaultAssumptions, evaluateBaseline, evaluateScenario, quarterChangeLabels, scenarioCutSeverance, type ScenarioAssumptions, type ScenarioDefinition, type ScenarioResult } from "@/lib/headcount/scenario";
+import { costRootId, defaultAssumptions, evaluateBaseline, evaluateScenario, quarterChangeLabels, scenarioCutSeverance, type ScenarioAssumptions, type ScenarioDefinition, type ScenarioResult } from "@/lib/headcount/scenario";
 
 export const DEFAULT_PREFILL_NOTE = "没有配置模型，使用默认值：离职率 8%，招聘周期 60 天，调薪率 0%，AI 替代比例沿用沙盘拆解。N+1 默认不计入。";
 export const TIMELINE_EFFECTIVE_CAPTION = "按季初生效";
@@ -135,7 +135,7 @@ export async function resolvePrefill(
 }
 
 function rootId(result: PlanResult): string {
-  return result.plan.departments.find((department) => !department.parentId)?.id ?? "rd";
+  return costRootId(result);
 }
 
 function quarterOf(year: number, iso: string): number {
@@ -184,6 +184,12 @@ function gapLabel(totalYuan: number, budgetYuan: number): { over: boolean; text:
   return { over: false, text: `结余 ${amount}`, amount };
 }
 
+/** 方案名以字母或数字结尾、后面接中文时补一个空格。以中文结尾的名字保持紧挨。 */
+export function phraseAfterName(name: string, rest: string): string {
+  const space = /[A-Za-z0-9]$/.test(name) && /^[\u3400-\u9fff]/.test(rest);
+  return space ? `${name} ${rest}` : `${name}${rest}`;
+}
+
 export function heroSentence(result: PlanResult, compared: ScenarioResult[]): string {
   const budgetYuan = result.plan.companyBudget;
   const year = result.plan.year;
@@ -193,7 +199,7 @@ export function heroSentence(result: PlanResult, compared: ScenarioResult[]): st
   const lowestGap = gapLabel(lowest.totalYuan, budgetYuan);
   const lowestRatio = lowest.definition.ratio === "未拆解" ? "人 : AI 未拆解" : `人 : AI 为 ${lowest.definition.ratio}`;
   const span = lowest.definition.spanAlert ? `，但${lowest.definition.spanAlert.department}管理幅度 ${lowest.definition.spanAlert.span} 超过建议值 ${lowest.definition.spanAlert.limit}` : "";
-  const bits = [`${lowest.definition.name}成本最低（${formatWan(lowest.totalYuan)} 万），比预算总包${lowestGap.text} 万，${lowestRatio}${span}`];
+  const bits = [`${phraseAfterName(lowest.definition.name, "成本最低")}（${formatWan(lowest.totalYuan)} 万），比预算总包${lowestGap.text} 万，${lowestRatio}${span}`];
   const rest = ranked.filter((item) => item.definition.id !== lowest.definition.id);
   for (const item of rest) {
     const gap = gapLabel(item.totalYuan, budgetYuan);
@@ -202,11 +208,11 @@ export function heroSentence(result: PlanResult, compared: ScenarioResult[]): st
       const severance = item.definition.cuts.reduce((total, cut) => total + scenarioCutSeverance(result, cut, item.definition.assumptions.noticePay), 0);
       const quarter = quarterOf(year, item.definition.cuts[0].effectiveDate);
       const ratio = item.definition.ratio === "未拆解" ? "人 : AI 未拆解" : `人 : AI 为 ${item.definition.ratio}`;
-      bits.push(`${item.definition.name}${gap.text} 万，但要在 Q${quarter} 减员 ${cutCount} 人、产生 ${formatWan(severance)} 万经济补偿，${ratio}`);
+      bits.push(`${phraseAfterName(item.definition.name, gap.text)} 万，但要在 Q${quarter} 减员 ${cutCount} 人、产生 ${formatWan(severance)} 万经济补偿，${ratio}`);
       continue;
     }
-    if (gap.over) bits.push(`${item.definition.name}超预算总包 ${gap.amount} 万`);
-    else bits.push(`${item.definition.name}${gap.text} 万，人 : AI 为 ${item.definition.ratio}`);
+    if (gap.over) bits.push(phraseAfterName(item.definition.name, `超预算总包 ${gap.amount} 万`));
+    else bits.push(`${phraseAfterName(item.definition.name, gap.text)} 万，人 : AI 为 ${item.definition.ratio}`);
   }
   return `对比的 ${compared.length} 个场景中，${bits.join("；")}。`;
 }

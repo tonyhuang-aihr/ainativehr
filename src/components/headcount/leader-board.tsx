@@ -2,9 +2,9 @@
 
 import { InfoMark } from "@/components/headcount/info-mark";
 import { RoundingMark } from "@/components/headcount/rounding-mark";
-import { AGENT_COST_NOTE, AGENT_COST_NOTE_OD, AGENT_STATUS_NOTE, AGENT_STATUS_NOTE_OD, COMP_MARK_NOTE, EMPLOYMENT_NOTE, PERSON_COST_HEADER, PERSON_COST_NOTE, PERSON_COST_NOTE_OD, PERSON_IMPACT_NOTE, PERSON_IMPACT_NOTE_OD, PERSON_SORT_NOTE, PERSON_STATUS_NOTE, PERSON_STATUS_NOTE_OD, SEAT_NOTE, TRANSIT_SUM_NOTE, YEAR_FORECAST_LEADER } from "@/lib/headcount/copy";
+import { COMP_MARK_NOTE, forecastHeroNote, PERSON_COST_HEADER, rosterFieldNote, stepCardNote } from "@/lib/headcount/copy";
 import type { LeaderView } from "@/lib/headcount/leaderView";
-import { AGENT_TRANSIT, EMPLOYMENT_TYPES, PERSON_TRANSIT, detailHref } from "@/lib/headcount/rosterPage";
+import { AGENT_TRANSIT, detailHref, EMPLOYMENT_TYPES, peopleRosterSummary, PERSON_TRANSIT } from "@/lib/headcount/rosterPage";
 
 const PEOPLE_CHIPS = ["全部", "在岗无变动", "在途", "待入职", "待转入", "待离职", "待转出"] as const;
 const AGENT_CHIPS = ["全部", "在用无变动", "在途", "待新增", "待扩容或调整", "待下线"] as const;
@@ -78,7 +78,7 @@ export function LeaderBoard({ view, variant = "full" }: { view: LeaderView; vari
           <div>
             <p className="text-sm text-muted">
               全年预计
-              <InfoMark note={YEAR_FORECAST_LEADER} />
+              <InfoMark note={forecastHeroNote(view.copyAudience)} />
             </p>
             <p className="text-4xl font-semibold tracking-tight">{view.annualLabel} 万</p>
           </div>
@@ -92,7 +92,10 @@ export function LeaderBoard({ view, variant = "full" }: { view: LeaderView; vari
 
       <section className="grid gap-3 md:grid-cols-3">
         <article className="rounded-2xl border border-line bg-white p-4">
-          <p className="text-sm text-muted">① 现在</p>
+          <p className="text-sm text-muted">
+            ① 现在
+            <InfoMark note={stepCardNote(view.copyAudience, "当前成本（年化）")} />
+          </p>
           <p className="mt-2 text-xl font-semibold">{view.now.currentLabel} 万</p>
           <p className="mt-2 text-sm text-muted">
             在岗 {view.now.people} 人 · Agent {view.now.agents}
@@ -100,7 +103,10 @@ export function LeaderBoard({ view, variant = "full" }: { view: LeaderView; vari
           <p className="text-sm text-muted">{view.now.quotaLine}</p>
         </article>
         <article className="rounded-2xl border border-line bg-white p-4">
-          <p className="text-sm text-muted">② 接下来会变</p>
+          <p className="text-sm text-muted">
+            ② 接下来会变
+            <InfoMark note={stepCardNote(view.copyAudience, "接下来会变")} />
+          </p>
           <p className="mt-2 text-xl font-semibold">{view.next.netLabel} 万</p>
           {view.drivers.map((line) => (
             <p key={line.detail} className="mt-2 text-sm text-muted">
@@ -117,7 +123,10 @@ export function LeaderBoard({ view, variant = "full" }: { view: LeaderView; vari
           </p>
         </article>
         <article className="rounded-2xl border border-line bg-white p-4">
-          <p className="text-sm text-muted">③ 年底预计</p>
+          <p className="text-sm text-muted">
+            ③ 年底预计
+            <InfoMark note={stepCardNote(view.copyAudience, "年底预计")} />
+          </p>
           <p className="mt-2 text-xl font-semibold">
             {view.yearEnd.annualLabel} 万
             {view.yearEnd.equation ? (
@@ -185,13 +194,7 @@ function QuarterSection({ view }: { view: LeaderView }) {
 }
 
 function peopleRosterLine(view: LeaderView): string {
-  const counts = view.people.counts;
-  const types = view.people.typeCounts;
-  const parts = PERSON_TRANSIT.filter((status) => counts[status] > 0).map((status) => `${status} ${counts[status]}`);
-  const typeText = EMPLOYMENT_TYPES.filter((type) => types[type] > 0).map((type) => `${type} ${types[type]}`).join(" · ");
-  const cost = view.exact ? "OD 看精确估算" : "成本为区间";
-  const mark = view.showMarks ? " · 补偿标记仅 OD / HR 可见" : "";
-  return `${counts.全部} 人 · 在岗 ${counts.在岗无变动} · 在途 ${counts.在途}${parts.length ? `（${parts.join(" · ")}）` : ""} · ${typeText} · ${cost}${mark}`;
+  return peopleRosterSummary(view.people, { exact: view.exact, showMarks: view.showMarks });
 }
 
 function agentRosterLine(view: LeaderView): string {
@@ -215,19 +218,19 @@ function PeopleSection({ view, hrefFor }: { view: LeaderView; hrefFor: (patch: R
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-sm text-muted">
               用工类型
-              <InfoMark note={EMPLOYMENT_NOTE} />
+              <InfoMark note={rosterFieldNote(view.copyAudience, "用工类型")} />
             </span>
             <ChipRow chips={TYPE_CHIPS} counts={page.typeCounts} current={page.types} transit={[]} hrefFor={(types) => hrefFor({ types: types.length ? types.join(",") : null, page: null, open: "people" })} />
           </div>
           <p className="text-xs text-muted">
             {page.sort === "effective" ? "按生效日排序" : "按汇报层级排序"}
-            <InfoMark note={PERSON_SORT_NOTE} />
+            <InfoMark note={rosterFieldNote(view.copyAudience, "人员排序")} />
           </p>
           {page.summary ? (
             <div className="text-sm">
               <p>
                 在途 {page.summary.count} 人 · 当季（Q1）合计 {page.summary.quarter} 万 · 全年合计 {page.summary.year} 万 · {page.summary.label}
-                <InfoMark note={TRANSIT_SUM_NOTE} />
+                <InfoMark note={rosterFieldNote(view.copyAudience, "在途合计")} />
               </p>
               {view.transitNote ? <p className="text-muted">{view.transitNote}</p> : null}
             </div>
@@ -243,7 +246,7 @@ function PeopleSection({ view, hrefFor }: { view: LeaderView; hrefFor: (patch: R
                   <th>用工类型</th>
                   <th>
                     状态 · 生效日
-                    <InfoMark note={view.showMarks ? PERSON_STATUS_NOTE_OD : PERSON_STATUS_NOTE} />
+                    <InfoMark note={rosterFieldNote(view.copyAudience, "状态 · 生效日")} />
                   </th>
                   {view.showMarks ? (
                     <th>
@@ -253,11 +256,11 @@ function PeopleSection({ view, hrefFor }: { view: LeaderView; hrefFor: (patch: R
                   ) : null}
                   <th>
                     {view.exact ? "全年成本估算" : PERSON_COST_HEADER}
-                    <InfoMark note={view.exact ? PERSON_COST_NOTE_OD : PERSON_COST_NOTE} />
+                    <InfoMark note={rosterFieldNote(view.copyAudience, "人员全年成本")} />
                   </th>
                   <th>
                     全年成本影响
-                    <InfoMark note={view.exact ? PERSON_IMPACT_NOTE_OD : PERSON_IMPACT_NOTE} />
+                    <InfoMark note={rosterFieldNote(view.copyAudience, "人员全年成本影响")} />
                   </th>
                 </tr>
               </thead>
@@ -322,16 +325,16 @@ function AgentSection({ view, hrefFor }: { view: LeaderView; hrefFor: (patch: Re
                   <th>实例数</th>
                   <th>
                     席位费
-                    <InfoMark note={SEAT_NOTE} />
+                    <InfoMark note={rosterFieldNote(view.copyAudience, "席位费")} />
                   </th>
                   <th>算力费</th>
                   <th>
                     状态 · 生效日
-                    <InfoMark note={view.showMarks ? AGENT_STATUS_NOTE_OD : AGENT_STATUS_NOTE} />
+                    <InfoMark note={rosterFieldNote(view.copyAudience, "Agent 状态 · 生效日")} />
                   </th>
                   <th>
                     全年成本
-                    <InfoMark note={view.exact ? AGENT_COST_NOTE_OD : AGENT_COST_NOTE} />
+                    <InfoMark note={rosterFieldNote(view.copyAudience, "Agent 全年成本")} />
                   </th>
                   <th>全年成本影响</th>
                 </tr>

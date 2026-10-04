@@ -3,6 +3,7 @@ import "server-only";
 import { resolveLlmConfig } from "@/lib/ai/llmConfig";
 import type { ChatTurn } from "@/lib/ai/desensitize";
 import { can, visibleDepartmentIds, type HeadcountUser } from "@/lib/headcount/authz";
+import { assertDepartmentVisible, ScopeDenied, seesCompany } from "@/lib/headcount/scopeGuard";
 import { chooseConclusion, conclusionFacts, directChildFacts } from "@/lib/headcount/conclusion";
 import { buildScopeOverview, maskPageCosts, pageKind, scopeHasSmallGroup, scopeRoots, type ScopeOverview } from "@/lib/headcount/overview";
 import { getDb } from "@/lib/headcount/db/client";
@@ -50,7 +51,7 @@ export async function openLeader(user: SessionUser, requestedId?: string, detail
   if (user.role === "sys_admin") throw new Error("无权查看");
   const { db, departments, visible } = await scopeFor(user);
   const requested = requestedId && visible.includes(requestedId) ? requestedId : null;
-  if (requestedId && !requested) throw new Error("部门不在授权范围");
+  if (requestedId && !requested) throw new ScopeDenied("部门不在授权范围");
   const roots = scopeRoots(departments, visible);
   const departmentId = requested ?? roots[0] ?? visible[0];
   if (!departmentId) throw new Error("没有可查看的部门");
@@ -66,6 +67,7 @@ export async function openLeader(user: SessionUser, requestedId?: string, detail
       exact: !ranges,
       maskCosts: ranges,
       showMarks: false,
+      copyAudience: "leader",
       companyScope: false,
       listBase: `/headcount/leader?dept=${departmentId}`,
       detail,
@@ -118,7 +120,8 @@ export async function openBaseline(user: HeadcountUser, detail?: DetailQuery) {
   const view = buildLeaderView(result, root, {
     exact: true,
     showMarks: can(user, "viewCompensation"),
-    companyScope: true,
+    copyAudience: "od",
+    companyScope: seesCompany(user),
     listBase: "/headcount/baseline",
     detail,
   });
@@ -128,7 +131,7 @@ export async function openBaseline(user: HeadcountUser, detail?: DetailQuery) {
 export async function openDepartment(user: HeadcountUser, departmentId: string, detail?: DetailQuery) {
   if (!can(user, "viewBusiness") || user.role === "leader") throw new Error("无权查看底座");
   const { db, visible, departments } = await scopeFor(user);
-  if (!visible.includes(departmentId)) throw new Error("部门不在授权范围");
+  assertDepartmentVisible(visible, departmentId);
   const plan = await loadPlan(db, { departmentIds: visible, sensitive: can(user, "viewOneOff") });
   const result = computePlan(plan);
   const facts = conclusionFacts(result, departmentId);
@@ -147,6 +150,7 @@ export async function openDepartment(user: HeadcountUser, departmentId: string, 
     exact: true,
     maskCosts: false,
     showMarks: can(user, "viewCompensation"),
+    copyAudience: "od",
     companyScope: false,
     backHref: "/headcount/baseline",
     listBase: `/headcount/baseline/${departmentId}`,

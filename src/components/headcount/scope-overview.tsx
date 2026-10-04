@@ -1,10 +1,15 @@
 import { InfoMark } from "@/components/headcount/info-mark";
-import { RoundingMark } from "@/components/headcount/rounding-mark";
-import { BUDGET_NOTE, DEPT_TOTAL_NOTE, GAP_NOTE, VACANCY_NOTE, VACANCY_TOTAL_NOTE, YEAR_FORECAST_LEADER_DEPT, YEAR_FORECAST_OD } from "@/lib/headcount/copy";
+import { alertRuleNote, BUDGET_NOTE, DEPT_TOTAL_NOTE, GAP_NOTE, GROUP_PRIVACY_NOTE, OD_TRANSIT_NOTE, overviewCardNote, VACANCY_NOTE, VACANCY_NOTE_LEADER, VACANCY_TOTAL_NOTE, YEAR_FORECAST_LEADER_DEPT, YEAR_FORECAST_OD } from "@/lib/headcount/copy";
 import { conclusionSourceLabel, type ScopeOverview } from "@/lib/headcount/overview";
 import Link from "next/link";
 
 const SEVERITY = { 高: "bg-[#FEE2E2] text-[#B91C1C]", 中: "bg-[#FEF3C7] text-[#92400E]", 低: "bg-[#F3F4F6] text-[#4B5563]" };
+
+function gapTone(gap: string): string {
+  if (gap.startsWith("+")) return "text-[#B91C1C]";
+  if (gap.startsWith("−") || gap.startsWith("-")) return "text-[#15803D]";
+  return "text-muted";
+}
 
 export function ScopeOverviewBoard({ overview }: { overview: ScopeOverview }) {
   return (
@@ -16,16 +21,21 @@ export function ScopeOverviewBoard({ overview }: { overview: ScopeOverview }) {
       <section className="rounded-3xl border border-line bg-white p-6 shadow-card">
         <p className="text-xs text-primary">{conclusionSourceLabel(overview.conclusionOrigin)}</p>
         <p className="mt-3 text-lg leading-8">{overview.conclusion}</p>
-        {overview.rangeNote ? <p className="mt-2 text-sm text-[#92400E]">{overview.rangeNote}</p> : null}
+        {overview.rangeNote ? (
+          <p className="mt-2 text-sm text-[#92400E]">
+            {overview.rangeNote}
+            {overview.audience === "leader" ? <InfoMark note={GROUP_PRIVACY_NOTE} /> : null}
+          </p>
+        ) : null}
       </section>
       <section className="grid gap-3 md:grid-cols-5">
         {overview.cards.map((card) => (
           <article key={card.label} className="rounded-2xl border border-line bg-white p-4">
-            <p className="text-sm text-muted">{card.label}</p>
-            <p className="mt-2 text-2xl font-semibold tracking-tight">
-              {card.value}
-              {card.roundingNote ? <RoundingMark note={card.roundingNote} /> : null}
+            <p className="text-sm text-muted">
+              {card.label}
+              {overviewCardNote(overview.audience, card.label) ? <InfoMark note={overviewCardNote(overview.audience, card.label)!} /> : null}
             </p>
+            <p className="mt-2 text-2xl font-semibold tracking-tight">{card.value}</p>
             <p className="mt-1 text-sm text-muted">{card.sub}</p>
             {card.extra ? <p className="mt-1 text-xs text-muted">{card.extra}</p> : null}
           </article>
@@ -33,7 +43,10 @@ export function ScopeOverviewBoard({ overview }: { overview: ScopeOverview }) {
       </section>
       <section className="overflow-hidden rounded-2xl border border-line bg-white">
         <div className="flex items-center justify-between border-b border-line px-4 py-3">
-          <h2 className="font-medium">异常部门提示</h2>
+          <h2 className="font-medium">
+            异常部门提示
+            <InfoMark note={alertRuleNote(overview.audience)} />
+          </h2>
           <p className="text-sm text-muted">
             {overview.alerts.length} 条 · 涉及 {new Set(overview.alerts.map((alert) => alert.title.split(" / ")[0])).size} 个部门
           </p>
@@ -63,10 +76,13 @@ export function ScopeOverviewBoard({ overview }: { overview: ScopeOverview }) {
               {overview.audience === "leader" ? <th>负责人</th> : null}
               <th>编制</th>
               <th>在岗</th>
-              <th>在途</th>
+              <th>
+                在途
+                {overview.audience === "od" ? <InfoMark note={OD_TRANSIT_NOTE} /> : null}
+              </th>
               <th>
                 空缺
-                <InfoMark note={VACANCY_NOTE} />
+                <InfoMark note={overview.audience === "od" ? VACANCY_NOTE : VACANCY_NOTE_LEADER} />
               </th>
               <th>Agent</th>
               <th>
@@ -100,7 +116,7 @@ export function ScopeOverviewBoard({ overview }: { overview: ScopeOverview }) {
                 <td>{row.agents}</td>
                 <td>{row.annual}</td>
                 <td>{row.budget ?? "未设置"}</td>
-                <td className={row.gap.startsWith("+") ? "text-[#B91C1C]" : "text-[#15803D]"}>{row.gap}</td>
+                <td className={gapTone(row.gap)}>{row.gap}</td>
                 <td>{row.status}</td>
                 <td>
                   <Link href={row.href} className="text-primary">
@@ -127,7 +143,7 @@ export function ScopeOverviewBoard({ overview }: { overview: ScopeOverview }) {
                 <td>{overview.listTotal.agents}</td>
                 <td>{overview.listTotal.annual}</td>
                 <td>{overview.listTotal.budget}</td>
-                <td className={overview.listTotal.gap.startsWith("+") ? "text-[#B91C1C]" : "text-[#15803D]"}>{overview.listTotal.gap}</td>
+                <td className={gapTone(overview.listTotal.gap)}>{overview.listTotal.gap}</td>
                 <td colSpan={2} />
               </tr>
             ) : null}

@@ -1,8 +1,9 @@
 import { LeaderBoard } from "@/components/headcount/leader-board";
 import { openDepartment } from "@/lib/headcount/db/present";
 import { detailQueryFromSearch } from "@/lib/headcount/rosterPage";
+import { ScopeDenied } from "@/lib/headcount/scopeGuard";
 import { currentUser } from "@/lib/headcount/session";
-import { redirect } from "next/navigation";
+import { forbidden, redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,8 @@ export default async function BaselineDepartmentPage({
   let data;
   try {
     data = await openDepartment(user, deptId, detail);
-  } catch {
+  } catch (error) {
+    if (error instanceof ScopeDenied) forbidden();
     redirect("/headcount/baseline");
   }
   return <LeaderBoard view={data.view} />;

@@ -53,7 +53,7 @@ export const TOOLTIPS = [
   { page: "OD 底座 · 部门页", metric: "在途合计", text: "合计先用未取整的金额加总，再取整到 0.5 万，可能和逐行相加略有差异。" },
   { page: "场景与时间轴 v2", metric: "场景总成本", text: "场景总成本 = 部门日常成本（人工 + Agent 席位、算力）+ 一次性费用（经济补偿、Agent 实施和培训费）。一次性费用由 HR/OD 统一管理，不摊到部门。" },
   { page: "场景与时间轴 v2", metric: "时间轴", text: "场景新增 = 本场景在基线之上加减的数量；括号里是加上已确认在途后，季初到季末的实际变化。两个数都直接取成本引擎结果。场景里的变动统一按该季第一天生效（P0）。" },
-  { page: "人员明细", metric: "外包汇总", text: "外包只有座位数，按部门汇总，不列姓名。" },
+  { page: "人员明细", metric: "外包汇总", text: "外包只有座位数，按部门汇总，不列姓名" },
 ] as const;
 
 export function tooltip(page: string, metric: string): string {
@@ -62,34 +62,96 @@ export function tooltip(page: string, metric: string): string {
   return found.text;
 }
 
-export const YEAR_FORECAST_OD = tooltip("OD 底座 · 总览", "全年预计");
-export const YEAR_FORECAST_LEADER = tooltip("负责人视图 · 总览（多部门，赵一）", "全年预计");
-export const YEAR_FORECAST_LEADER_DEPT = tooltip("负责人视图 · 总览（多部门，赵一）", "部门列表 · 全年预计");
-export const PERSON_COST_NOTE = tooltip("负责人视图 · 总览（多部门，赵一）", "人员全年成本");
-export const PERSON_COST_NOTE_OD = tooltip("OD 底座 · 部门页", "人员全年成本");
-export const PERSON_IMPACT_NOTE = tooltip("负责人视图 · 总览（多部门，赵一）", "人员全年成本影响");
-export const PERSON_IMPACT_NOTE_OD = tooltip("OD 底座 · 部门页", "人员全年成本影响");
-export const PERSON_STATUS_NOTE = tooltip("负责人视图 · 总览（多部门，赵一）", "状态 · 生效日");
-export const PERSON_STATUS_NOTE_OD = tooltip("OD 底座 · 部门页", "状态 · 生效日");
-export const PERSON_SORT_NOTE = tooltip("负责人视图 · 总览（多部门，赵一）", "人员排序");
-export const EMPLOYMENT_NOTE = tooltip("负责人视图 · 总览（多部门，赵一）", "用工类型");
-export const TRANSIT_SUM_NOTE = tooltip("负责人视图 · 总览（多部门，赵一）", "在途合计");
-export const AGENT_STATUS_NOTE = tooltip("负责人视图 · 总览（多部门，赵一）", "Agent 状态 · 生效日");
-export const AGENT_STATUS_NOTE_OD = tooltip("OD 底座 · 部门页", "Agent 状态 · 生效日");
-export const AGENT_COST_NOTE = tooltip("负责人视图 · 总览（多部门，赵一）", "Agent 全年成本");
-export const AGENT_COST_NOTE_OD = tooltip("OD 底座 · 部门页", "Agent 全年成本");
-export const SEAT_NOTE = tooltip("负责人视图 · 总览（多部门，赵一）", "席位费");
-export const COMP_MARK_NOTE = tooltip("OD 底座 · 部门页", "补偿标记");
-export const DEPT_TOTAL_NOTE = tooltip("OD 底座 · 总览", "部门合计");
-export const VACANCY_NOTE = tooltip("OD 底座 · 总览", "空缺");
-export const VACANCY_TOTAL_NOTE = tooltip("负责人视图 · 总览（多部门，赵一）", "合计空缺");
-export const BUDGET_NOTE = tooltip("OD 底座 · 总览", "部门预算");
-export const GAP_NOTE = tooltip("OD 底座 · 总览", "差额");
-export const ONE_OFF_NOTE = tooltip("OD 底座 · 总览", "一次性费用 vs 预留");
-export const TIMELINE_CHANGE_NOTE = tooltip("场景与时间轴 v2", "时间轴");
-export const SCENARIO_TOTAL_NOTE = tooltip("场景与时间轴 v2", "场景总成本");
+/** 页面上的 ⓘ 都从这里取，保证文案和悬停表同一条。 */
+export function slot(page: string, metric: string): string {
+  return tooltip(page, metric);
+}
 
-export const OUTSOURCE_SEAT_NOTE = tooltip("人员明细", "外包汇总");
+export const YEAR_FORECAST_OD = slot("OD 底座 · 总览", "全年预计");
+export const YEAR_FORECAST_LEADER = slot("负责人视图 · 总览（多部门，赵一）", "全年预计");
+export const YEAR_FORECAST_LEADER_DEPT = slot("负责人视图 · 总览（多部门，赵一）", "部门列表 · 全年预计");
+export const PERSON_COST_NOTE = slot("负责人视图 · 总览（多部门，赵一）", "人员全年成本");
+export const PERSON_COST_NOTE_OD = slot("OD 底座 · 部门页", "人员全年成本");
+export const PERSON_IMPACT_NOTE = slot("负责人视图 · 总览（多部门，赵一）", "人员全年成本影响");
+export const PERSON_IMPACT_NOTE_OD = slot("OD 底座 · 部门页", "人员全年成本影响");
+export const PERSON_STATUS_NOTE = slot("负责人视图 · 总览（多部门，赵一）", "状态 · 生效日");
+export const PERSON_STATUS_NOTE_OD = slot("OD 底座 · 部门页", "状态 · 生效日");
+export const PERSON_SORT_NOTE = slot("负责人视图 · 总览（多部门，赵一）", "人员排序");
+export const EMPLOYMENT_NOTE = slot("负责人视图 · 总览（多部门，赵一）", "用工类型");
+export const TRANSIT_SUM_NOTE = slot("负责人视图 · 总览（多部门，赵一）", "在途合计");
+export const AGENT_STATUS_NOTE = slot("负责人视图 · 总览（多部门，赵一）", "Agent 状态 · 生效日");
+export const AGENT_STATUS_NOTE_OD = slot("OD 底座 · 部门页", "Agent 状态 · 生效日");
+export const AGENT_COST_NOTE = slot("负责人视图 · 总览（多部门，赵一）", "Agent 全年成本");
+export const AGENT_COST_NOTE_OD = slot("OD 底座 · 部门页", "Agent 全年成本");
+export const SEAT_NOTE = slot("负责人视图 · 总览（多部门，赵一）", "席位费");
+export const SEAT_NOTE_OD = slot("OD 底座 · 部门页", "席位费");
+export const COMP_MARK_NOTE = slot("OD 底座 · 部门页", "补偿标记");
+export const DEPT_TOTAL_NOTE = slot("OD 底座 · 总览", "部门合计");
+export const VACANCY_NOTE = slot("OD 底座 · 总览", "空缺");
+export const VACANCY_NOTE_LEADER = slot("负责人视图 · 总览（多部门，赵一）", "空缺");
+export const VACANCY_TOTAL_NOTE = slot("负责人视图 · 总览（多部门，赵一）", "合计空缺");
+export const BUDGET_NOTE = slot("OD 底座 · 总览", "部门预算");
+export const GAP_NOTE = slot("OD 底座 · 总览", "差额");
+export const ONE_OFF_NOTE = slot("OD 底座 · 总览", "一次性费用 vs 预留");
+export const TIMELINE_CHANGE_NOTE = slot("场景与时间轴 v2", "时间轴");
+export const SCENARIO_TOTAL_NOTE = slot("场景与时间轴 v2", "场景总成本");
+export const OUTSOURCE_SEAT_NOTE = slot("人员明细", "外包汇总");
+
+export function overviewCardNote(audience: "od" | "leader", label: string): string | null {
+  if (label === "编制与人员") return audience === "od" ? slot("OD 底座 · 总览", "编制与人员") : slot("负责人视图 · 总览（多部门，赵一）", "编制与人员");
+  if (label === "Agent") return audience === "od" ? slot("OD 底座 · 总览", "Agent") : slot("负责人视图 · 总览（多部门，赵一）", "Agent");
+  if (label === "人 : AI 按工时") return audience === "od" ? slot("OD 底座 · 总览", "人 : AI") : slot("负责人视图 · 总览（多部门，赵一）", "人 : AI");
+  if (label === "全年预计 vs 预算总包") return slot("OD 底座 · 总览", "全年预计 vs 预算总包");
+  if (label === "全年预计 vs 部门预算") return YEAR_FORECAST_LEADER;
+  if (label === "一次性费用 vs 预留") return ONE_OFF_NOTE;
+  if (label === "在途变动") return slot("负责人视图 · 总览（多部门，赵一）", "在途变动");
+  return null;
+}
+
+export function forecastHeroNote(audience: "od" | "leader"): string {
+  return audience === "od" ? slot("OD 底座 · 部门页", "全年预计成本") : slot("负责人视图 · 单部门（钱二）", "全年预计");
+}
+
+export function stepCardNote(audience: "od" | "leader", step: "当前成本（年化）" | "接下来会变" | "年底预计"): string {
+  if (audience === "od") {
+    if (step === "当前成本（年化）") return slot("OD 底座 · 部门页", "当前成本（年化）");
+    if (step === "接下来会变") return slot("OD 底座 · 部门页", "接下来会变");
+    return slot("OD 底座 · 部门页", "年底预计");
+  }
+  if (step === "当前成本（年化）") return slot("负责人视图 · 单部门（钱二）", "当前成本（年化）");
+  if (step === "接下来会变") return slot("负责人视图 · 单部门（钱二）", "接下来会变");
+  return slot("负责人视图 · 单部门（钱二）", "年底预计");
+}
+
+export function rosterFieldNote(audience: "od" | "leader", metric: "用工类型" | "人员排序" | "在途合计" | "人员全年成本" | "人员全年成本影响" | "状态 · 生效日" | "席位费" | "Agent 状态 · 生效日" | "Agent 全年成本"): string {
+  if (audience === "od") {
+    if (metric === "用工类型") return slot("OD 底座 · 部门页", "用工类型");
+    if (metric === "人员排序") return slot("OD 底座 · 部门页", "人员排序");
+    if (metric === "在途合计") return slot("OD 底座 · 部门页", "在途合计");
+    if (metric === "人员全年成本") return PERSON_COST_NOTE_OD;
+    if (metric === "人员全年成本影响") return PERSON_IMPACT_NOTE_OD;
+    if (metric === "状态 · 生效日") return PERSON_STATUS_NOTE_OD;
+    if (metric === "席位费") return SEAT_NOTE_OD;
+    if (metric === "Agent 状态 · 生效日") return AGENT_STATUS_NOTE_OD;
+    return AGENT_COST_NOTE_OD;
+  }
+  if (metric === "用工类型") return EMPLOYMENT_NOTE;
+  if (metric === "人员排序") return PERSON_SORT_NOTE;
+  if (metric === "在途合计") return TRANSIT_SUM_NOTE;
+  if (metric === "人员全年成本") return PERSON_COST_NOTE;
+  if (metric === "人员全年成本影响") return PERSON_IMPACT_NOTE;
+  if (metric === "状态 · 生效日") return PERSON_STATUS_NOTE;
+  if (metric === "席位费") return SEAT_NOTE;
+  if (metric === "Agent 状态 · 生效日") return AGENT_STATUS_NOTE;
+  return AGENT_COST_NOTE;
+}
+
+export function alertRuleNote(audience: "od" | "leader"): string {
+  return audience === "od" ? slot("OD 底座 · 总览", "异常提示规则") : slot("负责人视图 · 总览（多部门，赵一）", "异常提示规则");
+}
+
+export const GROUP_PRIVACY_NOTE = slot("负责人视图 · 总览（多部门，赵一）", "小组隐私规则");
+export const OD_TRANSIT_NOTE = slot("OD 底座 · 总览", "在途");
 
 export const ONE_OFF_CARD_LABEL = "一次性费用 vs 预留";
 export const COMPARE_SCROLL_HINT = "左右滑动查看其他场景，左侧名称保持不动";

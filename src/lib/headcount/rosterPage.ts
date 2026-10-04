@@ -108,6 +108,11 @@ export type PagedPeople = {
   statuses: string[];
   types: string[];
   sort: "reporting" | "effective";
+  /** 当前筛选下的渲染行数。外包汇总算 1 行，其余按编制。 */
+  displayRows: number;
+  /** 当前筛选下的编制合计，等于命中的状态芯片之和。 */
+  counted: number;
+  summaryHead: string;
   footer: string;
   rows: PersonTableRow[];
   summary: { count: number; quarter: string; year: string; yearYuan: number; precise: boolean; label: string } | null;
@@ -232,27 +237,56 @@ export function collectPersonLines(result: PlanResult, departmentId: string): Pe
   });
   for (const seat of result.plan.others) {
     if (!ids.has(seat.departmentId) || seat.count <= 0) continue;
-    lines.push({
-      id: `other:${seat.departmentId}:${seat.employmentType}`,
-      name: `${seat.employmentType}（${names.get(seat.departmentId) ?? seat.departmentId}）`,
-      departmentName: names.get(seat.departmentId) ?? seat.departmentId,
-      title: seat.employmentType,
-      grade: "—",
-      employmentType: seat.employmentType,
-      status: "在岗",
-      effectiveDate: null,
-      managerId: null,
-      isManager: false,
-      employeeNo: `~${seat.employmentType}`,
-      headcount: seat.count,
-      yearCost: seat.annual * seat.count,
-      yearImpact: null,
-      quarterImpact: null,
-      compMark: null,
-      quarters: [0, 0, 0, 0],
-    });
+    const departmentName = names.get(seat.departmentId) ?? seat.departmentId;
+    if (seat.employmentType === "外包") {
+      lines.push({
+        id: `other:${seat.departmentId}:${seat.employmentType}`,
+        name: `${seat.employmentType}（${departmentName}）`,
+        departmentName,
+        title: seat.employmentType,
+        grade: "—",
+        employmentType: seat.employmentType,
+        status: "在岗",
+        effectiveDate: null,
+        managerId: null,
+        isManager: false,
+        employeeNo: `~${seat.employmentType}`,
+        headcount: seat.count,
+        yearCost: seat.annual * seat.count,
+        yearImpact: null,
+        quarterImpact: null,
+        compMark: null,
+        quarters: [0, 0, 0, 0],
+      });
+      continue;
+    }
+    for (let index = 0; index < seat.count; index += 1) {
+      lines.push({
+        id: `other:${seat.departmentId}:${seat.employmentType}:${index}`,
+        name: `${seat.employmentType}（${departmentName}）`,
+        departmentName,
+        title: seat.employmentType,
+        grade: "—",
+        employmentType: seat.employmentType,
+        status: "在岗",
+        effectiveDate: null,
+        managerId: null,
+        isManager: false,
+        employeeNo: `~${seat.employmentType}-${index}`,
+        headcount: 1,
+        yearCost: seat.annual,
+        yearImpact: null,
+        quarterImpact: null,
+        compMark: null,
+        quarters: [0, 0, 0, 0],
+      });
+    }
   }
   return lines;
+}
+
+function isOutsourceAggregate(line: PersonLine): boolean {
+  return line.employmentType === "外包" && line.id.startsWith("other:");
 }
 
 function headcountOf(lines: PersonLine[], status?: PersonStatus): number {
@@ -283,11 +317,36 @@ export function pairedTransfers(lines: PersonLine[]): number {
   return new Set(lines.filter((line) => line.status === "待转入" && outgoing.has(line.employeeNo)).map((line) => line.employeeNo)).size;
 }
 
-export function peopleFooterLabel(lines: PersonLine[], companyScope: boolean): string {
-  const rows = lines.reduce((total, line) => total + line.headcount, 0);
+export function peopleLineFacts(lines: PersonLine[]): { rows: number; counted: number; pairs: number; outsourceSeats: number; outsourceRows: number; footer: string; summaryHead: string } {
+  const outsource = lines.filter(isOutsourceAggregate);
+  const outsourceSeats = outsource.reduce((total, line) => total + line.headcount, 0);
+  const outsourceRows = outsource.length;
+  const counted = lines.reduce((total, line) => total + line.headcount, 0);
+  const rows = lines.reduce((total, line) => total + (isOutsourceAggregate(line) ? 1 : line.headcount), 0);
   const pairs = pairedTransfers(lines);
-  if (companyScope && pairs > 0) return `共 ${rows} 行（${rows - pairs} 人，${pairs} 人内部转岗各占两行）`;
-  return `共 ${rows} 人`;
+  const exceptions: string[] = [];
+  if (outsourceSeats > outsourceRows) exceptions.push(`外包 ${outsourceSeats} 个座位合并为 ${outsourceRows} 行`);
+  if (pairs > 0) exceptions.push(`${pairs} 人内部转岗各占两行，实际 ${counted - pairs} 人`);
+  const footer = exceptions.length === 0
+    ? `共 ${counted} 人`
+    : rows === counted
+      ? `共 ${rows} 行（${exceptions.join("；")}）`
+      : `共 ${rows} 行，计 ${counted}（${exceptions.join("；")}）`;
+  const summaryHead = rows !== counted ? `${rows} 行，计 ${counted}` : exceptions.length > 0 ? `${rows} 行` : `${counted} 人`;
+  return { rows, counted, pairs, outsourceSeats, outsourceRows, footer, summaryHead };
+}
+
+export function peopleFooterLabel(lines: PersonLine[]): string {
+  return peopleLineFacts(lines).footer;
+}
+
+export function peopleRosterSummary(page: Pick<PagedPeople, "counts" | "typeCounts" | "summaryHead">, options: { exact: boolean; showMarks: boolean }): string {
+  const counts = page.counts;
+  const parts = PERSON_TRANSIT.filter((status) => counts[status] > 0).map((status) => `${status} ${counts[status]}`);
+  const typeText = EMPLOYMENT_TYPES.filter((type) => page.typeCounts[type] > 0).map((type) => `${type} ${page.typeCounts[type]}`).join(" · ");
+  const cost = options.exact ? "OD 看精确估算" : "成本为区间";
+  const mark = options.showMarks ? " · 补偿标记仅 OD / HR 可见" : "";
+  return `${page.summaryHead} · 在岗无变动 ${counts.在岗无变动} · 在途 ${counts.在途}${parts.length ? `（${parts.join(" · ")}）` : ""} · ${typeText} · ${cost}${mark}`;
 }
 
 function slicePage<T>(items: T[], page: number, pageSize: PageSize): { page: number; pageCount: number; rows: T[] } {
@@ -334,7 +393,8 @@ export function pagePeople(
     ? [...filtered].sort((left, right) => (left.effectiveDate ?? "9999").localeCompare(right.effectiveDate ?? "9999") || left.name.localeCompare(right.name, "zh"))
     : sortByReporting(filtered);
   const sliced = slicePage(ordered, query.peoplePage, query.peopleSize);
-  const headcount = filtered.reduce((total, line) => total + line.headcount, 0);
+  const facts = peopleLineFacts(filtered);
+  const headcount = facts.counted;
   const precise = options.exact || (options.preciseSummary !== false && headcount >= 5);
   const quarterSum = filtered.reduce((total, line) => total + (line.quarterImpact ?? 0), 0);
   const yearSum = filtered.reduce((total, line) => total + (line.yearImpact ?? 0), 0);
@@ -360,7 +420,10 @@ export function pagePeople(
     statuses: query.peopleStatuses,
     types,
     sort: byDate ? "effective" : "reporting",
-    footer: peopleFooterLabel(filtered, Boolean(options.companyScope)),
+    displayRows: facts.rows,
+    counted: facts.counted,
+    summaryHead: facts.summaryHead,
+    footer: facts.footer,
     rows: sliced.rows.map((line) => {
       const row: PersonTableRow = {
         id: line.id,

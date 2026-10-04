@@ -18,6 +18,8 @@ import {
   copyScenario,
   DEFAULT_PREFILL_NOTE,
   healthChecks,
+  heroSentence,
+  phraseAfterName,
   resolvePrefill,
   scenarioCutTextHasPerPerson,
   setCompared,
@@ -40,11 +42,17 @@ describe("场景页与沙盘导入", () => {
     expect(board.timelineLabels).toEqual(labels);
     expect(board.timelineSummary).toContain(labels.join(" · "));
     expect(labels).toEqual([
-      "Q1 场景减员 10 人（含基线变动共 486→479）",
-      "Q2 场景新增 12 个 Agent（含基线变动共 19→34）",
+      "Q1 离职未补位 10 人（含基线变动共 486→479）",
       "Q2 场景增员 2 人（含基线变动共 479→482）",
+      "Q2 场景新增 12 个 Agent（含基线变动共 19→34）",
       "Q3 场景减员 8 人（含基线变动共 482→474）",
     ]);
+    expect(phraseAfterName("沙盘方案 A", "成本最低")).toBe("沙盘方案 A 成本最低");
+    expect(phraseAfterName("沙盘方案 A · 拆组前", "成本最低")).toBe("沙盘方案 A · 拆组前成本最低");
+    const renamed = presetScenarios().map((item) => (item.id === "fa" ? { ...item, name: "沙盘方案 A" } : item));
+    const compared = renamed.filter((item) => item.compared).map((item) => evaluateScenario(result, item));
+    expect(heroSentence(result, compared)).toContain("沙盘方案 A 成本最低");
+    expect(heroSentence(result, compared)).not.toContain("沙盘方案 A成本最低");
     expect(opening.agents).toBe(15);
     expect(baseline.quarters.map((quarter) => quarter.agents)).toEqual([19, 22, 21, 21]);
     expect(aggressive.quarters.map((quarter) => quarter.agents)).toEqual([19, 34, 33, 33]);

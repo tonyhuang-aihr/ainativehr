@@ -68,6 +68,15 @@ export type ScenarioQuarter = {
   agents: number;
 };
 
+/** 这一季相对上一季，未补上的离职缺口、场景增员、场景减员、Agent 增减。括号外的数字用这些，不用净差额的正负号。 */
+export type QuarterFlow = {
+  attrition: number;
+  hires: number;
+  cuts: number;
+  agentsAdded: number;
+  agentsRemoved: number;
+};
+
 export type ScenarioResult = {
   definition: ScenarioDefinition;
   quarters: ScenarioQuarter[];
@@ -79,6 +88,7 @@ export type ScenarioResult = {
   yearEndPeople: number;
   yearEndAgents: number;
   attritionPerQuarter: number;
+  flows: QuarterFlow[];
 };
 
 const DEFAULT_ASSUMPTIONS: ScenarioAssumptions = {
@@ -185,8 +195,20 @@ function qsplit(year: number, annual: number, startIso: string, endMs = yearEnd(
   return quarterBounds(year).map(([from, to]) => (annual * overlapDays(from, to, start, endMs)) / yearDays(year));
 }
 
+/** 公司方案用研发中心。范围里没有研发中心时，用这份计划自己的根部门，OD 数字不变。 */
+export function costRootId(result: PlanResult): string {
+  if (result.plan.departments.some((department) => department.id === "rd")) return "rd";
+  const ids = new Set(result.plan.departments.map((department) => department.id));
+  const root = result.plan.departments.find((department) => !department.parentId || !ids.has(department.parentId));
+  return root?.id ?? result.plan.departments[0]?.id ?? "rd";
+}
+
+function emptyFlows(): QuarterFlow[] {
+  return [0, 1, 2, 3].map(() => ({ attrition: 0, hires: 0, cuts: 0, agentsAdded: 0, agentsRemoved: 0 }));
+}
+
 function baselineQuarters(result: PlanResult): { labor: number[]; agent: number[]; severance: number[]; agentOneOff: number[]; headcount: number[]; agents: number[] } {
-  const stat = deptStat(result, "rd");
+  const stat = deptStat(result, costRootId(result));
   const year = result.plan.year;
   const bounds = quarterBounds(year);
   const headcount = bounds.map(([, end]) => {
@@ -241,7 +263,7 @@ export function scenarioCutSeverance(result: PlanResult, cut: ScenarioCut, notic
 export function evaluateScenario(result: PlanResult, definition: ScenarioDefinition): ScenarioResult {
   const year = result.plan.year;
   const base = baselineQuarters(result);
-  const stat = deptStat(result, "rd");
+  const stat = deptStat(result, costRootId(result));
   let labor = [...base.labor];
   let agent = [...base.agent];
   const severance = [...base.severance];
@@ -252,6 +274,8 @@ export function evaluateScenario(result: PlanResult, definition: ScenarioDefinit
   const yearDaysCount = yearDays(year);
   const average = averageFormalAnnual(result);
   const perQuarter = Math.round(stat.onBoard * definition.assumptions.attritionRate / 4);
+  const gap = [0, 0, 0, 0];
+  const flows = emptyFlows();
 
   for (const [start, end] of bounds) {
     const length = Math.round((end - start) / 86_400_000);
@@ -260,9 +284,13 @@ export function evaluateScenario(result: PlanResult, definition: ScenarioDefinit
     const vacant = bounds.map(([from, to]) => (perQuarter * average * overlapDays(from, to, mid, back)) / yearDaysCount);
     labor = add(labor, scale(vacant, -1));
     bounds.forEach(([, quarterEnd], later) => {
-      if (mid < quarterEnd && back >= quarterEnd) headcount[later] -= perQuarter;
+      if (mid < quarterEnd && back >= quarterEnd) {
+        headcount[later] -= perQuarter;
+        gap[later] += perQuarter;
+      }
     });
   }
+  for (let index = 0; index < 4; index += 1) flows[index].attrition = gap[index] - (index === 0 ? 0 : gap[index - 1]);
 
   if (definition.assumptions.raiseRate) {
     labor = scale(labor, 1 + definition.assumptions.raiseRate);
@@ -273,6 +301,8 @@ export function evaluateScenario(result: PlanResult, definition: ScenarioDefinit
     labor = add(labor, qsplit(year, annual, hire.effectiveDate));
     const when = parseIsoDate(hire.effectiveDate);
     headcount = headcount.map((count, index) => (when < bounds[index][1] ? count + hire.count : count));
+    const hired = quarterIndex(year, when);
+    if (hired >= 0 && hired < 4) flows[hired].hires += hire.count;
   }
 
   for (const change of definition.agents) {
@@ -281,7 +311,11 @@ export function evaluateScenario(result: PlanResult, definition: ScenarioDefinit
     const when = parseIsoDate(change.effectiveDate);
     agents = agents.map((count, index) => (when < bounds[index][1] ? count + change.count : count));
     const quarter = quarterIndex(year, when);
-    if (quarter >= 0) agentOneOff[quarter] += change.oneOff;
+    if (quarter >= 0 && quarter < 4) {
+      agentOneOff[quarter] += change.oneOff;
+      if (change.count > 0) flows[quarter].agentsAdded += change.count;
+      else if (change.count < 0) flows[quarter].agentsRemoved += Math.abs(change.count);
+    }
   }
 
   for (const once of definition.extraAgentOneOff) {
@@ -297,7 +331,10 @@ export function evaluateScenario(result: PlanResult, definition: ScenarioDefinit
     headcount = headcount.map((count, index) => (when < bounds[index][1] ? count - cut.count : count));
     const amount = scenarioCutSeverance(result, cut, definition.assumptions.noticePay);
     const quarter = quarterIndex(year, when);
-    if (quarter >= 0) severance[quarter] += amount;
+    if (quarter >= 0 && quarter < 4) {
+      severance[quarter] += amount;
+      flows[quarter].cuts += cut.count;
+    }
   }
 
   const quarters = [0, 1, 2, 3].map((index) => {
@@ -324,6 +361,7 @@ export function evaluateScenario(result: PlanResult, definition: ScenarioDefinit
     yearEndPeople: headcount[3],
     yearEndAgents: agents[3],
     attritionPerQuarter: perQuarter,
+    flows,
   };
 }
 
@@ -368,6 +406,7 @@ export function evaluateBaseline(result: PlanResult): ScenarioResult {
     yearEndPeople: base.headcount[3],
     yearEndAgents: base.agents[3],
     attritionPerQuarter: 0,
+    flows: emptyFlows(),
   };
 }
 
@@ -379,7 +418,7 @@ export function gapWan(totalYuan: number, budgetYuan: number): number {
   return Number((roundToHalfWan(totalYuan) - roundToHalfWan(budgetYuan)).toFixed(1));
 }
 
-/** 括号外是场景相对基线的差额，括号里是该场景季末人数的实际变化。都从季度序列里算。 */
+/** 类别来自事件来源。同一季有两条人员标签时，人数括号只挂在最后一条。 */
 export function quarterChangeLabels(
   baseline: ScenarioResult,
   scenario: ScenarioResult,
@@ -388,24 +427,27 @@ export function quarterChangeLabels(
   const labels: string[] = [];
   for (let index = 0; index < 4; index += 1) {
     const quarter = index + 1;
-    const agentsFrom = index === 0 ? opening.agents : scenario.quarters[index - 1].agents;
-    const agentsTo = scenario.quarters[index].agents;
-    const baseAgentsFrom = index === 0 ? opening.agents : baseline.quarters[index - 1].agents;
-    const baseAgentsTo = baseline.quarters[index].agents;
-    const agentDelta = agentsTo - agentsFrom - (baseAgentsTo - baseAgentsFrom);
-    if (agentDelta !== 0) {
-      const verb = agentDelta > 0 ? `场景新增 ${agentDelta} 个 Agent` : `场景减少 ${Math.abs(agentDelta)} 个 Agent`;
-      labels.push(`Q${quarter} ${verb}（含基线变动共 ${agentsFrom}→${agentsTo}）`);
-    }
+    const flow = scenario.flows[index];
+    const base = baseline.flows[index];
+    const peopleBits: string[] = [];
+    const attrition = flow.attrition - base.attrition;
+    const hires = flow.hires - base.hires;
+    const cuts = flow.cuts - base.cuts;
+    if (attrition > 0) peopleBits.push(`离职未补位 ${attrition} 人`);
+    if (hires > 0) peopleBits.push(`场景增员 ${hires} 人`);
+    if (cuts > 0) peopleBits.push(`场景减员 ${cuts} 人`);
     const peopleFrom = index === 0 ? opening.people : scenario.quarters[index - 1].headcount;
     const peopleTo = scenario.quarters[index].headcount;
-    const basePeopleFrom = index === 0 ? opening.people : baseline.quarters[index - 1].headcount;
-    const basePeopleTo = baseline.quarters[index].headcount;
-    const peopleDelta = peopleTo - peopleFrom - (basePeopleTo - basePeopleFrom);
-    if (peopleDelta !== 0) {
-      const verb = peopleDelta > 0 ? `场景增员 ${peopleDelta} 人` : `场景减员 ${Math.abs(peopleDelta)} 人`;
-      labels.push(`Q${quarter} ${verb}（含基线变动共 ${peopleFrom}→${peopleTo}）`);
-    }
+    peopleBits.forEach((bit, bitIndex) => {
+      const paren = bitIndex === peopleBits.length - 1 ? `（含基线变动共 ${peopleFrom}→${peopleTo}）` : "";
+      labels.push(`Q${quarter} ${bit}${paren}`);
+    });
+    const agentsFrom = index === 0 ? opening.agents : scenario.quarters[index - 1].agents;
+    const agentsTo = scenario.quarters[index].agents;
+    const added = flow.agentsAdded - base.agentsAdded;
+    const removed = flow.agentsRemoved - base.agentsRemoved;
+    if (added > 0) labels.push(`Q${quarter} 场景新增 ${added} 个 Agent（含基线变动共 ${agentsFrom}→${agentsTo}）`);
+    if (removed > 0) labels.push(`Q${quarter} 下线 ${removed} 个 Agent（含基线变动共 ${agentsFrom}→${agentsTo}）`);
   }
   return labels;
 }
