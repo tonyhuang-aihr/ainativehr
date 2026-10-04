@@ -31,8 +31,10 @@ vi.mock("next/navigation", async (importOriginal) => {
 import ForbiddenPage from "@/app/headcount/forbidden";
 import NotFoundPage from "@/app/headcount/not-found";
 import BaselinePage from "@/app/headcount/baseline/page";
+import BaselineNotFound from "@/app/headcount/baseline/not-found";
 import BaselineDepartmentPage from "@/app/headcount/baseline/[deptId]/page";
 import BaselineDepartmentNotFound from "@/app/headcount/baseline/[deptId]/not-found";
+import { GET as leaderApi } from "@/app/api/headcount/leader/route";
 import LeaderPage from "@/app/headcount/leader/page";
 import LeaderNotFound from "@/app/headcount/leader/not-found";
 import ScenariosPage from "@/app/headcount/scenarios/page";
@@ -176,6 +178,37 @@ describe("未知场景 404，范围外 403", () => {
     );
     await expectStatus(() => LeaderPage({ searchParams: Promise.resolve({ dept: "doesnotexist" }) }), 404, LeaderNotFound);
     await expectStatus(() => BaselineDepartmentPage({ params: Promise.resolve({ deptId: DEPT.plat }), searchParams: Promise.resolve({}) }), 403);
+  }, 120_000);
+
+  it("底座的 dept 参数未知时是 404，范围外是 403，范围内打开该部门", async () => {
+    session.user = huang;
+    await expectStatus(() => BaselinePage({ searchParams: Promise.resolve({ dept: "doesnotexist" }) }), 404, BaselineNotFound);
+    const plat = renderToStaticMarkup(await BaselinePage({ searchParams: Promise.resolve({ dept: DEPT.plat }) }));
+    expect(plat).toContain("平台部");
+    expect(plat).not.toContain("OD 底座 · 研发中心");
+    session.user = lin;
+    await expectStatus(() => BaselinePage({ searchParams: Promise.resolve({ dept: "doesnotexist" }) }), 404, BaselineNotFound);
+    await expectStatus(() => BaselinePage({ searchParams: Promise.resolve({ dept: DEPT.plat }) }), 403);
+    await expectStatus(
+      () => BaselineDepartmentPage({ params: Promise.resolve({ deptId: DEPT.prod1 }), searchParams: Promise.resolve({ dept: "doesnotexist" }) }),
+      404,
+      BaselineDepartmentNotFound,
+    );
+    await expectStatus(
+      () => BaselineDepartmentPage({ params: Promise.resolve({ deptId: DEPT.prod1 }), searchParams: Promise.resolve({ dept: DEPT.plat }) }),
+      403,
+    );
+    session.user = zhao;
+    await expectStatus(() => BaselinePage({ searchParams: Promise.resolve({ dept: "doesnotexist" }) }), 404, BaselineNotFound);
+    await expectStatus(() => BaselinePage({ searchParams: Promise.resolve({ dept: DEPT.plat }) }), 403);
+
+    session.user = huang;
+    const missing = await leaderApi(new Request("http://localhost/api/headcount/leader?dept=doesnotexist"));
+    expect(missing.status).toBe(404);
+    expect(await missing.json()).toEqual({ error: "部门不存在" });
+    session.user = lin;
+    const denied = await leaderApi(new Request(`http://localhost/api/headcount/leader?dept=${DEPT.plat}`));
+    expect(denied.status).toBe(403);
   }, 120_000);
 
   it("记入这一季用普通 POST 写入，公司示例对林的导入动作会被拒绝", async () => {
