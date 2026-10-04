@@ -1,4 +1,4 @@
-/** 悬停文案 v1.1，与设计稿同一份，共 53 条。改文案先改生成稿再整表替换。 */
+/** 悬停文案 v1.1，与设计稿同一份，共 55 条。改文案先改生成稿再整表替换。 */
 
 export const TOOLTIPS = [
   { page: "负责人视图 · 总览（多部门，赵一）", metric: "编制与人员", text: "编制、在岗、在途、空缺只算正式员工；外包、实习、顾问单列人数。空缺 = 编制 −（在岗 + 在途）。" },
@@ -52,8 +52,10 @@ export const TOOLTIPS = [
   { page: "OD 底座 · 部门页", metric: "Agent 全年成本", text: "席位费和算力费 × 实例数，按在用天数折算到当年；实施、培训等一次性费用不在这里。" },
   { page: "OD 底座 · 部门页", metric: "在途合计", text: "合计先用未取整的金额加总，再取整到 0.5 万，可能和逐行相加略有差异。" },
   { page: "场景与时间轴 v2", metric: "场景总成本", text: "场景总成本 = 部门日常成本（人工 + Agent 席位、算力）+ 一次性费用（经济补偿、Agent 实施和培训费）。一次性费用由 HR/OD 统一管理，不摊到部门。" },
-  { page: "场景与时间轴 v2", metric: "时间轴", text: "场景新增 = 本场景在基线之上加减的数量；括号里是加上已确认在途后，季初到季末的实际变化。两个数都直接取成本引擎结果。场景里的变动统一按该季第一天生效（P0）。" },
+  { page: "场景与时间轴 v2", metric: "时间轴", text: "标签分四类：离职未补位、场景增员、场景减员、场景新增或下线 Agent。场景新增 = 本场景在基线之上加减的数量；括号里是加上已确认在途后，季初到季末的实际变化。两个数都直接取成本引擎结果。场景里的变动统一按该季第一天生效（P0）。" },
   { page: "人员明细", metric: "外包汇总", text: "外包只有座位数，按部门汇总，不列姓名" },
+  { page: "事业部底座 · 总览", metric: "范围合计", text: "范围合计只含授权范围内各部门的日常成本（人工 + Agent），不含一次性费用，也不含范围外的部门。" },
+  { page: "场景与时间轴 v2", metric: "未归属部门 Agent", text: "沙盘里没有岗位拆解的 Agent，只计入公司口径，不分到部门。" },
 ] as const;
 
 export function tooltip(page: string, metric: string): string {
@@ -96,8 +98,18 @@ export const ONE_OFF_NOTE = slot("OD 底座 · 总览", "一次性费用 vs 预�
 export const TIMELINE_CHANGE_NOTE = slot("场景与时间轴 v2", "时间轴");
 export const SCENARIO_TOTAL_NOTE = slot("场景与时间轴 v2", "场景总成本");
 export const OUTSOURCE_SEAT_NOTE = slot("人员明细", "外包汇总");
+export const SCOPE_TOTAL_NOTE = slot("事业部底座 · 总览", "范围合计");
+export const UNATTRIBUTED_AGENT_NOTE = slot("场景与时间轴 v2", "未归属部门 Agent");
 
-export function overviewCardNote(audience: "od" | "leader", label: string): string | null {
+export function overviewCardNote(audience: "od" | "leader" | "hrbp", label: string): string | null {
+  if (audience === "hrbp") {
+    if (label === "编制与人员") return slot("负责人视图 · 总览（多部门，赵一）", "编制与人员");
+    if (label === "Agent") return slot("负责人视图 · 总览（多部门，赵一）", "Agent");
+    if (label === "人 : AI 按工时") return slot("OD 底座 · 总览", "人 : AI");
+    if (label === "全年预计 vs 部门预算") return YEAR_FORECAST_LEADER;
+    if (label === "在途变动") return slot("负责人视图 · 总览（多部门，赵一）", "在途变动");
+    return null;
+  }
   if (label === "编制与人员") return audience === "od" ? slot("OD 底座 · 总览", "编制与人员") : slot("负责人视图 · 总览（多部门，赵一）", "编制与人员");
   if (label === "Agent") return audience === "od" ? slot("OD 底座 · 总览", "Agent") : slot("负责人视图 · 总览（多部门，赵一）", "Agent");
   if (label === "人 : AI 按工时") return audience === "od" ? slot("OD 底座 · 总览", "人 : AI") : slot("负责人视图 · 总览（多部门，赵一）", "人 : AI");
@@ -146,7 +158,7 @@ export function rosterFieldNote(audience: "od" | "leader", metric: "用工类型
   return AGENT_COST_NOTE;
 }
 
-export function alertRuleNote(audience: "od" | "leader"): string {
+export function alertRuleNote(audience: "od" | "leader" | "hrbp"): string {
   return audience === "od" ? slot("OD 底座 · 总览", "异常提示规则") : slot("负责人视图 · 总览（多部门，赵一）", "异常提示规则");
 }
 

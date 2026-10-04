@@ -62,7 +62,8 @@ export async function openLeader(user: SessionUser, requestedId?: string, detail
   await recordAccess(db, user.id, user.name, departmentId, facts.name);
   if (pageKind(departmentId, departments, visible) === "overview") {
     const ranges = user.role === "leader" && scopeHasSmallGroup(result, visible);
-    const overview = buildScopeOverview(result, departmentId, user.role === "leader" ? "leader" : "od", ranges);
+    const overviewAudience = user.role === "leader" ? "leader" : user.role === "hrbp" ? "hrbp" : "od";
+    const overview = buildScopeOverview(result, departmentId, overviewAudience, ranges);
     const view = buildLeaderView(result, departmentId, {
       exact: !ranges,
       maskCosts: ranges,
@@ -116,12 +117,13 @@ export async function openBaseline(user: HeadcountUser, detail?: DetailQuery) {
   const result = computePlan(plan);
   const root = scopeRoots(departments, visible)[0];
   if (!root) throw new Error("没有可查看的部门");
-  const overview = buildScopeOverview(result, root, "od", false);
+  const company = seesCompany(user);
+  const overview = buildScopeOverview(result, root, company ? "od" : "hrbp", false);
   const view = buildLeaderView(result, root, {
     exact: true,
     showMarks: can(user, "viewCompensation"),
-    copyAudience: "od",
-    companyScope: seesCompany(user),
+    copyAudience: company ? "od" : "leader",
+    companyScope: company,
     listBase: "/headcount/baseline",
     detail,
   });
@@ -150,7 +152,7 @@ export async function openDepartment(user: HeadcountUser, departmentId: string, 
     exact: true,
     maskCosts: false,
     showMarks: can(user, "viewCompensation"),
-    copyAudience: "od",
+    copyAudience: seesCompany(user) ? "od" : "leader",
     companyScope: false,
     backHref: "/headcount/baseline",
     listBase: `/headcount/baseline/${departmentId}`,

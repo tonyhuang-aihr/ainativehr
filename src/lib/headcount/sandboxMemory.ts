@@ -1,4 +1,4 @@
-import { presetScenarios, type ScenarioDefinition } from "@/lib/headcount/scenario";
+import { normalizeScenarioDefinition, presetScenarios, type ScenarioDefinition } from "@/lib/headcount/scenario";
 
 export const DEMO_SANDBOX_CAPTION = "演示模式：刷新后沙盘方案从本机浏览器恢复";
 
@@ -71,7 +71,7 @@ export function readSandboxPlans(storage: Storage | null, userId: string, scopeK
   try {
     const parsed = JSON.parse(raw) as SandboxEnvelope;
     if (!parsed || parsed.userId !== userId || parsed.scopeKey !== scopeKey || !Array.isArray(parsed.plans)) return [];
-    return parsed.plans.filter(isUserSandbox);
+    return parsed.plans.filter(isUserSandbox).map((plan) => normalizeScenarioDefinition(plan));
   } catch {
     return [];
   }
@@ -139,6 +139,7 @@ function canonicalDefinition(definition: ScenarioDefinition): string {
       monthly: agent.monthly,
       effectiveDate: agent.effectiveDate,
       oneOff: agent.oneOff,
+      departmentName: agent.departmentName ?? null,
     })),
     extraAgentOneOff: definition.extraAgentOneOff.map((item) => ({ effectiveDate: item.effectiveDate, amount: item.amount })),
     cuts: definition.cuts.map((cut) => ({

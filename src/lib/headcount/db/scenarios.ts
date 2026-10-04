@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import type { AppDatabase } from "@/lib/headcount/db/client";
 import * as schema from "@/lib/headcount/db/schema";
-import { presetScenarios, type ScenarioDefinition } from "@/lib/headcount/scenario";
+import { normalizeScenarioDefinition, presetScenarios, type ScenarioDefinition } from "@/lib/headcount/scenario";
 
 const ORDER = ["jz", "jj", "bs", "fa"];
 
@@ -12,8 +12,8 @@ export function serializeDefinition(definition: ScenarioDefinition): string {
 export function parseDefinition(note: string): ScenarioDefinition | null {
   try {
     const value = JSON.parse(note) as ScenarioDefinition;
-    if (!value || typeof value.id !== "string" || !value.assumptions || !Array.isArray(value.hires)) return null;
-    return value;
+    if (!value || typeof value.id !== "string" || !value.assumptions || !Array.isArray(value.hires) || !Array.isArray(value.agents)) return null;
+    return normalizeScenarioDefinition(value);
   } catch {
     return null;
   }

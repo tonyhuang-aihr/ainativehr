@@ -179,6 +179,7 @@ describe("场景页与沙盘导入", () => {
     const view = buildLeaderView(result, DEPT.plat, { exact: false });
     const blob = JSON.stringify(view);
     expect(blob).not.toContain("激进");
+    expect(blob).not.toContain("未归属部门 Agent");
     expect(blob).not.toContain("15,972.0");
     expect(healthChecks(result, evaluateScenario(result, presetScenarios()[0])).some((item) => item.title === "超预算")).toBe(true);
   });

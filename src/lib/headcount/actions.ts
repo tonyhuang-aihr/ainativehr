@@ -15,7 +15,10 @@ import { askHeadcountModel, modelConfigured } from "@/lib/headcount/modelClient"
 import { parseScenarioFile } from "@/lib/data/scenarioFile";
 import { buildRdCenterWorkspace } from "@/lib/demo/rdCenter";
 import { scenarioFromSandbox } from "@/lib/headcount/sandboxImport";
-import { defaultAssumptions, type ScenarioAssumptions, type ScenarioDefinition } from "@/lib/headcount/scenario";
+import { defaultAssumptions, presetScenarios, type ScenarioAssumptions, type ScenarioDefinition } from "@/lib/headcount/scenario";
+import { mergeBusinessScenarios } from "@/lib/headcount/buCost";
+import { scopeRoots } from "@/lib/headcount/overview";
+import { DEMO_AI_RATIO } from "@/lib/headcount/sample";
 import { scenarioFitsScope, seesCompany } from "@/lib/headcount/scopeGuard";
 import { assumptionUnits, copyScenario, quarterDate, resolvePrefill, setCompared } from "@/lib/headcount/scenarioView";
 import {
@@ -241,17 +244,70 @@ async function scenarioScope(user: { id: string; role: HeadcountRole; department
   const scoped = await scopeFor(user);
   const companyWide = seesCompany(user);
   const allowed = new Set(scoped.departments.filter((department) => scoped.visible.includes(department.id)).map((department) => department.name));
-  return { ...scoped, companyWide, allowed, names: scoped.departments.map((department) => department.name) };
+  const db = await getDb();
+  const result = companyWide ? null : computePlan(await loadPlan(db, { departmentIds: null, sensitive: false }));
+  const root = scopeRoots(scoped.departments, scoped.visible)[0] ?? null;
+  return { ...scoped, companyWide, allowed, names: scoped.departments.map((department) => department.name), result, root };
 }
 
 function visibleDefinitions(definitions: ScenarioDefinition[], scope: Awaited<ReturnType<typeof scenarioScope>>) {
-  return definitions.filter((definition) => scenarioFitsScope(definition, scope.allowed, scope.names, scope.companyWide));
+  const visible = definitions.filter((definition) => scenarioFitsScope(definition, scope.allowed, scope.names, scope.companyWide));
+  if (scope.companyWide || !scope.root || !scope.result) return visible;
+  return mergeBusinessScenarios(definitions, visible, scope.root, scope.result);
 }
 
 function quarterValue(value: FormDataEntryValue | null): 1 | 2 | 3 | 4 {
   const quarter = Number(value ?? 2);
   if (quarter === 1 || quarter === 2 || quarter === 3 || quarter === 4) return quarter;
   return 2;
+}
+
+export async function createScenarioAction(formData: FormData) {
+  const user = await scenarioActor();
+  const db = await getDb();
+  const scope = await scenarioScope(user);
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) scenarioNotice("场景需要一个名称");
+  const catalog = await loadScenarioDefinitions(db);
+  const visible = visibleDefinitions(catalog, scope);
+  const seed = catalog.find((item) => item.id === "jz") ?? presetScenarios()[0];
+  const ratio = scope.companyWide ? seed.ratio : (DEMO_AI_RATIO[scope.root ?? ""] ?? "未拆解");
+  const definition: ScenarioDefinition = {
+    id: `copy-${Date.now()}`,
+    name,
+    source: "copy",
+    compared: visible.filter((item) => item.compared).length < 3,
+    assumptions: { ...seed.assumptions },
+    assumptionOrigin: "od",
+    hires: [],
+    agents: [],
+    extraAgentOneOff: [],
+    cuts: [],
+    ratio,
+    ratioNote: ratio === "未拆解" ? "沙盘尚未拆解" : seed.ratioNote,
+    structureNote: null,
+    spanAlert: null,
+  };
+  if (!scenarioFitsScope(definition, scope.allowed, scope.names, scope.companyWide)) scenarioNotice("无权查看");
+  await saveScenarioDefinition(db, definition);
+  await recordOperation(db, user.id, user.name, "新建场景", definition.name);
+  scenarioNotice(`已新建${definition.name}`, definition.id);
+}
+
+export async function renameScenarioAction(formData: FormData) {
+  const user = await scenarioActor();
+  const db = await getDb();
+  const scope = await scenarioScope(user);
+  const id = String(formData.get("id") ?? "");
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) scenarioNotice("场景需要一个名称", id);
+  if (id === "jz" || id === "jj" || id === "bs" || id === "fa" || id === "jx") scenarioNotice("这个场景不能改名", id);
+  const current = visibleDefinitions(await loadScenarioDefinitions(db), scope).find((item) => item.id === id);
+  if (!current) scenarioNotice("无权查看");
+  const next = { ...current, name };
+  await saveScenarioDefinition(db, next);
+  await recordOperation(db, user.id, user.name, "重命名场景", `${current.name} → ${name}`);
+  scenarioNotice(`已改名为${name}`, id);
 }
 
 export async function copyScenarioAction(formData: FormData) {
@@ -324,8 +380,10 @@ export async function addScenarioChangeAction(formData: FormData) {
   } else if (kind === "agent") {
     const monthly = Number(formData.get("monthly") ?? "");
     const oneOff = Number(formData.get("oneOff") ?? 0);
+    const departmentName = String(formData.get("department") ?? "").trim();
+    if (!departmentName) scenarioNotice(`Agent「${String(formData.get("agentName") ?? "新增 Agent")}」缺少所属部门`, id);
     if (!Number.isFinite(monthly) || !Number.isFinite(oneOff)) scenarioNotice("Agent 费用没有写成数字", id);
-    next.agents.push({ name: String(formData.get("agentName") ?? "新增 Agent"), count, monthly, effectiveDate, oneOff });
+    next.agents.push({ name: String(formData.get("agentName") ?? "新增 Agent"), count, monthly, effectiveDate, oneOff, departmentName });
   } else if (kind === "cut") {
     const mark = String(formData.get("mark") ?? "N");
     const tenureYears = Number(formData.get("tenure") ?? "");

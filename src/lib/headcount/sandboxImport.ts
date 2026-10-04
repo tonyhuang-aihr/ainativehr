@@ -50,6 +50,8 @@ export function scenarioFromSandbox(workspace: Workspace, quarter: 1 | 2 | 3 | 4
   const ratio = rollup.ratio.startsWith("人 : AI = ") ? rollup.ratio.slice("人 : AI = ".length) : rollup.ratio;
   const knownSample = workspace.importMeta.sampleId === RD_CENTER_SAMPLE_ID && Boolean(merge);
   const effectiveDate = QUARTER_DATE[quarter - 1];
+  const departmentNames = new Set(snapshot.people.map((person) => person.departmentPath[1] ?? person.departmentPath[0]).filter((name): name is string => Boolean(name)));
+  const departmentName = knownSample ? "数据智能部" : departmentNames.size === 1 ? ([...departmentNames][0] ?? null) : null;
   const agentCount = knownSample ? 6 : Math.max(1, rollup.covered ? 6 : 1);
   const annualCompute = knownSample ? 380_000 : rollup.compute;
   const oneOff = knownSample ? 120_000 : 0;
@@ -73,6 +75,7 @@ export function scenarioFromSandbox(workspace: Workspace, quarter: 1 | 2 | 3 | 4
         monthly: annualCompute / agentCount / 12,
         effectiveDate,
         oneOff,
+        departmentName,
       },
     ],
     extraAgentOneOff: [],

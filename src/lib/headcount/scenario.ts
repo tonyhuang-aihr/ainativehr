@@ -1,5 +1,5 @@
 import { quarterBounds, quarterIndex, yearDays, yearEnd, overlapDays, parseIsoDate } from "@/lib/headcount/calendar";
-import { deptStat, type PlanResult } from "@/lib/headcount/engine";
+import { deptStat, subtreeIds, type PlanResult } from "@/lib/headcount/engine";
 import { formatWan, roundToHalfWan } from "@/lib/headcount/money";
 import { exclusiveServiceEnd, SCENARIO_NOTICE_PAY_DEFAULT } from "@/lib/headcount/policies";
 import { estimateSeverance, type CompMark } from "@/lib/headcount/severance";
@@ -19,6 +19,11 @@ export type ScenarioAgentChange = {
   effectiveDate: string;
   /** 上线当季的一次性费用，部门不摊。 */
   oneOff: number;
+  /**
+   * 所属部门。null 表示未归属，只计入公司口径。
+   * 字段缺失时引擎直接报错，不能靠省略来表示未归属。
+   */
+  departmentName: string | null;
 };
 
 export type ScenarioCut = {
@@ -118,7 +123,7 @@ export function presetScenarios(): ScenarioDefinition[] {
         { departmentName: "数据智能部", grade: "P6", count: 2, effectiveDate: "2027-04-01" },
         { departmentName: "质量与交付部", grade: "P5", count: 4, effectiveDate: "2027-07-01" },
       ],
-      agents: [{ name: "测试用例生成 Agent", count: 4, monthly: 2000, effectiveDate: "2027-04-01", oneOff: 40_000 }],
+      agents: [{ name: "测试用例生成 Agent", count: 4, monthly: 2000, effectiveDate: "2027-04-01", oneOff: 40_000, departmentName: null }],
       cuts: [],
       ratio: "78 : 22",
       ratioNote: "沿用基线拆解",
@@ -132,8 +137,8 @@ export function presetScenarios(): ScenarioDefinition[] {
       assumptions: defaultAssumptions(),
       hires: [{ departmentName: "数据智能部", grade: "P7", count: 2, effectiveDate: "2027-04-01" }],
       agents: [
-        { name: "测试用例生成 Agent", count: 6, monthly: 2000, effectiveDate: "2027-04-01", oneOff: 0 },
-        { name: "代码评审 Agent", count: 6, monthly: 3500, effectiveDate: "2027-04-01", oneOff: 0 },
+        { name: "测试用例生成 Agent", count: 6, monthly: 2000, effectiveDate: "2027-04-01", oneOff: 0, departmentName: null },
+        { name: "代码评审 Agent", count: 6, monthly: 3500, effectiveDate: "2027-04-01", oneOff: 0, departmentName: null },
       ],
       extraAgentOneOff: [{ effectiveDate: "2027-04-01", amount: 180_000 }],
       cuts: [
@@ -158,7 +163,7 @@ export function presetScenarios(): ScenarioDefinition[] {
       compared: false,
       assumptions: defaultAssumptions({ hiringCycleDays: 90 }),
       hires: [],
-      agents: [{ name: "代码评审 Agent", count: 2, monthly: 3500, effectiveDate: "2027-04-01", oneOff: 10_000 }],
+      agents: [{ name: "代码评审 Agent", count: 2, monthly: 3500, effectiveDate: "2027-04-01", oneOff: 10_000, departmentName: null }],
       cuts: [],
       ratio: "78 : 22",
       ratioNote: "沿用基线拆解",
@@ -171,7 +176,7 @@ export function presetScenarios(): ScenarioDefinition[] {
       assumptions: defaultAssumptions(),
       assumptionOrigin: "default",
       hires: [],
-      agents: [{ name: "方案 A 新增 Agent 岗位", count: 6, monthly: 380_000 / 6 / 12, effectiveDate: "2027-04-01", oneOff: 120_000 }],
+      agents: [{ name: "方案 A 新增 Agent 岗位", count: 6, monthly: 380_000 / 6 / 12, effectiveDate: "2027-04-01", oneOff: 120_000, departmentName: "数据智能部" }],
       extraAgentOneOff: [],
       cuts: [],
       ratio: "69 : 31",
@@ -207,13 +212,15 @@ function emptyFlows(): QuarterFlow[] {
   return [0, 1, 2, 3].map(() => ({ attrition: 0, hires: 0, cuts: 0, agentsAdded: 0, agentsRemoved: 0 }));
 }
 
-function baselineQuarters(result: PlanResult): { labor: number[]; agent: number[]; severance: number[]; agentOneOff: number[]; headcount: number[]; agents: number[] } {
-  const stat = deptStat(result, costRootId(result));
+function baselineQuarters(result: PlanResult, rootId: string): { labor: number[]; agent: number[]; severance: number[]; agentOneOff: number[]; headcount: number[]; agents: number[] } {
+  const stat = deptStat(result, rootId);
+  const ids = subtreeIds(result.plan, rootId);
   const year = result.plan.year;
   const bounds = quarterBounds(year);
   const headcount = bounds.map(([, end]) => {
     let count = stat.onBoard;
     for (const movement of result.movements) {
+      if (!ids.has(movement.departmentId)) continue;
       if (parseIsoDate(movement.effectiveDate) >= end) continue;
       if (movement.kind === "入职") count += 1;
       if (movement.kind === "离职") count -= 1;
@@ -223,6 +230,7 @@ function baselineQuarters(result: PlanResult): { labor: number[]; agent: number[
   const agents = bounds.map(([, end]) => {
     let count = stat.agentInUse;
     for (const movement of result.movements) {
+      if (!ids.has(movement.departmentId)) continue;
       if (!movement.kind.startsWith("Agent")) continue;
       if (parseIsoDate(movement.effectiveDate) >= end) continue;
       count += movement.agentInstances ?? 0;
@@ -239,11 +247,34 @@ function baselineQuarters(result: PlanResult): { labor: number[]; agent: number[
   };
 }
 
-function averageFormalAnnual(result: PlanResult): number {
+/** 在岗、待离职、待转出的正式员工年均。计算中不取整。 */
+export function formalAverageAnnual(result: PlanResult): number {
   const onBoard = result.people.filter((person) => person.status === "在岗" || person.status === "待离职" || person.status === "待转出");
   const annual = onBoard.reduce((total, person) => total + (result.plan.gradeAnnual[person.grade] ?? 0), 0);
   return onBoard.length ? annual / onBoard.length : 0;
 }
+
+export function requireAgentDepartment(agent: ScenarioAgentChange): void {
+  if (agent.departmentName === undefined || agent.departmentName === "") throw new Error(`Agent「${agent.name}」缺少所属部门`);
+}
+
+export function scenarioAgentQuarters(result: PlanResult, agents: ScenarioAgentChange[]): number[] {
+  const year = result.plan.year;
+  let quarters = [0, 0, 0, 0];
+  for (const change of agents) {
+    requireAgentDepartment(change);
+    quarters = add(quarters, qsplit(year, change.monthly * 12 * change.count, change.effectiveDate));
+  }
+  return quarters;
+}
+
+export type ScenarioEvalOptions = {
+  rootId?: string;
+  /** 缺编人数。不传时按该根部门年初在岗取整一次。 */
+  attritionPerQuarter?: number;
+  /** 缺编用的正式员工年均。不传时用这份计划里的人，公司方案即公司均薪。 */
+  averageFormalAnnual?: number;
+};
 
 /** 场景减员的补偿月数。平均司龄先换成完整月，再按第 47 条折月。 */
 export function scenarioCutSeverance(result: PlanResult, cut: ScenarioCut, noticePay: boolean): number {
@@ -260,10 +291,12 @@ export function scenarioCutSeverance(result: PlanResult, cut: ScenarioCut, notic
   return estimated.amount * cut.count;
 }
 
-export function evaluateScenario(result: PlanResult, definition: ScenarioDefinition): ScenarioResult {
+export function evaluateScenario(result: PlanResult, definition: ScenarioDefinition, options?: ScenarioEvalOptions): ScenarioResult {
+  for (const change of definition.agents) requireAgentDepartment(change);
   const year = result.plan.year;
-  const base = baselineQuarters(result);
-  const stat = deptStat(result, costRootId(result));
+  const rootId = options?.rootId ?? costRootId(result);
+  const base = baselineQuarters(result, rootId);
+  const stat = deptStat(result, rootId);
   let labor = [...base.labor];
   let agent = [...base.agent];
   const severance = [...base.severance];
@@ -272,8 +305,13 @@ export function evaluateScenario(result: PlanResult, definition: ScenarioDefinit
   let agents = [...base.agents];
   const bounds = quarterBounds(year);
   const yearDaysCount = yearDays(year);
-  const average = averageFormalAnnual(result);
-  const perQuarter = Math.round(stat.onBoard * definition.assumptions.attritionRate / 4);
+  const average = options?.averageFormalAnnual ?? formalAverageAnnual(result);
+  const perQuarter = options?.attritionPerQuarter ?? Math.round(stat.onBoard * definition.assumptions.attritionRate / 4);
+  const scopeIds = subtreeIds(result.plan, rootId);
+  const wholePlan = result.plan.departments.every((department) => scopeIds.has(department.id));
+  const namesInScope = new Set(result.plan.departments.filter((department) => scopeIds.has(department.id)).map((department) => department.name));
+  const personHere = (name: string) => wholePlan || namesInScope.has(name);
+  const agentHere = (change: ScenarioAgentChange) => wholePlan || (change.departmentName != null && namesInScope.has(change.departmentName));
   const gap = [0, 0, 0, 0];
   const flows = emptyFlows();
 
@@ -297,6 +335,7 @@ export function evaluateScenario(result: PlanResult, definition: ScenarioDefinit
   }
 
   for (const hire of definition.hires) {
+    if (!personHere(hire.departmentName)) continue;
     const annual = (result.plan.gradeAnnual[hire.grade] ?? 0) * hire.count;
     labor = add(labor, qsplit(year, annual, hire.effectiveDate));
     const when = parseIsoDate(hire.effectiveDate);
@@ -306,6 +345,7 @@ export function evaluateScenario(result: PlanResult, definition: ScenarioDefinit
   }
 
   for (const change of definition.agents) {
+    if (!agentHere(change)) continue;
     const annual = change.monthly * 12 * change.count;
     agent = add(agent, qsplit(year, annual, change.effectiveDate));
     const when = parseIsoDate(change.effectiveDate);
@@ -318,12 +358,15 @@ export function evaluateScenario(result: PlanResult, definition: ScenarioDefinit
     }
   }
 
-  for (const once of definition.extraAgentOneOff) {
-    const quarter = quarterIndex(year, parseIsoDate(once.effectiveDate));
-    if (quarter >= 0) agentOneOff[quarter] += once.amount;
+  if (wholePlan) {
+    for (const once of definition.extraAgentOneOff) {
+      const quarter = quarterIndex(year, parseIsoDate(once.effectiveDate));
+      if (quarter >= 0) agentOneOff[quarter] += once.amount;
+    }
   }
 
   for (const cut of definition.cuts) {
+    if (!personHere(cut.departmentName)) continue;
     const annual = (result.plan.gradeAnnual[cut.grade] ?? 0) * cut.count;
     const stop = exclusiveServiceEnd(cut.effectiveDate);
     labor = add(labor, scale(qsplit(year, annual, stop), -1));
@@ -365,8 +408,8 @@ export function evaluateScenario(result: PlanResult, definition: ScenarioDefinit
   };
 }
 
-export function evaluateBaseline(result: PlanResult): ScenarioResult {
-  const base = baselineQuarters(result);
+export function evaluateBaseline(result: PlanResult, rootId = costRootId(result)): ScenarioResult {
+  const base = baselineQuarters(result, rootId);
   const quarters = [0, 1, 2, 3].map((index) => {
     const oneOff = base.severance[index] + base.agentOneOff[index];
     return {
@@ -407,6 +450,22 @@ export function evaluateBaseline(result: PlanResult): ScenarioResult {
     yearEndAgents: base.agents[3],
     attritionPerQuarter: 0,
     flows: emptyFlows(),
+  };
+}
+
+/** 旧数据里省略的所属部门：方案 A 归数据智能部，其余视为未归属。新写入仍必须显式给出。 */
+export function normalizeScenarioDefinition(definition: ScenarioDefinition): ScenarioDefinition {
+  return {
+    ...definition,
+    agents: definition.agents.map((agent) => ({
+      ...agent,
+      departmentName:
+        agent.departmentName === undefined || agent.departmentName === ""
+          ? definition.id === "fa" || agent.name.includes("方案 A")
+            ? "数据智能部"
+            : null
+          : agent.departmentName,
+    })),
   };
 }
 

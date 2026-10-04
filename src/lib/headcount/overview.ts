@@ -46,7 +46,7 @@ export function conclusionSourceLabel(origin: ConclusionOrigin): string {
 }
 
 export type ScopeOverview = {
-  audience: "od" | "leader";
+  audience: "od" | "leader" | "hrbp";
   title: string;
   eyebrow: string;
   asOf: string;
@@ -227,12 +227,13 @@ function statusFor(result: PlanResult, departmentId: string, alerts: AlertItem[]
   return parts.length ? parts.join(" · ") : "正常";
 }
 
-export function buildScopeOverview(result: PlanResult, rootId: string, audience: "od" | "leader", ranges: boolean): ScopeOverview {
+export function buildScopeOverview(result: PlanResult, rootId: string, audience: "od" | "leader" | "hrbp", ranges: boolean): ScopeOverview {
   const stat = deptStat(result, rootId);
   const mode = audience === "od" && rootId === "rd" ? "company" : "leader";
   const alerts = collectAlerts(result, rootId, mode);
   const children = result.plan.departments.filter((department) => department.parentId === rootId);
-  const rows = children
+  const listed = children.length > 0 ? children : audience === "hrbp" ? result.plan.departments.filter((department) => department.id === rootId) : [];
+  const rows = listed
     .map((department) => {
       const child = deptStat(result, department.id);
       const shownVacancy = presentVacancy(child.vacancy);
@@ -254,7 +255,7 @@ export function buildScopeOverview(result: PlanResult, rootId: string, audience:
         gap: gap == null ? "未设置" : formatSignedWan(gap * 10_000),
         usage: budget ? Math.round((roundToHalfWan(child.yearDailyYuan) / roundToHalfWan(budget)) * 1000) / 10 : null,
         status: statusFor(result, department.id, alerts),
-        href: audience === "od" ? `/headcount/baseline/${department.id}` : `/headcount/leader?dept=${department.id}`,
+        href: audience === "leader" ? `/headcount/leader?dept=${department.id}` : `/headcount/baseline/${department.id}`,
         sortGap: gap ?? -999,
         sortAnnual: child.yearDailyYuan,
       };
@@ -320,8 +321,8 @@ export function buildScopeOverview(result: PlanResult, rootId: string, audience:
 
   return {
     audience,
-    title: audience === "od" ? `OD 底座 · ${stat.name}` : stat.name,
-    eyebrow: audience === "od" ? `${children.length} 个部门 · 数据截至 ${result.plan.asOf}` : `${children.length} 个部门 · 截至 ${result.plan.asOf}`,
+    title: audience === "od" ? `OD 底座 · ${stat.name}` : audience === "hrbp" ? `事业部底座 · ${stat.name}` : stat.name,
+    eyebrow: audience === "od" ? `${children.length} 个部门 · 数据截至 ${result.plan.asOf}` : `${audience === "hrbp" ? listed.length : children.length} 个部门 · 截至 ${result.plan.asOf}`,
     asOf: result.plan.asOf,
     year: result.plan.year,
     conclusion,
@@ -371,11 +372,11 @@ export function buildScopeOverview(result: PlanResult, rootId: string, audience:
             gap: formatSignedWan((oneOffGap ?? 0) * 10_000),
           }
         : null,
-    listTotal: listTotalOf(result, rootId, stat, company),
+    listTotal: listTotalOf(result, rootId, stat, company, audience),
   };
 }
 
-function listTotalOf(result: PlanResult, rootId: string, stat: ReturnType<typeof deptStat>, company: boolean) {
+function listTotalOf(result: PlanResult, rootId: string, stat: ReturnType<typeof deptStat>, company: boolean, audience: "od" | "leader" | "hrbp") {
   const children = result.plan.departments.filter((department) => department.parentId === rootId);
   const budgetYuan = company
     ? children.reduce((total, department) => total + (result.plan.budgets[department.id] ?? 0), 0)
@@ -384,7 +385,7 @@ function listTotalOf(result: PlanResult, rootId: string, stat: ReturnType<typeof
   const shown = presentVacancy(stat.vacancy);
   const gap = gapWan(stat.yearDailyYuan, budgetYuan);
   return {
-    label: company ? "部门合计" : `${stat.name}合计`,
+    label: company ? "部门合计" : audience === "hrbp" ? "范围合计" : `${stat.name}合计`,
     quota: stat.quotaFormal,
     onBoard: stat.onBoard,
     inTransit: stat.inTransit,

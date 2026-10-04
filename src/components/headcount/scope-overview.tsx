@@ -1,5 +1,5 @@
 import { InfoMark } from "@/components/headcount/info-mark";
-import { alertRuleNote, BUDGET_NOTE, DEPT_TOTAL_NOTE, GAP_NOTE, GROUP_PRIVACY_NOTE, OD_TRANSIT_NOTE, overviewCardNote, VACANCY_NOTE, VACANCY_NOTE_LEADER, VACANCY_TOTAL_NOTE, YEAR_FORECAST_LEADER_DEPT, YEAR_FORECAST_OD } from "@/lib/headcount/copy";
+import { alertRuleNote, BUDGET_NOTE, DEPT_TOTAL_NOTE, GAP_NOTE, GROUP_PRIVACY_NOTE, OD_TRANSIT_NOTE, overviewCardNote, SCOPE_TOTAL_NOTE, VACANCY_NOTE, VACANCY_NOTE_LEADER, VACANCY_TOTAL_NOTE, YEAR_FORECAST_LEADER_DEPT, YEAR_FORECAST_OD } from "@/lib/headcount/copy";
 import { conclusionSourceLabel, type ScopeOverview } from "@/lib/headcount/overview";
 import Link from "next/link";
 
@@ -58,7 +58,7 @@ export function ScopeOverviewBoard({ overview }: { overview: ScopeOverview }) {
               <span className="font-medium">{alert.kind}</span>
               <span>{alert.title}</span>
               <span className="text-muted">{alert.detail}</span>
-              <Link href={overview.audience === "od" ? `/headcount/baseline/${alert.departmentId}` : `/headcount/leader?dept=${alert.departmentId}`} className="ml-auto text-primary">
+              <Link href={overview.audience === "leader" ? `/headcount/leader?dept=${alert.departmentId}` : `/headcount/baseline/${alert.departmentId}`} className="ml-auto text-primary">
                 进入部门
               </Link>
             </li>
@@ -130,6 +130,7 @@ export function ScopeOverviewBoard({ overview }: { overview: ScopeOverview }) {
                 <td className="px-3 py-2">
                   {overview.listTotal.label}
                   {overview.audience === "od" ? <InfoMark note={DEPT_TOTAL_NOTE} /> : null}
+                  {overview.audience === "hrbp" ? <InfoMark note={SCOPE_TOTAL_NOTE} /> : null}
                 </td>
                 {overview.audience === "leader" ? <td /> : null}
                 <td>{overview.listTotal.quota}</td>

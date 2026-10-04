@@ -157,11 +157,21 @@ export function LeaderBoard({ view, variant = "full" }: { view: LeaderView; vari
   );
 }
 
+function CollapseGlyph() {
+  return (
+    <span aria-hidden="true" className="inline-flex w-3 justify-center text-muted">
+      <span className="group-open:hidden">›</span>
+      <span className="hidden group-open:inline">⌄</span>
+    </span>
+  );
+}
+
 function QuarterSection({ view }: { view: LeaderView }) {
   return (
     <section className="overflow-hidden rounded-2xl border border-line bg-white">
-      <details>
+      <details className="group">
         <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3 text-sm [&::-webkit-details-marker]:hidden">
+          <CollapseGlyph />
           <b>季度成本</b>
           <span className="text-muted">{view.quarterSummary}</span>
           <span className="ml-auto text-primary">展开</span>
@@ -208,8 +218,9 @@ function PeopleSection({ view, hrefFor }: { view: LeaderView; hrefFor: (patch: R
   const opened = view.openSection === "people" || page.statuses.length > 0;
   return (
     <section id="people-detail" className="overflow-hidden rounded-2xl border border-line bg-white">
-      <details open={opened}>
+      <details className="group" open={opened}>
         <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3 text-sm [&::-webkit-details-marker]:hidden">
+          <CollapseGlyph />
           <b>人员明细</b>
           <span className="text-muted">{peopleRosterLine(view)}</span>
         </summary>
@@ -299,8 +310,9 @@ function AgentSection({ view, hrefFor }: { view: LeaderView; hrefFor: (patch: Re
   const opened = view.openSection === "agents" || page.statuses.length > 0;
   return (
     <section id="agent-detail" className="overflow-hidden rounded-2xl border border-line bg-white">
-      <details open={opened}>
+      <details className="group" open={opened}>
         <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3 text-sm [&::-webkit-details-marker]:hidden">
+          <CollapseGlyph />
           <b>Agent 明细</b>
           <span className="text-muted">{agentRosterLine(view)}</span>
           <span className="ml-auto text-xs text-muted">{page.sort === "cost" ? "按全年成本从高到低" : page.sort === "effective" ? "按生效日排序" : "按名称排序"}</span>

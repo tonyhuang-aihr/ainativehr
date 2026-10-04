@@ -125,7 +125,7 @@ describe("人员明细和 Agent 明细分页", () => {
   });
 
   it("外包汇总行带座位说明，实习和正式行没有", () => {
-    expect(TOOLTIPS).toHaveLength(53);
+    expect(TOOLTIPS).toHaveLength(55);
     expect(OUTSOURCE_SEAT_NOTE).toBe("外包只有座位数，按部门汇总，不列姓名");
     const company = collectPersonLines(result, DEPT.center);
     const seats = pagePeople(company, { ...defaultDetailQuery(), peopleTypes: ["外包"], peopleSize: 50 }, { exact: true });

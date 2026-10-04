@@ -1,14 +1,17 @@
 import {
   addScenarioChangeAction,
   copyScenarioAction,
+  createScenarioAction,
   importSampleSandboxAction,
   importSandboxFileAction,
   prefillAssumptionsAction,
+  renameScenarioAction,
   saveAssumptionsAction,
   toggleScenarioAction,
 } from "@/lib/headcount/actions";
 import { SandboxLocalRestore } from "@/components/headcount/sandbox-restore";
 import { ScenarioFileField } from "@/components/headcount/scenario-file-field";
+import { DepartmentDailyRows } from "@/components/headcount/department-daily-rows";
 import { InfoMark } from "@/components/headcount/info-mark";
 import { COMPARE_SCROLL_HINT, SCENARIO_TOTAL_NOTE, TIMELINE_CHANGE_NOTE } from "@/lib/headcount/copy";
 import type { ScenarioDefinition } from "@/lib/headcount/scenario";
@@ -55,7 +58,7 @@ export function ScenarioBoardView({
             <InfoMark note={SCENARIO_TOTAL_NOTE} />
           </p>
           <p className="mt-3 text-base leading-8">{board.hero}</p>
-          <p className="mt-4 text-xs text-muted">一次性费用（经济补偿、Agent 实施 / 培训）按公司统一管理计入总成本，不摊到部门</p>
+          <p className="mt-4 text-xs text-muted">{board.oneOffCaption}</p>
         </div>
         <div className="border-line lg:border-l lg:pl-6">
           <p className="text-sm text-muted">成本最低 · {board.lowestName}</p>
@@ -67,7 +70,9 @@ export function ScenarioBoardView({
             <div className="h-2 rounded-full bg-primary" style={{ width: `${Math.min(100, board.usage)}%` }} />
           </div>
           <p className="mt-2 flex justify-between text-xs text-muted">
-            <span>预算总包 {board.budget} 万</span>
+            <span>
+              {board.budgetCaption} {board.budget} 万
+            </span>
             <span>为预算的 {board.percent}</span>
           </p>
         </div>
@@ -104,14 +109,14 @@ export function ScenarioBoardView({
             </thead>
             <tbody>
               <tr className="border-b border-line text-right">
-                <td className={`px-4 py-3 text-left ${sticky}`}>全年总成本</td>
+                <td className={`px-4 py-3 text-left ${sticky}`}>{board.totalLabel}</td>
                 {board.columns.map((column) => (
                   <td key={column.id} className={`px-4 py-3 ${column.lowest ? "bg-[#FAFAFF]" : ""}`}>
                     <div className={`text-lg font-semibold ${column.lowest ? "text-primary" : ""}`}>{column.total}</div>
                   </td>
                 ))}
               </tr>
-              <Metric label={`对比预算总包 ${board.budget}`} values={board.columns.map((column) => ({ id: column.id, text: column.gap, warn: column.over, lowest: column.lowest }))} />
+              <Metric label={`对比${board.budgetCaption} ${board.budget}`} values={board.columns.map((column) => ({ id: column.id, text: column.gap, warn: column.over, lowest: column.lowest }))} />
               <Metric label="期末正式人数" values={board.columns.map((column) => ({ id: column.id, text: String(column.people), lowest: column.lowest }))} />
               <Metric label="期末 Agent 数" values={board.columns.map((column) => ({ id: column.id, text: String(column.agents), lowest: column.lowest }))} />
               <Metric label="人 : AI 按工时" values={board.columns.map((column) => ({ id: column.id, text: column.ratio, muted: column.ratio === "未拆解", lowest: column.lowest }))} />
@@ -121,8 +126,12 @@ export function ScenarioBoardView({
                 </td>
                 <td className="bg-[#FCFCFD]" colSpan={board.columns.length} />
               </tr>
-              <Metric label="部门持续成本 人工 + Agent" values={board.columns.map((column) => ({ id: column.id, text: column.daily, lowest: column.lowest }))} />
-              <Metric label="一次性 HR / OD 统一管理" values={board.columns.map((column) => ({ id: column.id, text: column.oneOff, lowest: column.lowest }))} />
+              {board.dailyBreakdown ? (
+                <DepartmentDailyRows columns={board.columns} note={board.dailyBreakdown.note} />
+              ) : (
+                <Metric label="部门持续成本 人工 + Agent" values={board.columns.map((column) => ({ id: column.id, text: column.daily, lowest: column.lowest }))} />
+              )}
+              {board.showOneOff ? <Metric label="一次性 HR / OD 统一管理" values={board.columns.map((column) => ({ id: column.id, text: column.oneOff, lowest: column.lowest }))} /> : null}
             </tbody>
           </table>
         </div>
@@ -322,9 +331,22 @@ export function ScenarioBoardView({
                   复制
                 </button>
               </form>
+              <form action={renameScenarioAction} className="flex items-center gap-2">
+                <input name="id" type="hidden" value={item.id} />
+                <input className="w-36 rounded-lg border border-line px-2 py-1" name="name" placeholder="新名称" />
+                <button className="rounded-lg px-2 py-1 text-primary" type="submit">
+                  重命名
+                </button>
+              </form>
             </li>
           ))}
         </ul>
+        <form action={createScenarioAction} className="mt-3 flex flex-wrap items-center gap-2">
+          <input className={field} name="name" placeholder="新场景名称" />
+          <button className="rounded-xl border border-line px-3 py-2" type="submit">
+            新建场景
+          </button>
+        </form>
       </section>
 
       <section id="sandbox-import" className="rounded-2xl border border-line bg-white p-4 text-sm">
