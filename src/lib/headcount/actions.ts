@@ -33,7 +33,8 @@ import {
   wipeOnline,
 } from "@/lib/headcount/db/mutate";
 import { listUsers, loadDepartments } from "@/lib/headcount/db/queries";
-import { isDemo } from "@/lib/headcount/env";
+import { isDemo, usesEphemeralDb } from "@/lib/headcount/env";
+import { applyLocalSandboxRestore } from "@/lib/headcount/sandboxRestore";
 import { currentUser } from "@/lib/headcount/session";
 
 function notice(path: string, message: string): never {
@@ -354,6 +355,14 @@ async function storeImported(user: { id: string; name: string }, definition: Sce
   await saveScenarioDefinition(db, next);
   await recordOperation(db, user.id, user.name, "导入沙盘方案", next.structureNote ?? next.name);
   scenarioNotice(`已导入${next.name}。${next.structureNote ?? ""} 人 : AI ${next.ratio}。花名册没有写入。`, next.id);
+}
+
+export async function restoreLocalSandboxAction(plans: ScenarioDefinition[]): Promise<{ restoredIds: string[]; rejectedIds: string[] }> {
+  const user = await currentUser();
+  if (!user || !can(user, "viewScenarios") || !usesEphemeralDb()) return { restoredIds: [], rejectedIds: [] };
+  const result = await applyLocalSandboxRestore(await getDb(), user, plans);
+  if (result.restoredIds.length) revalidatePath("/headcount/scenarios");
+  return result;
 }
 
 export async function importSampleSandboxAction(formData: FormData) {

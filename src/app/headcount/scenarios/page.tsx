@@ -5,7 +5,9 @@ import { scopeFor } from "@/lib/headcount/db/present";
 import { loadPlan } from "@/lib/headcount/db/queries";
 import { loadScenarioDefinitions } from "@/lib/headcount/db/scenarios";
 import { computePlan } from "@/lib/headcount/engine";
+import { usesEphemeralDb } from "@/lib/headcount/env";
 import { modelConfigured } from "@/lib/headcount/modelClient";
+import { scopeStorageKey } from "@/lib/headcount/sandboxMemory";
 import { buildScenarioBoard, DEFAULT_PREFILL_NOTE, MODEL_PREFILL_NOTE } from "@/lib/headcount/scenarioView";
 import { ScopeDenied, seesCompany, selectScenariosForUser } from "@/lib/headcount/scopeGuard";
 import { currentUser } from "@/lib/headcount/session";
@@ -35,5 +37,12 @@ export default async function ScenariosPage({ searchParams }: { searchParams: Pr
   }
   const plan = await loadPlan(db, { departmentIds: companyWide ? null : scoped.visible, sensitive: can(user, "viewOneOff") });
   const board = buildScenarioBoard(computePlan(plan), selection.definitions, selection.focusId, modelConfigured() ? MODEL_PREFILL_NOTE : DEFAULT_PREFILL_NOTE);
-  return <ScenarioBoardView board={board} notice={query.notice} />;
+  const sandboxRestore = usesEphemeralDb()
+    ? {
+        userId: user.id,
+        scopeKey: scopeStorageKey(companyWide, scoped.visible),
+        plans: selection.definitions.filter((definition) => definition.source === "sandbox"),
+      }
+    : null;
+  return <ScenarioBoardView board={board} notice={query.notice} sandboxRestore={sandboxRestore} />;
 }

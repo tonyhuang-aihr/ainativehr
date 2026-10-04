@@ -54,6 +54,7 @@ describe("场景页与沙盘导入", () => {
     expect(heroSentence(result, compared)).toContain("沙盘方案 A 成本最低");
     expect(heroSentence(result, compared)).not.toContain("沙盘方案 A成本最低");
     expect(opening.agents).toBe(15);
+    expect(quarterChangeLabels(baseline, baseline, opening)).toEqual([]);
     expect(baseline.quarters.map((quarter) => quarter.agents)).toEqual([19, 22, 21, 21]);
     expect(aggressive.quarters.map((quarter) => quarter.agents)).toEqual([19, 34, 33, 33]);
     expect(board.health.map((row) => row.name)).toEqual(["基准", "激进 · AI 加速", "沙盘方案 A · 拆组前"]);
@@ -76,6 +77,47 @@ describe("场景页与沙盘导入", () => {
     const blob = JSON.stringify(board);
     expect(blob).not.toMatch(/钱二|赵一|68750|每人|employeeNo/);
     expect(scenarioCutTextHasPerPerson(blob)).toBe(false);
+  });
+
+  it("四个场景的时间轴标签与核对清单逐字一致", () => {
+    const opening = { people: deptStat(result, DEPT.center).onBoard, agents: deptStat(result, DEPT.center).agentInUse };
+    const baseline = evaluateBaseline(result);
+    const expected = {
+      jz: [
+        "Q1 离职未补位 10 人（含基线变动共 486→479）",
+        "Q2 场景增员 6 人（含基线变动共 479→486）",
+        "Q2 场景新增 4 个 Agent（含基线变动共 19→26）",
+        "Q3 场景增员 4 人（含基线变动共 486→490）",
+      ],
+      jj: [
+        "Q1 离职未补位 10 人（含基线变动共 486→479）",
+        "Q2 场景增员 2 人（含基线变动共 479→482）",
+        "Q2 场景新增 12 个 Agent（含基线变动共 19→34）",
+        "Q3 场景减员 8 人（含基线变动共 482→474）",
+      ],
+      bs: [
+        "Q1 离职未补位 10 人（含基线变动共 486→479）",
+        "Q2 场景新增 2 个 Agent（含基线变动共 19→24）",
+      ],
+      fa: [
+        "Q1 离职未补位 10 人（含基线变动共 486→479）",
+        "Q2 场景新增 6 个 Agent（含基线变动共 19→28）",
+      ],
+    };
+    const presets = presetScenarios();
+    for (const definition of presets) {
+      const labels = expected[definition.id as keyof typeof expected];
+      expect(quarterChangeLabels(baseline, evaluateScenario(result, definition), opening)).toEqual(labels);
+      expect(buildScenarioBoard(result, presets, definition.id, DEFAULT_PREFILL_NOTE).timelineLabels).toEqual(labels);
+      expect(labels.some((label) => label.startsWith("Q4"))).toBe(false);
+      expect(labels.every((label) => label.endsWith("）") && label.includes("（含基线变动共 "))).toBe(true);
+    }
+    const latest = scenarioFromSandbox(buildRdCenterWorkspace("2026-10-04T00:00:00.000Z"), 2);
+    expect(latest.name).toBe("沙盘方案 A");
+    expect(quarterChangeLabels(baseline, evaluateScenario(result, latest), opening)).toEqual(expected.fa);
+    const withLatest = presets.map((item) => (item.id === "fa" ? latest : item));
+    expect(buildScenarioBoard(result, withLatest, "fa", DEFAULT_PREFILL_NOTE).timelineLabels).toEqual(expected.fa);
+    expect(quarterChangeLabels(baseline, baseline, opening)).toEqual([]);
   });
 
   it("预填只送脱敏汇总，没有模型时用默认假设", async () => {

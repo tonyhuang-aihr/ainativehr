@@ -7,9 +7,11 @@ import {
   saveAssumptionsAction,
   toggleScenarioAction,
 } from "@/lib/headcount/actions";
+import { SandboxLocalRestore } from "@/components/headcount/sandbox-restore";
 import { ScenarioFileField } from "@/components/headcount/scenario-file-field";
 import { InfoMark } from "@/components/headcount/info-mark";
 import { COMPARE_SCROLL_HINT, SCENARIO_TOTAL_NOTE, TIMELINE_CHANGE_NOTE } from "@/lib/headcount/copy";
+import type { ScenarioDefinition } from "@/lib/headcount/scenario";
 import type { ScenarioBoard } from "@/lib/headcount/scenarioView";
 
 const field = "w-full rounded-xl border border-line px-3 py-2";
@@ -23,13 +25,22 @@ function healthShort(name: string): string {
   return name;
 }
 
-export function ScenarioBoardView({ board, notice }: { board: ScenarioBoard; notice?: string }) {
+export function ScenarioBoardView({
+  board,
+  notice,
+  sandboxRestore,
+}: {
+  board: ScenarioBoard;
+  notice?: string;
+  sandboxRestore?: { userId: string; scopeKey: string; plans: ScenarioDefinition[] } | null;
+}) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">场景与时间轴</h1>
           <p className="mt-1 text-sm text-muted">基于基线（含已确认在途）· 仅 OD / HRBP 可见 · {board.year} 自然季度</p>
+          {sandboxRestore ? <SandboxLocalRestore userId={sandboxRestore.userId} scopeKey={sandboxRestore.scopeKey} plans={sandboxRestore.plans} /> : null}
         </div>
         <a className="text-sm text-primary" href="/headcount/explain">
           口径说明

@@ -91,6 +91,7 @@ describe("场景按设计师口径折算", () => {
       "Q1 离职未补位 10 人",
       "Q1 场景增员 2 人（含基线变动共 486→481）",
     ]);
+    expect(quarterChangeLabels(baseline, baseline, opening)).toEqual([]);
   });
 
   it("取整说明只有一句", () => {
