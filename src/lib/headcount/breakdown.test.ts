@@ -14,6 +14,7 @@ import {
 } from "@/lib/headcount/buCost";
 import { DepartmentDailyRows } from "@/components/headcount/department-daily-rows";
 import { SCOPE_TOTAL_NOTE, TOOLTIPS, UNATTRIBUTED_AGENT_NOTE } from "@/lib/headcount/copy";
+import { loadTooltipFile } from "@/lib/headcount/tooltipFile";
 import { computePlan, deptStat } from "@/lib/headcount/engine";
 import { buildScopeOverview } from "@/lib/headcount/overview";
 import { formatWan, ROUNDING_GAP_NOTE } from "@/lib/headcount/money";
@@ -261,11 +262,12 @@ describe("林的事业部口径", () => {
 
 describe("悬停文案仍是 55 条", () => {
   it("末四条按时间轴、未归属、外包（部门）、范围合计排列，时间轴与文件原文一致", () => {
+    const file = loadTooltipFile();
+    expect(file).toHaveLength(52);
+    expect(file.at(-1)?.metric).toBe("时间轴");
     expect(TOOLTIPS).toHaveLength(55);
     expect(TOOLTIPS.slice(51).map((item) => item.metric)).toEqual(["时间轴", "未归属部门 Agent", "外包（部门）", "范围合计"]);
-    expect(TOOLTIPS.find((item) => item.metric === "时间轴")?.text).toBe(
-      "场景新增 = 本场景在基线之上加减的数量；括号里是加上已确认在途后，季初到季末的实际变化。两个数都直接取成本引擎结果。场景里的变动统一按该季第一天生效（P0）。",
-    );
+    expect(TOOLTIPS.find((item) => item.metric === "时间轴")?.text).toBe(file.find((item) => item.metric === "时间轴")?.text);
     expect(UNATTRIBUTED_AGENT_NOTE).toBe(TOOLTIPS[52]?.text);
     expect(SCOPE_TOTAL_NOTE).toBe("范围合计只含日常成本（人工 + Agent），对比范围内部门预算之和；一次性费用（经济补偿、Agent 实施和培训费）由 HR 和 OD 统一管理，不计入。");
   });

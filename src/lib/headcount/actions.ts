@@ -16,6 +16,7 @@ import { scenarioFromSandbox } from "@/lib/headcount/sandboxImport";
 import { normalizeScenarioDefinition, type ScenarioDefinition } from "@/lib/headcount/scenario";
 import { assumptionUnits, resolvePrefill } from "@/lib/headcount/scenarioView";
 import { commitScenarioMemory, openScenarioMemory } from "@/lib/headcount/scenarioMemoryStore";
+import { ScenarioStateTooLarge } from "@/lib/headcount/scenarioCookieCodec";
 import { acceptStoredScenarios, mergeScenarioState, scenarioDelta } from "@/lib/headcount/scenarioState";
 import { executeScenarioCommand, visibleScenarioCatalog, type ScenarioCommand, type WriteScope } from "@/lib/headcount/scenarioWrites";
 import {
@@ -261,7 +262,12 @@ async function runScenarioCommand(command: ScenarioCommand, log: string) {
   const visible = visibleScenarioCatalog(memory.catalog, scope);
   const outcome = executeScenarioCommand(memory.catalog, visible, scope, command);
   if (!outcome.ok) scenarioNotice(outcome.notice, outcome.focusId);
-  await commitScenarioMemory(memory, outcome.catalog, outcome.changed, outcome.removedId);
+  try {
+    await commitScenarioMemory(memory, outcome.catalog, outcome.changed, outcome.removedId);
+  } catch (error) {
+    if (error instanceof ScenarioStateTooLarge) scenarioNotice(error.message, outcome.removedId ? undefined : outcome.focusId);
+    throw error;
+  }
   await recordOperation(memory.db, user.id, user.name, log, outcome.changed?.name ?? outcome.removedId ?? outcome.focusId);
   scenarioNotice(outcome.notice, outcome.removedId ? undefined : outcome.focusId);
 }
@@ -354,7 +360,12 @@ export async function adoptDemoStateAction(plans: ScenarioDefinition[]): Promise
     restoredIds.push(kept.id);
   }
   const merged = mergeScenarioState(memory.seed, [...scenarioDelta(memory.seed, memory.catalog), ...accepted]);
-  await commitScenarioMemory(memory, merged, null, null);
+  try {
+    await commitScenarioMemory(memory, merged, null, null);
+  } catch (error) {
+    if (error instanceof ScenarioStateTooLarge) return { restoredIds: [], rejectedIds: restoredIds };
+    throw error;
+  }
   if (restoredIds.length) {
     await recordOperation(memory.db, user.id, user.name, "恢复本机场景", restoredIds.join(","));
     revalidatePath("/headcount/scenarios");
@@ -393,7 +404,12 @@ export async function prefillAssumptionsAction(formData: FormData) {
   const units = assumptionUnits(computePlan(plan));
   const resolved = await resolvePrefill(units, modelConfigured() ? askHeadcountModel : null);
   const next = { ...current, assumptions: resolved.assumptions, assumptionOrigin: resolved.origin };
-  await commitScenarioMemory(memory, memory.catalog.map((item) => (item.id === id ? next : item)).concat(memory.catalog.some((item) => item.id === id) ? [] : [next]), next, null);
+  try {
+    await commitScenarioMemory(memory, memory.catalog.map((item) => (item.id === id ? next : item)).concat(memory.catalog.some((item) => item.id === id) ? [] : [next]), next, null);
+  } catch (error) {
+    if (error instanceof ScenarioStateTooLarge) scenarioNotice(error.message, id);
+    throw error;
+  }
   await recordOperation(memory.db, user.id, user.name, "预填场景假设", `${current.name} ${resolved.origin}`);
   scenarioNotice(resolved.note, id);
 }

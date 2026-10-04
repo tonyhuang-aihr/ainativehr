@@ -4,7 +4,9 @@ import { scenarioFitsScope } from "@/lib/headcount/scopeGuard";
 
 export const SCENARIO_STATE_STORAGE_PREFIX = "ainativehr.headcountState.v1";
 export const SCENARIO_STATE_COOKIE = "hcstate";
-const COOKIE_CHUNK = 2800;
+/** 单片值的长度。加上名字和属性后仍低于浏览器约 4KB 的单条 cookie 上限。 */
+export const COOKIE_CHUNK_CHARS = 2800;
+export const MAX_COOKIE_CHUNKS = 16;
 
 export type ScenarioEnvelope = {
   userId: string;
@@ -42,12 +44,15 @@ export function acceptStoredScenarios(stored: readonly ScenarioDefinition[], sco
   return stored.filter((item) => scenarioFitsScope(item, scope.allowed, scope.names, scope.companyWide));
 }
 
-export function encodeCookieChunks(json: string): string[] {
-  const encoded = Buffer.from(json, "utf8").toString("base64url");
-  if (!encoded) return [];
+export function splitCookieValue(value: string): string[] {
+  if (!value) return [];
   const chunks: string[] = [];
-  for (let index = 0; index < encoded.length; index += COOKIE_CHUNK) chunks.push(encoded.slice(index, index + COOKIE_CHUNK));
+  for (let index = 0; index < value.length; index += COOKIE_CHUNK_CHARS) chunks.push(value.slice(index, index + COOKIE_CHUNK_CHARS));
   return chunks;
+}
+
+export function encodeCookieChunks(json: string): string[] {
+  return splitCookieValue(Buffer.from(json, "utf8").toString("base64url"));
 }
 
 export function decodeCookieChunks(chunks: readonly string[]): string {

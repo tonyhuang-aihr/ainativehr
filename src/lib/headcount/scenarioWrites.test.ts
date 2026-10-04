@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { createMemoryDb } from "@/lib/headcount/db/client";
 import { loadScenarioDefinitions, saveScenarioDefinition } from "@/lib/headcount/db/scenarios";
@@ -8,8 +9,9 @@ import { buildRdCenterWorkspace } from "@/lib/demo/rdCenter";
 import { DEPT, samplePlan } from "@/lib/headcount/sample";
 import { scenarioFromSandbox } from "@/lib/headcount/sandboxImport";
 import { presetScenarios, type ScenarioDefinition } from "@/lib/headcount/scenario";
-import { decodeCookieChunks, encodeCookieChunks, mergeScenarioState, parseScenarioEnvelope, scenarioDelta, serializeEnvelope } from "@/lib/headcount/scenarioState";
-import { executeScenarioCommand, visibleScenarioCatalog, type ScenarioCommand, type ScenarioWrite, type WriteScope } from "@/lib/headcount/scenarioWrites";
+import { packScenarioCookie, ScenarioStateTooLarge, unpackScenarioCookie } from "@/lib/headcount/scenarioCookieCodec";
+import { COOKIE_CHUNK_CHARS, decodeCookieChunks, encodeCookieChunks, MAX_COOKIE_CHUNKS, mergeScenarioState, parseScenarioEnvelope, scenarioDelta, serializeEnvelope } from "@/lib/headcount/scenarioState";
+import { executeScenarioCommand, scopeSandboxImport, visibleScenarioCatalog, type ScenarioCommand, type ScenarioWrite, type WriteScope } from "@/lib/headcount/scenarioWrites";
 
 const result = computePlan(samplePlan());
 const names = result.plan.departments.map((department) => department.name);
@@ -68,6 +70,63 @@ describe("演示模式的场景差量可以跨实例重放", () => {
     const restored = parseScenarioEnvelope(decodeCookieChunks(encodeCookieChunks(json)), "lin", DEPT.prod1);
     expect(restored.map((item) => item.name)).toEqual(["基准"]);
     expect(parseScenarioEnvelope(json, "huang", DEPT.prod1)).toEqual([]);
+  });
+
+  it("五份用户场景、二十笔变动和一份导入方案时，每片 cookie 仍低于 4KB", () => {
+    let catalog = presetScenarios();
+    const ids: string[] = [];
+    for (let index = 0; index < 5; index += 1) {
+      const outcome = executeScenarioCommand(catalog, visibleScenarioCatalog(catalog, linScope), linScope, { type: "create", name: `用户方案${index + 1}`, id: `copy-user-${index}` });
+      expect(outcome.ok).toBe(true);
+      if (!outcome.ok) return;
+      catalog = outcome.catalog;
+      ids.push(outcome.focusId);
+    }
+    for (let index = 0; index < 20; index += 1) {
+      const kind = (["hire", "agent", "cut"] as const)[index % 3];
+      const command: ScenarioCommand = {
+        type: "change",
+        id: ids[index % ids.length],
+        kind,
+        count: 1 + (index % 3),
+        quarter: ((index % 4) + 1) as 1 | 2 | 3 | 4,
+        department: "产品研发一部",
+        grade: "P6",
+        agentName: `一部 Agent ${index}`,
+        monthly: 2000,
+        oneOff: 10000,
+        mark: "N",
+        tenure: 3.5,
+      };
+      const outcome = executeScenarioCommand(catalog, visibleScenarioCatalog(catalog, linScope), linScope, command);
+      expect(outcome.ok).toBe(true);
+      if (outcome.ok) catalog = outcome.catalog;
+    }
+    const imported = scopeSandboxImport(scenarioFromSandbox(buildRdCenterWorkspace(), 2), linScope, "sandbox-prod1-sample");
+    expect(imported).not.toBeNull();
+    const saved = executeScenarioCommand(catalog, visibleScenarioCatalog(catalog, linScope), linScope, { type: "import", definition: imported!, id: "sandbox-prod1-sample" });
+    expect(saved.ok).toBe(true);
+    if (!saved.ok) return;
+    const json = serializeEnvelope({ userId: "lin", scopeKey: DEPT.prod1, scenarios: scenarioDelta(presetScenarios(), saved.catalog) });
+    const chunks = packScenarioCookie(json);
+    const attributes = "; Path=/; Expires=Tue, 03 Nov 2026 15:38:53 GMT; Max-Age=2592000; Secure; HttpOnly; SameSite=lax";
+    expect(chunks.length).toBeGreaterThan(0);
+    expect(chunks.length).toBeLessThanOrEqual(4);
+    expect(chunks.join("").startsWith("gz.")).toBe(false);
+    for (const [index, value] of chunks.entries()) {
+      expect(Buffer.byteLength(`hcstate.${index}=${value}${attributes}`)).toBeLessThanOrEqual(4096);
+    }
+    expect(Buffer.byteLength(`hcstate.15=${"a".repeat(COOKIE_CHUNK_CHARS)}${attributes}`)).toBeLessThanOrEqual(4096);
+    const restored = parseScenarioEnvelope(unpackScenarioCookie(chunks), "lin", DEPT.prod1);
+    expect(restored.filter((item) => item.source === "copy")).toHaveLength(5);
+    expect(restored.reduce((sum, item) => sum + item.hires.length + item.agents.length + item.cuts.length, 0)).toBeGreaterThanOrEqual(20);
+    const bulky = JSON.stringify({ note: "方案".repeat(20_000) });
+    const compressed = packScenarioCookie(bulky);
+    expect(compressed.join("").startsWith("gz.")).toBe(true);
+    expect(compressed.length).toBeLessThanOrEqual(MAX_COOKIE_CHUNKS);
+    expect(unpackScenarioCookie(compressed)).toBe(bulky);
+    expect(() => packScenarioCookie(JSON.stringify({ blob: randomBytes(800_000).toString("base64") }))).toThrow(ScenarioStateTooLarge);
+    expect(decodeCookieChunks(encodeCookieChunks("[]"))).toBe("[]");
   });
 
   it("有数据库时不走浏览器，没有数据库时两台实例共用同一份差量", () => {
