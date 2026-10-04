@@ -17,6 +17,7 @@ const LINKS = [
   { href: "/sandbox", label: "沙盘" },
   { href: "/roles", label: "岗位拆解" },
   { href: "/roster", label: "花名册" },
+  { href: "/headcount", label: "编制规划" },
 ];
 
 function downloadScenario(workspace: Workspace) {
