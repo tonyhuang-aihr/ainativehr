@@ -5,7 +5,7 @@ import { DepartmentDailyRows } from "@/components/headcount/department-daily-row
 import { LeaderBoard } from "@/components/headcount/leader-board";
 import { ScenarioBoardView } from "@/components/headcount/scenario-board";
 import { ScopeOverviewBoard } from "@/components/headcount/scope-overview";
-import { HRBP_SCENARIO_TOTAL_NOTE, NOFILL_LABEL_TEMPLATE, NOFILL_Q2_NOTE, SCOPE_TOTAL_NOTE, SCENARIO_TOTAL_NOTE, SINGLE_DEPARTMENT_PLAN_NOTE, TIMELINE_CHANGE_NOTE, TOOLTIPS } from "@/lib/headcount/copy";
+import { HRBP_SCENARIO_TOTAL_NOTE, LEADER_DEPT_ROUNDING_NOTE, LEADER_OVERVIEW_ROUNDING_NOTE, NOFILL_LABEL_TEMPLATE, OD_OVERVIEW_ROUNDING_NOTE, SCOPE_TOTAL_NOTE, SCENARIO_ROUNDING_NOTE, SCENARIO_TOTAL_NOTE, SINGLE_DEPARTMENT_PLAN_NOTE, TIMELINE_CHANGE_NOTE, TOOLTIPS } from "@/lib/headcount/copy";
 import { loadTooltipFile } from "@/lib/headcount/tooltipFile";
 import { computePlan } from "@/lib/headcount/engine";
 import { buildLeaderView } from "@/lib/headcount/leaderView";
@@ -79,6 +79,12 @@ describe("每个角色页面上的 ⓘ 都按悬停表原文渲染", () => {
     demo.id,
     DEFAULT_PREFILL_NOTE,
   );
+  const q1Nofill = buildScenarioBoard(
+    result,
+    [{ ...demo, nofill: [{ departmentName: "产品研发一部", grade: "P5", count: 2, effectiveDate: "2027-01-01" }], compared: true }],
+    demo.id,
+    DEFAULT_PREFILL_NOTE,
+  );
   const rendered = {
     od: [
       ...labels(createElement(ScopeOverviewBoard, { overview: odOverview })),
@@ -87,6 +93,7 @@ describe("每个角色页面上的 ⓘ 都按悬停表原文渲染", () => {
       ...labels(createElement(LeaderBoard, { view: odTransit })),
       ...labels(createElement(ScenarioBoardView, { board: companyBoard })),
       ...labels(createElement(ScenarioBoardView, { board: demoBoard })),
+      ...labels(createElement(ScenarioBoardView, { board: q1Nofill })),
       ...labels(createElement(DepartmentDailyRows, { columns: companyBoard.columns, note: companyBoard.dailyBreakdown!.note, defaultOpen: true })),
     ],
     leader: [
@@ -102,7 +109,7 @@ describe("每个角色页面上的 ⓘ 都按悬停表原文渲染", () => {
 
   it("渲染出来的每条说明都能对上文件，文件里的每条也都有页面", () => {
     const file = new Set<string>(tooltipFile.map((item) => item.text));
-    expect(tooltipFile).toHaveLength(59);
+    expect(tooltipFile).toHaveLength(62);
     expect(tooltipFile.at(-1)?.metric).toBe("场景总成本（HRBP 版）");
     expect(file.has("两个数都直接取成本引擎结果")).toBe(false);
     expect(file.has("相加与合计差 0.5 万")).toBe(false);
@@ -132,8 +139,25 @@ describe("每个角色页面上的 ⓘ 都按悬停表原文渲染", () => {
       .map((item) => `${item.page} / ${item.metric}`);
     expect(missing).toEqual([]);
     expect(seen.has(NOFILL_LABEL_TEMPLATE)).toBe(false);
-    expect(seen.has(NOFILL_Q2_NOTE)).toBe(true);
+    expect(seen.has("含场景出缺不补 2 人：岗位空出后不再补人，从该季第一天起按职级扣减；不算增员或减员，不产生经济补偿。")).toBe(false);
     expect(seen.has(SINGLE_DEPARTMENT_PLAN_NOTE)).toBe(true);
+    expect(seen.has(SCENARIO_ROUNDING_NOTE)).toBe(true);
+    expect(seen.has(OD_OVERVIEW_ROUNDING_NOTE)).toBe(true);
+    expect(seen.has(LEADER_OVERVIEW_ROUNDING_NOTE)).toBe(true);
+    expect(seen.has(LEADER_DEPT_ROUNDING_NOTE)).toBe(true);
+    const odOverviewHtml = renderToStaticMarkup(createElement(ScopeOverviewBoard, { overview: odOverview }));
+    const leaderOverviewHtml = renderToStaticMarkup(createElement(ScopeOverviewBoard, { overview: leaderOverview }));
+    const qianHtml = renderToStaticMarkup(createElement(LeaderBoard, { view: leaderDepartment }));
+    expect(odOverviewHtml).toContain("≈ 16,095.5");
+    expect(odOverviewHtml).toContain(OD_OVERVIEW_ROUNDING_NOTE);
+    expect(odOverview.cards.find((card) => card.label.startsWith("全年"))?.extra).toBe("Q1 3,975.0 · Q2 4,013.0 · Q3 4,053.5 · Q4 4,053.5 万 · 含一次性");
+    expect(leaderOverviewHtml).toContain("≈ 2,075.5");
+    expect(leaderOverviewHtml).toContain(LEADER_OVERVIEW_ROUNDING_NOTE);
+    expect(qianHtml).toContain("≈ 1,110.5");
+    expect(qianHtml).toContain(LEADER_DEPT_ROUNDING_NOTE);
+    expect(qianHtml).toContain("= ① + ②");
+    const demoLabels = labels(createElement(ScenarioBoardView, { board: demoBoard }));
+    expect(demoLabels.some((note) => note.includes("出缺不补 2 人"))).toBe(false);
     expect([...seen].some(matchesNofillTemplate)).toBe(true);
   });
 });

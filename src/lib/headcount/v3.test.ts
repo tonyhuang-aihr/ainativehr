@@ -49,6 +49,8 @@ describe("OD 总览告警和部门页", () => {
     expect(overview.listTotal).toMatchObject({ label: "部门合计", quota: 507, onBoard: 486, inTransit: 11, vacancy: 10, annual: "16,071.0", budget: "15,970.0", gap: "+101.0" });
     const leader = buildScopeOverview(result, DEPT.plat, "leader", true);
     expect(leader.departments.find((row) => row.name === "数据平台组")).toMatchObject({ vacancy: 0, overstaff: "超编 1 人" });
+    expect(leader.cards.find((card) => card.label.startsWith("全年"))?.value).toBe("2,075.5");
+    expect(leader.cards.find((card) => card.label.startsWith("全年"))?.roundingNote).toBe("各项分别取整到 0.5 万，合计按未取整金额加总后再取整，可能差 0.5 万。");
   });
 });
 
@@ -109,6 +111,7 @@ describe("负责人按范围进入，小组成本在接口里就是区间", () =
     expect(view.yearEnd.agents).toBe(7);
     expect(view.yearEnd.equation).toBe("= ① + ②");
     expect(view.yearEnd.roundingNote).toBeNull();
+    expect(view.annualApproxNote).toBe("各项分别取整到 0.5 万，合计按未取整金额加总后再取整，可能差 0.5 万。");
     expect(view.aiRatio).toBe("72 : 28");
     const blob = JSON.stringify(view);
     expect(blob).not.toContain("1 人入职");

@@ -35,6 +35,15 @@ export function sumWithinHalfWan(totalWan: number, partsWan: number[]): boolean 
   return Math.abs(roundingGapWan(totalWan, partsWan)) <= 0.5;
 }
 
+/**
+ * 合计先取整。只要任意一组已经取整的分项加不回这个数，合计就该标 ≈。
+ * 空组不算，所以没有部门行时仍然可以只看四个季度。
+ */
+export function anyRoundedGroupDisagrees(totalYuan: number, groups: number[][]): boolean {
+  const total = roundToHalfWan(totalYuan);
+  return groups.some((parts) => parts.length > 0 && roundingGapWan(total, parts) !== 0);
+}
+
 /** 取整差为 0 时不需要说明。有差时只写这一句。 */
 export const ROUNDING_GAP_NOTE = "各项分别取整到 0.5 万，合计按未取整金额加总后再取整，可能差 0.5 万。";
 

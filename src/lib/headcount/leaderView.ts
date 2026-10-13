@@ -1,6 +1,7 @@
 import { conclusionFacts, directChildFacts, templateConclusion, type ConclusionFacts } from "@/lib/headcount/conclusion";
+import { LEADER_DEPT_ROUNDING_NOTE, ROUNDING_EQUATION_NOTE } from "@/lib/headcount/copy";
 import { deptStat, subtreeIds, type PlanResult } from "@/lib/headcount/engine";
-import { formatSignedWan, formatWan, quarterBand, roundToHalfWan, roundingGapNote, roundingGapWan, yearBand } from "@/lib/headcount/money";
+import { anyRoundedGroupDisagrees, formatSignedWan, formatWan, quarterBand, roundToHalfWan, roundingGapNote, roundingGapWan, yearBand } from "@/lib/headcount/money";
 import { collectAgentLines, collectPersonLines, defaultDetailQuery, pageAgents, pagePeople, transitCrossLine, type DetailQuery, type PagedAgents, type PagedPeople } from "@/lib/headcount/rosterPage";
 import { DEMO_AI_RATIO } from "@/lib/headcount/sample";
 import { presentVacancy } from "@/lib/headcount/vacancy";
@@ -16,6 +17,8 @@ export type LeaderView = {
   basis: string[];
   budgetYuanLabel: string | null;
   annualLabel: string;
+  /** 四个季度取整后加不回全年预计时的 ⓘ。① + ② 的差仍写在年底预计上。 */
+  annualApproxNote: string | null;
   deltaLabel: string | null;
   ratioLabel: string | null;
   now: { people: number; agents: number; currentLabel: string; quotaLine: string };
@@ -178,6 +181,13 @@ export function buildLeaderView(
     : null;
   const childFacts = directChildFacts(result, departmentId);
   const equation = mask ? { equation: null, roundingNote: null } : yearEndEquation(facts);
+  const copyAudience = options.copyAudience ?? "leader";
+  const annualApproxNote =
+    mask || !anyRoundedGroupDisagrees(facts.annualYuan, [facts.quartersYuan.map((value) => roundToHalfWan(value))])
+      ? null
+      : copyAudience === "od"
+        ? ROUNDING_EQUATION_NOTE
+        : LEADER_DEPT_ROUNDING_NOTE;
   return {
     departmentId,
     departmentName: facts.name,
@@ -200,6 +210,7 @@ export function buildLeaderView(
         : basisLines(facts),
     budgetYuanLabel: budgetWan == null ? null : formatWan(facts.budgetYuan ?? 0),
     annualLabel: mask ? yearBand(facts.annualYuan) : formatWan(facts.annualYuan),
+    annualApproxNote,
     deltaLabel: mask ? null : gap == null ? null : gap === 0 ? "与预算持平" : gap > 0 ? `多 ${gap.toFixed(1)} 万` : `少 ${Math.abs(gap).toFixed(1)} 万`,
     ratioLabel: mask || !budgetWan ? null : `${((annualWan / budgetWan) * 100).toFixed(1)}%`,
     now: { people: facts.headcount, agents: facts.agents, currentLabel: mask ? yearBand(facts.currentYuan) : formatWan(facts.currentYuan), quotaLine },
@@ -243,7 +254,7 @@ export function buildLeaderView(
     transitNote,
     showDepartment: new Set(personLines.map((line) => line.departmentName)).size > 1,
     showMarks,
-    copyAudience: options.copyAudience ?? "leader",
+    copyAudience,
     openSection: detail.open,
     listBase: options.listBase ?? `/headcount/leader?dept=${departmentId}`,
     options: result.plan.departments.filter((department) => ids.has(department.id)).map((department) => ({ id: department.id, name: department.name })),

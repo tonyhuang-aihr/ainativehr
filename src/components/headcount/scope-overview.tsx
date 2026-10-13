@@ -1,9 +1,15 @@
 import { InfoMark } from "@/components/headcount/info-mark";
-import { alertRuleNote, BUDGET_NOTE, DEPT_TOTAL_NOTE, GAP_NOTE, GROUP_PRIVACY_NOTE, OD_TRANSIT_NOTE, overviewCardNote, SCOPE_TOTAL_NOTE, VACANCY_NOTE, VACANCY_NOTE_LEADER, VACANCY_TOTAL_NOTE, YEAR_FORECAST_LEADER_DEPT, YEAR_FORECAST_OD } from "@/lib/headcount/copy";
-import { conclusionSourceLabel, type ScopeOverview } from "@/lib/headcount/overview";
+import { alertRuleNote, BUDGET_NOTE, DEPT_TOTAL_NOTE, GAP_NOTE, GROUP_PRIVACY_NOTE, OD_OVERVIEW_ROUNDING_NOTE, OD_TRANSIT_NOTE, overviewCardNote, SCOPE_TOTAL_NOTE, VACANCY_NOTE, VACANCY_NOTE_LEADER, VACANCY_TOTAL_NOTE, YEAR_FORECAST_LEADER_DEPT, YEAR_FORECAST_OD } from "@/lib/headcount/copy";
+import { conclusionSourceLabel, type OverviewCard, type ScopeOverview } from "@/lib/headcount/overview";
 import Link from "next/link";
 
 const SEVERITY = { 高: "bg-[#FEE2E2] text-[#B91C1C]", 中: "bg-[#FEF3C7] text-[#92400E]", 低: "bg-[#F3F4F6] text-[#4B5563]" };
+
+function cardRounding(overview: ScopeOverview, card: OverviewCard): string | null {
+  if (card.roundingNote) return card.roundingNote;
+  if (overview.audience === "od" && card.label.startsWith("全年") && overview.total?.roundingNote) return OD_OVERVIEW_ROUNDING_NOTE;
+  return null;
+}
 
 function gapTone(gap: string): string {
   if (gap.startsWith("+")) return "text-[#B91C1C]";
@@ -35,7 +41,10 @@ export function ScopeOverviewBoard({ overview }: { overview: ScopeOverview }) {
               {card.label}
               {overviewCardNote(overview.audience, card.label) ? <InfoMark note={overviewCardNote(overview.audience, card.label)!} /> : null}
             </p>
-            <p className="mt-2 text-2xl font-semibold tracking-tight">{card.value}</p>
+            <p className="mt-2 text-2xl font-semibold tracking-tight">
+              {cardRounding(overview, card) ? `≈ ${card.value}` : card.value}
+              {cardRounding(overview, card) ? <InfoMark note={cardRounding(overview, card)!} /> : null}
+            </p>
             <p className="mt-1 text-sm text-muted">{card.sub}</p>
             {card.extra ? <p className="mt-1 text-xs text-muted">{card.extra}</p> : null}
           </article>

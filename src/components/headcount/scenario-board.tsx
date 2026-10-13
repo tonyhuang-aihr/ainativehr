@@ -4,7 +4,7 @@ import { SandboxLocalRestore } from "@/components/headcount/sandbox-restore";
 import { ScenarioFileField } from "@/components/headcount/scenario-file-field";
 import { DepartmentDailyRows } from "@/components/headcount/department-daily-rows";
 import { InfoMark } from "@/components/headcount/info-mark";
-import { COMPARE_SCROLL_HINT, HRBP_SCENARIO_TOTAL_NOTE, ROUNDING_EQUATION_NOTE, SCENARIO_TOTAL_NOTE, TIMELINE_CHANGE_NOTE } from "@/lib/headcount/copy";
+import { COMPARE_SCROLL_HINT, HRBP_SCENARIO_TOTAL_NOTE, SCENARIO_ROUNDING_NOTE, SCENARIO_TOTAL_NOTE, TIMELINE_CHANGE_NOTE } from "@/lib/headcount/copy";
 import type { ScenarioDefinition } from "@/lib/headcount/scenario";
 import { COMPARISON_CAP, COMPARISON_CAP_ERROR, type ScenarioBoard } from "@/lib/headcount/scenarioView";
 
@@ -75,7 +75,7 @@ export function ScenarioBoardView({
           <p className="mt-1 text-4xl font-semibold tracking-tight text-primary">
             {board.lowestYearApprox ? "≈ " : null}
             {board.lowestTotal}
-            {board.lowestYearApprox ? <InfoMark note={ROUNDING_EQUATION_NOTE} /> : null}
+            {board.lowestYearApprox ? <InfoMark note={SCENARIO_ROUNDING_NOTE} /> : null}
             <span className="ml-1 text-base font-normal text-muted">万</span>
           </p>
           <div className="mt-4 h-2 rounded-full bg-[#EEF0F3]">
@@ -129,7 +129,7 @@ export function ScenarioBoardView({
                   <td key={column.id} className={`px-4 py-3 ${column.lowest ? "bg-[#FAFAFF]" : ""}`}>
                     <div className={`text-lg font-semibold ${column.lowest ? "text-primary" : ""}`}>
                       {column.yearApprox ? `≈ ${column.total}` : column.total}
-                      {column.yearApprox ? <InfoMark note={ROUNDING_EQUATION_NOTE} /> : null}
+                      {column.yearApprox ? <InfoMark note={SCENARIO_ROUNDING_NOTE} /> : null}
                     </div>
                   </td>
                 ))}
@@ -147,7 +147,15 @@ export function ScenarioBoardView({
               {board.dailyBreakdown ? (
                 <DepartmentDailyRows columns={board.columns} note={board.dailyBreakdown.note} />
               ) : (
-                <Metric label="部门持续成本 人工 + Agent" values={board.columns.map((column) => ({ id: column.id, text: column.daily, lowest: column.lowest }))} />
+                <Metric
+                  label="部门持续成本 人工 + Agent"
+                  values={board.columns.map((column) => ({
+                    id: column.id,
+                    text: column.approx ? `≈ ${column.daily}` : column.daily,
+                    lowest: column.lowest,
+                    note: column.approx ? SCENARIO_ROUNDING_NOTE : null,
+                  }))}
+                />
               )}
               {board.showOneOff ? <Metric label="一次性 HR / OD 统一管理" values={board.columns.map((column) => ({ id: column.id, text: column.oneOff, lowest: column.lowest }))} /> : null}
             </tbody>
@@ -455,13 +463,14 @@ function Step({ n, title, body, note, current, aside }: { n: string; title: stri
   );
 }
 
-function Metric({ label, values }: { label: string; values: { id: string; text: string; warn?: boolean; muted?: boolean; lowest?: boolean }[] }) {
+function Metric({ label, values }: { label: string; values: { id: string; text: string; warn?: boolean; muted?: boolean; lowest?: boolean; note?: string | null }[] }) {
   return (
     <tr className="border-b border-line text-right">
       <td className={`px-4 py-2 text-left text-muted ${sticky}`}>{label}</td>
       {values.map((value) => (
         <td key={value.id} className={`px-4 py-2 ${value.lowest ? "bg-[#FAFAFF]" : ""} ${value.warn ? "text-[#DC2626]" : ""} ${value.muted ? "text-muted" : ""}`}>
           {value.text}
+          {value.note ? <InfoMark note={value.note} /> : null}
         </td>
       ))}
     </tr>

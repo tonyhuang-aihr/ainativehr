@@ -1,7 +1,8 @@
 import { ONE_OFF_CARD_LABEL } from "@/lib/headcount/copy";
 import { conclusionFacts, templateConclusion } from "@/lib/headcount/conclusion";
 import { deptStat, subtreeIds, type PlanResult } from "@/lib/headcount/engine";
-import { formatSignedWan, formatWan, roundToHalfWan, roundingGapNote, roundingGapWan, yearBand } from "@/lib/headcount/money";
+import { LEADER_OVERVIEW_ROUNDING_NOTE } from "@/lib/headcount/copy";
+import { anyRoundedGroupDisagrees, formatSignedWan, formatWan, roundToHalfWan, roundingGapNote, roundingGapWan, yearBand } from "@/lib/headcount/money";
 import { DEMO_AI_RATIO } from "@/lib/headcount/sample";
 import { presentVacancy, vacancyPhrase } from "@/lib/headcount/vacancy";
 
@@ -314,9 +315,12 @@ export function buildScopeOverview(result: PlanResult, rootId: string, audience:
   const facts = conclusionFacts(result, rootId);
   const conclusion = company ? companySentence(result, alerts) : templateConclusion(facts);
   const quarterRollup = company ? companyQuarterRollup(stat) : null;
-  if (quarterRollup) {
-    const yearCard = cards.find((card) => card.label.startsWith("全年"));
-    if (yearCard) yearCard.extra = quarterRollup.label;
+  const yearCard = cards.find((card) => card.label.startsWith("全年"));
+  if (quarterRollup && yearCard) yearCard.extra = quarterRollup.label;
+  if (!company && audience === "leader" && yearCard) {
+    const quarterWan = [0, 1, 2, 3].map((index) => roundToHalfWan(stat.quarterFormal[index] + stat.quarterOther[index] + stat.quarterAgent[index]));
+    const childWan = listed.length > 1 ? listed.map((department) => roundToHalfWan(deptStat(result, department.id).yearDailyYuan)) : [];
+    if (anyRoundedGroupDisagrees(stat.yearDailyYuan, [quarterWan, childWan])) yearCard.roundingNote = LEADER_OVERVIEW_ROUNDING_NOTE;
   }
 
   return {

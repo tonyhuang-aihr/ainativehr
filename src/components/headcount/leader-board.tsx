@@ -80,7 +80,11 @@ export function LeaderBoard({ view, variant = "full" }: { view: LeaderView; vari
               全年预计
               <InfoMark note={forecastHeroNote(view.copyAudience)} />
             </p>
-            <p className="text-4xl font-semibold tracking-tight">{view.annualLabel} 万</p>
+            <p className="text-4xl font-semibold tracking-tight">
+              {view.annualApproxNote ? "≈ " : null}
+              {view.annualLabel} 万
+              {view.annualApproxNote ? <InfoMark note={view.annualApproxNote} /> : null}
+            </p>
           </div>
           <div className="min-w-48 text-sm text-muted">
             <p>部门预算 {view.budgetYuanLabel ? `${view.budgetYuanLabel} 万` : "未设置"}</p>

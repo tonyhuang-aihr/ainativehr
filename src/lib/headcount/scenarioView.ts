@@ -4,7 +4,7 @@ import { conclusionFacts, directChildFacts, modelUnits, type ModelUnit } from "@
 import { deptStat, type PlanResult } from "@/lib/headcount/engine";
 import { SINGLE_DEPARTMENT_PLAN_NOTE, TIMELINE_CHANGE_NOTE, UNATTRIBUTED_AGENT_NOTE } from "@/lib/headcount/copy";
 import { baselineDailyBreakdown, businessScenarioResult, scenarioDailyBreakdown } from "@/lib/headcount/buCost";
-import { formatWan, roundingGapWan, roundToHalfWan } from "@/lib/headcount/money";
+import { anyRoundedGroupDisagrees, formatWan, roundingGapWan, roundToHalfWan } from "@/lib/headcount/money";
 import { DEMO_AI_RATIO } from "@/lib/headcount/sample";
 import { costRootId, defaultAssumptions, evaluateBaseline, evaluateScenario, quarterChangeDetails, scenarioCutSeverance, type ScenarioAssumptions, type ScenarioDefinition, type ScenarioResult } from "@/lib/headcount/scenario";
 
@@ -45,6 +45,7 @@ export type CompareColumn = {
   /** 公司口径展开行。事业部和负责人没有这组格子。 */
   dailyParts: { id: string; name: string; text: string }[] | null;
   unattributed: string | null;
+  /** 部门行或四个日常季度，任意一组取整后加不回部门持续成本。 */
   approx: boolean;
 };
 
@@ -358,16 +359,21 @@ export type ScenarioBoardOptions = {
   departmentNames?: string[];
 };
 
+function dailyQuarterWan(item: ScenarioResult): number[] {
+  return item.quarters.map((quarter) => roundToHalfWan(quarter.labor + quarter.agent));
+}
+
 function columnParts(result: PlanResult, item: ScenarioResult, company: boolean): Pick<CompareColumn, "dailyParts" | "unattributed" | "approx"> {
-  if (!company) return { dailyParts: null, unattributed: null, approx: false };
+  const groups = [dailyQuarterWan(item)];
+  if (!company) return { dailyParts: null, unattributed: null, approx: anyRoundedGroupDisagrees(item.dailyYuan, groups) };
   const breakdown = item.definition.id === "jx" ? baselineDailyBreakdown(result) : scenarioDailyBreakdown(result, item.definition);
   const partWan = breakdown.rows.map((row) => roundToHalfWan(row.yuan));
   const unattributedWan = roundToHalfWan(breakdown.unattributedYuan);
-  const approx = roundingGapWan(roundToHalfWan(item.dailyYuan), [...partWan, unattributedWan]) !== 0;
+  groups.push([...partWan, unattributedWan]);
   return {
     dailyParts: breakdown.rows.map((row) => ({ id: row.id, name: row.name, text: formatWan(row.yuan) })),
     unattributed: formatWan(breakdown.unattributedYuan),
-    approx,
+    approx: anyRoundedGroupDisagrees(item.dailyYuan, groups),
   };
 }
 

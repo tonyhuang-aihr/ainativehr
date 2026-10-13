@@ -103,6 +103,8 @@ export function businessScenarioResult(result: PlanResult, definition: ScenarioD
     attritionPerQuarter: seats.get(rootId) ?? 0,
     averageFormalAnnual: average,
   });
+  // reconcile() 只把公司与部门之和的余数加到最后一个一级部门。其余部门的格子就是这次求值，不必再把公司和六个部门各算一遍。
+  if (rootId !== FIRST_LEVEL_IDS[FIRST_LEVEL_IDS.length - 1]) return evaluated;
   const row = scenarioDailyBreakdown(result, definition).rows.find((item) => item.id === rootId);
   if (!row || row.yuan === evaluated.dailyYuan) return evaluated;
   const delta = row.yuan - evaluated.dailyYuan;

@@ -131,15 +131,16 @@ describe("部门持续成本和未归属 Agent", () => {
     expect(() => evaluateScenario(result, { ...presets[0], agents: [{ ...agent, departmentName: "" }] })).toThrow("缺少所属部门");
   });
 
-  it("默认对比没有 ≈，把保守放进对比后只有保守那一列有 ≈", () => {
+  it("部门持续成本在部门行或四个季度对不齐时标 ≈", () => {
     const board = buildScenarioBoard(result, presets, "jj", DEFAULT_PREFILL_NOTE);
     expect(board.columns.map((column) => column.name)).toEqual(["基线", "基准", "激进 · AI 加速", "沙盘方案 A · 拆组前"]);
-    expect(board.columns.every((column) => column.approx === false)).toBe(true);
+    expect(board.columns.filter((column) => column.approx).map((column) => column.name)).toEqual(["基线", "基准", "激进 · AI 加速"]);
+    expect(board.columns.find((column) => column.name === "沙盘方案 A · 拆组前")?.approx).toBe(false);
     expect(board.dailyBreakdown?.note).toBe(UNATTRIBUTED_AGENT_NOTE);
     const withConservative = presets.map((item) => (item.id === "fa" ? { ...item, compared: false } : item.id === "bs" ? { ...item, compared: true } : item));
     const conservative = buildScenarioBoard(result, withConservative, "bs", DEFAULT_PREFILL_NOTE);
     const flagged = conservative.columns.filter((column) => column.approx).map((column) => column.name);
-    expect(flagged).toEqual(["保守"]);
+    expect(flagged).toEqual(["基线", "基准", "激进 · AI 加速", "保守"]);
     const conservativeColumn = conservative.columns.find((column) => column.name === "保守");
     expect(conservativeColumn?.daily).toBe("15,810.0");
     const wan = (text: string) => Number(text.replace(/,/g, ""));
@@ -150,7 +151,13 @@ describe("部门持续成本和未归属 Agent", () => {
     expect(html).not.toContain("⌄");
     expect(html).not.toContain("未归属部门 Agent");
     expect(html).not.toContain("产品研发一部");
-    expect(html).not.toContain("≈");
+    const collapsedDaily = html.split("部门持续成本 人工 + Agent")[1]?.split("</tr>")[0] ?? "";
+    expect(collapsedDaily).toContain("≈ 16,071.0");
+    expect(collapsedDaily).toContain("≈ 16,070.0");
+    expect(collapsedDaily).toContain("≈ 15,874.5");
+    expect(collapsedDaily).toContain("15,908.5");
+    expect(collapsedDaily).not.toContain("≈ 15,908.5");
+    expect(collapsedDaily).toContain(ROUNDING_GAP_NOTE);
     expect(html).toContain("部门持续成本 人工 + Agent");
     const open = renderToStaticMarkup(createElement(DepartmentDailyRows, { columns: board.columns, note: board.dailyBreakdown!.note, defaultOpen: true }));
     expect(open).toContain("⌄");
@@ -164,7 +171,7 @@ describe("部门持续成本和未归属 Agent", () => {
     expect(unattributedRow).toContain("30.0");
     const comparedHtml = renderToStaticMarkup(createElement(DepartmentDailyRows, { columns: conservative.columns, note: conservative.dailyBreakdown!.note }));
     const dailyRow = comparedHtml.split("部门持续成本 人工 + Agent")[1]?.split("</tr>")[0] ?? "";
-    expect(dailyRow.match(/≈/g)?.length).toBe(1);
+    expect(dailyRow.match(/≈/g)?.length).toBe(4);
     expect(dailyRow).toContain("≈ 15,810.0");
     expect(dailyRow).not.toContain("15,810.0≈");
     expect(dailyRow).toContain(ROUNDING_GAP_NOTE);
@@ -199,7 +206,8 @@ describe("林的事业部口径", () => {
     expect(board.assumptionForm.attrition).toBe("8");
     expect(board.assumptionForm.cycle).toBe("60");
     expect(board.dailyBreakdown).toBeNull();
-    expect(board.columns.every((column) => column.dailyParts == null && column.unattributed == null && column.approx === false)).toBe(true);
+    expect(board.columns.every((column) => column.dailyParts == null && column.unattributed == null)).toBe(true);
+    expect(board.columns.filter((column) => column.approx).map((column) => column.name)).toEqual(["激进 · AI 加速"]);
     const blob = JSON.stringify(board);
     expect(blob).not.toContain("未归属部门 Agent");
     expect(blob).not.toContain("沙盘里没有岗位拆解的 Agent");
@@ -214,9 +222,15 @@ describe("林的事业部口径", () => {
 
   it("基准、激进、保守的日常成本、季度和标签", () => {
     const column = (id: string) => board.columns.find((item) => item.id === id);
-    expect(column("bu-prod1-jz")).toMatchObject({ total: "4,878.5", gap: "超 153.5" });
-    expect(column("bu-prod1-jj")).toMatchObject({ total: "4,788.0", gap: "超 63.0" });
-    expect(column("bu-prod1-bs")).toMatchObject({ total: "4,765.0", gap: "超 40.0" });
+    expect(column("bu-prod1-jz")).toMatchObject({ total: "4,878.5", gap: "超 153.5", approx: false });
+    expect(column("bu-prod1-jj")).toMatchObject({ total: "4,788.0", gap: "超 63.0", approx: true });
+    expect(column("bu-prod1-bs")).toMatchObject({ total: "4,765.0", gap: "超 40.0", approx: false });
+    const linHtml = renderToStaticMarkup(createElement(ScenarioBoardView, { board }));
+    const dailyRow = linHtml.split("部门持续成本 人工 + Agent")[1]?.split("</tr>")[0] ?? "";
+    expect(dailyRow).toContain("≈ 4,788.0");
+    expect(dailyRow).toContain(ROUNDING_GAP_NOTE);
+    expect(dailyRow).not.toContain("≈ 4,878.5");
+    expect(dailyRow).not.toContain("≈ 4,765.0");
     const labels = (id: string) => buildScenarioBoard(result, definitions, id, DEFAULT_PREFILL_NOTE, { mode: "business", rootId: root }).timelineLabels;
     expect(labels("bu-prod1-jz")).toEqual([
       "Q1 离职未补位 3 人（含基线变动共 150→148）",
@@ -275,16 +289,23 @@ describe("林的事业部口径", () => {
   });
 });
 
-describe("悬停文案是 59 条", () => {
-  it("末几条按时间轴、未归属、单部门方案、Q2 出缺不补、外包、范围合计、出缺不补模板、HRBP 场景总成本排列，并与文件原文一致", () => {
+describe("悬停文案是 62 条", () => {
+  it("去掉 Q2 离职未补位，补上四个 ≈ 合计，并与文件原文一致", () => {
     const file = loadTooltipFile();
-    expect(file).toHaveLength(59);
+    expect(file).toHaveLength(62);
     expect(file.at(-1)?.metric).toBe("场景总成本（HRBP 版）");
-    expect(TOOLTIPS).toHaveLength(59);
-    expect(TOOLTIPS.slice(51).map((item) => item.metric)).toEqual(["时间轴", "未归属部门 Agent ⓘ", "仅产品研发一部 ⓘ", "Q2 离职未补位标签", "外包（部门）", "范围合计 ⓘ", "离职未补位标签（含出缺不补）", "场景总成本（HRBP 版）"]);
+    expect(TOOLTIPS).toHaveLength(62);
+    expect(file.some((item) => item.metric === "Q2 离职未补位标签")).toBe(false);
+    expect(file.filter((item) => item.metric === "≈ 合计").map((item) => item.page)).toEqual([
+      "负责人视图 · 总览（多部门，赵一）",
+      "负责人视图 · 单部门（钱二）",
+      "OD 底座 · 总览",
+      "场景与时间轴 v2",
+    ]);
+    expect(TOOLTIPS.slice(-8).map((item) => item.metric)).toEqual(["≈ 合计", "时间轴", "未归属部门 Agent ⓘ", "仅产品研发一部 ⓘ", "外包（部门）", "范围合计 ⓘ", "离职未补位标签（含出缺不补）", "场景总成本（HRBP 版）"]);
     expect(TOOLTIPS.find((item) => item.metric === "时间轴")?.text).toBe(file.find((item) => item.metric === "时间轴")?.text);
     expect(TOOLTIPS.find((item) => item.metric === "≈ ① + ②")?.text).toBe("各项分别取整到 0.5 万，合计按未取整金额加总后再取整，可能差 0.5 万。");
-    expect(UNATTRIBUTED_AGENT_NOTE).toBe(TOOLTIPS[52]?.text);
+    expect(UNATTRIBUTED_AGENT_NOTE).toBe(TOOLTIPS.find((item) => item.metric === "未归属部门 Agent ⓘ")?.text);
     expect(SCOPE_TOTAL_NOTE).toBe("范围合计只含日常成本（人工 + Agent），对比范围内部门预算之和；一次性费用（经济补偿、Agent 实施和培训费）由 HR 和 OD 统一管理，不计入。");
   });
 });

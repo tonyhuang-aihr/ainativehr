@@ -5,7 +5,7 @@ import { ScenarioBoardView } from "@/components/headcount/scenario-board";
 import { can } from "@/lib/headcount/authz";
 import { businessScenarioResult, mergeBusinessScenarios, scenarioDailyBreakdown } from "@/lib/headcount/buCost";
 import { computePlan } from "@/lib/headcount/engine";
-import { formatWan } from "@/lib/headcount/money";
+import { formatWan, roundToHalfWan, roundingGapWan } from "@/lib/headcount/money";
 import {
   PROD1_SANDBOX_DEMO,
   PROD1_SANDBOX_DEMO_CAPTION,
@@ -242,7 +242,7 @@ describe("沙盘示例 · 产品研发一部的核对数字", () => {
     const column = linBoard.columns.find((item) => item.id === linPlan.id);
     expect(linBoard.budget).toBe("4,725.0");
     expect(linBoard.showOneOff).toBe(false);
-    expect(column).toMatchObject({ total: "4,756.5", daily: "4,756.5", gap: "超 31.5", ratio: "70 : 30", yearApprox: true });
+    expect(column).toMatchObject({ total: "4,756.5", daily: "4,756.5", gap: "超 31.5", ratio: "70 : 30", yearApprox: true, approx: true });
     expect(linBoard.timelineRows.map((row) => row.total)).toEqual(["1,180.5", "1,185.5", "1,195.0", "1,195.0"]);
     expect(linBoard.timelineLabels).toEqual([
       "Q1 离职未补位 3 人（含基线变动共 150→148）",
@@ -250,10 +250,8 @@ describe("沙盘示例 · 产品研发一部的核对数字", () => {
       "Q2 场景新增 2 个 Agent（含基线变动共 4→6）",
     ]);
     expect(linBoard.timelineLabelNotes[0]).toBeNull();
-    expect(linBoard.timelineLabelNotes[1]).toBe(nofillLabelNote(2, 0));
-    expect(linBoard.timelineLabelNotes[1]).not.toContain("其余");
-    expect(linBoard.timelineLabelNotes[1]).not.toContain("出缺不补 N 人");
-    expect(linBoard.timelineLabelNotes[1]).not.toContain("其余 M 人");
+    expect(nofillLabelNote(2, 0)).toBeNull();
+    expect(linBoard.timelineLabelNotes[1]).toBeNull();
     expect(linBoard.stepCheck).toBe(`0 / 1 个场景在预算内 · 最低：${PROD1_SANDBOX_DEMO_NAME}`);
     expect(linBoard.timelineLabelNotes[2]).toBeNull();
     expect(health(linBoard, "超预算")).toBe("超 31.5");
@@ -263,6 +261,7 @@ describe("沙盘示例 · 产品研发一部的核对数字", () => {
     const html = renderToStaticMarkup(createElement(ScenarioBoardView, { board: linBoard }));
     expect(html).not.toContain(">一次性<");
     expect(html).toContain("≈ 4,756.5");
+    expect(html).not.toContain("含场景出缺不补 2 人");
     expect(html).toContain("各项分别取整到 0.5 万，合计按未取整金额加总后再取整，可能差 0.5 万。");
     expect(html).toContain("标签分四类：离职未补位、场景增员、场景减员、场景新增或下线 Agent");
   });
@@ -290,14 +289,20 @@ describe("沙盘示例 · 产品研发一部的核对数字", () => {
       "数据智能部 2,209.0",
     ]);
     expect(column?.unattributed).toBe("0.0");
-    expect(column?.approx).toBe(false);
+    const evaluated = evaluateScenario(result, companyPlan);
+    const dailyQuarters = evaluated.quarters.map((quarter) => roundToHalfWan(quarter.labor + quarter.agent));
+    expect(dailyQuarters).toEqual([3912.5, 3951, 3992, 3992]);
+    expect(roundingGapWan(roundToHalfWan(evaluated.dailyYuan), dailyQuarters)).toBe(0.5);
+    const departmentSum = (column?.dailyParts ?? []).reduce((total, part) => total + Number(part.text.replace(/,/g, "")), 0) + Number((column?.unattributed ?? "0").replace(/,/g, ""));
+    expect(departmentSum).toBe(15848);
+    expect(column?.approx).toBe(true);
     expect(odBoard.timelineRows.map((row) => row.total)).toEqual(["3,937.0", "3,953.0", "3,992.0", "3,992.0"]);
     expect(odBoard.timelineLabels).toEqual([
       "Q1 离职未补位 10 人（含基线变动共 486→479）",
       "Q2 离职未补位 2 人（含基线变动共 479→478）",
       "Q2 场景新增 2 个 Agent（含基线变动共 19→24）",
     ]);
-    expect(odBoard.timelineLabelNotes[1]).toBe(nofillLabelNote(2, 0));
+    expect(odBoard.timelineLabelNotes[1]).toBeNull();
     expect(health(odBoard, "超预算")).toBe("超 31.5");
     expect(health(odBoard, "管理幅度")).toBe("—");
     expect(health(odBoard, "人 : AI")).toBe("70 : 30 · 仅产品研发一部");
@@ -305,6 +310,8 @@ describe("沙盘示例 · 产品研发一部的核对数字", () => {
     const html = renderToStaticMarkup(createElement(ScenarioBoardView, { board: odBoard }));
     expect(html).toContain(">一次性<");
     expect(html).toContain("≈ 15,874.5");
+    expect(html).toContain("≈ 15,848.0");
+    expect(html).not.toContain("含场景出缺不补 2 人");
 
     const besideConservative = buildScenarioBoard(
       result,
@@ -398,7 +405,7 @@ describe("沙盘示例 · 产品研发一部的核对数字", () => {
       "Q2 离职未补位 2 人（含基线变动共 479→478）",
       "Q2 场景新增 2 个 Agent（含基线变动共 19→24）",
     ]);
-    expect(mixed.timelineLabelNotes[1]).toBe("含场景出缺不补 2 人：岗位空出后不再补人，从该季第一天起按职级扣减；不算增员或减员，不产生经济补偿。");
+    expect(mixed.timelineLabelNotes[1]).toBeNull();
     expect(mixed.assumptionSummary).toBe("离职率 8% · 招聘周期 60 天 · N+1 不计入");
     expect(mixed.nofillSummary).toBe("产品研发一部 · P5 · 2 人 · 2027-04-01 起 · 不算减员，无经济补偿");
     const html = renderToStaticMarkup(createElement(ScenarioBoardView, { board: mixed }));
