@@ -5,7 +5,7 @@ import { DepartmentDailyRows } from "@/components/headcount/department-daily-row
 import { LeaderBoard } from "@/components/headcount/leader-board";
 import { ScenarioBoardView } from "@/components/headcount/scenario-board";
 import { ScopeOverviewBoard } from "@/components/headcount/scope-overview";
-import { HRBP_SCENARIO_TOTAL_NOTE, LEADER_DEPT_ROUNDING_NOTE, LEADER_OVERVIEW_ROUNDING_NOTE, NOFILL_LABEL_TEMPLATE, OD_OVERVIEW_ROUNDING_NOTE, SCOPE_TOTAL_NOTE, SCENARIO_ROUNDING_NOTE, SCENARIO_TOTAL_NOTE, SINGLE_DEPARTMENT_PLAN_NOTE, TIMELINE_CHANGE_NOTE, TOOLTIPS } from "@/lib/headcount/copy";
+import { HRBP_SCENARIO_TOTAL_NOTE, LEADER_DEPT_ROUNDING_NOTE, LEADER_OVERVIEW_ROUNDING_NOTE, NOFILL_LABEL_TEMPLATE, OD_DEPT_QUARTER_NOTE, OD_OVERVIEW_ROUNDING_NOTE, SCOPE_TOTAL_NOTE, SCENARIO_ROUNDING_NOTE, SCENARIO_TOTAL_NOTE, SINGLE_DEPARTMENT_PLAN_NOTE, TIMELINE_CHANGE_NOTE, TOOLTIPS } from "@/lib/headcount/copy";
 import { loadTooltipFile } from "@/lib/headcount/tooltipFile";
 import { computePlan } from "@/lib/headcount/engine";
 import { buildLeaderView } from "@/lib/headcount/leaderView";
@@ -109,7 +109,7 @@ describe("每个角色页面上的 ⓘ 都按悬停表原文渲染", () => {
 
   it("渲染出来的每条说明都能对上文件，文件里的每条也都有页面", () => {
     const file = new Set<string>(tooltipFile.map((item) => item.text));
-    expect(tooltipFile).toHaveLength(62);
+    expect(tooltipFile).toHaveLength(63);
     expect(tooltipFile.at(-1)?.metric).toBe("场景总成本（HRBP 版）");
     expect(file.has("两个数都直接取成本引擎结果")).toBe(false);
     expect(file.has("相加与合计差 0.5 万")).toBe(false);
@@ -156,6 +156,16 @@ describe("每个角色页面上的 ⓘ 都按悬停表原文渲染", () => {
     expect(qianHtml).toContain("≈ 1,110.5");
     expect(qianHtml).toContain(LEADER_DEPT_ROUNDING_NOTE);
     expect(qianHtml).toContain("= ① + ②");
+    expect(qianHtml).toContain("≈ 278.0");
+    expect(qianHtml).toContain(OD_DEPT_QUARTER_NOTE);
+    const odDepartmentHtml = renderToStaticMarkup(createElement(LeaderBoard, { view: odDepartment }));
+    expect(odDepartmentHtml).toContain("≈ 1,221.0");
+    expect(odDepartmentHtml).not.toContain("≈ 1,192.0");
+    expect(odDepartmentHtml).not.toContain("≈ 1,211.5");
+    expect(odDepartmentHtml).toContain(OD_DEPT_QUARTER_NOTE);
+    const businessHtml = renderToStaticMarkup(createElement(ScenarioBoardView, { board: businessBoard }));
+    const businessTimeline = businessHtml.slice(businessHtml.indexOf('id="scenario-timeline"'));
+    expect(businessTimeline).not.toMatch(/≈ /);
     const demoLabels = labels(createElement(ScenarioBoardView, { board: demoBoard }));
     expect(demoLabels.some((note) => note.includes("出缺不补 2 人"))).toBe(false);
     expect([...seen].some(matchesNofillTemplate)).toBe(true);

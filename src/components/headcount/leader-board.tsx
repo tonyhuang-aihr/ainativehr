@@ -177,7 +177,10 @@ function QuarterSection({ view }: { view: LeaderView }) {
         <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3 text-sm [&::-webkit-details-marker]:hidden">
           <CollapseGlyph />
           <b>季度成本</b>
-          <span className="text-muted">{view.quarterSummary}</span>
+          <span className="text-muted">
+            {view.quarterSummary}
+            {view.quarterApproxNote ? <InfoMark note={view.quarterApproxNote} /> : null}
+          </span>
           <span className="ml-auto text-primary">展开</span>
         </summary>
         <div className="border-t border-line px-4 py-4">
@@ -196,7 +199,10 @@ function QuarterSection({ view }: { view: LeaderView }) {
                   <td className="py-2">{quarter.label}</td>
                   <td>{quarter.labor}</td>
                   <td>{quarter.agent}</td>
-                  <td>{quarter.total}</td>
+                  <td>
+                    {quarter.approx ? `≈ ${quarter.total}` : quarter.total}
+                    {quarter.approx && view.quarterApproxNote ? <InfoMark note={view.quarterApproxNote} /> : null}
+                  </td>
                 </tr>
               ))}
             </tbody>

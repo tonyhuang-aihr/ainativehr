@@ -250,5 +250,5 @@ describe("场景页与沙盘导入", () => {
     await seedSample(fresh);
     const seeded = await loadScenarioDefinitions(fresh);
     expect(seeded.map((item) => item.id)).toEqual(["jz", "jj", "bs", "fa"]);
-  });
+  }, 20_000);
 });

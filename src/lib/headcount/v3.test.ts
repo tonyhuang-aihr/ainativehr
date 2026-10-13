@@ -112,6 +112,14 @@ describe("负责人按范围进入，小组成本在接口里就是区间", () =
     expect(view.yearEnd.equation).toBe("= ① + ②");
     expect(view.yearEnd.roundingNote).toBeNull();
     expect(view.annualApproxNote).toBe("各项分别取整到 0.5 万，合计按未取整金额加总后再取整，可能差 0.5 万。");
+    expect(view.annualLabel).toBe("1,110.5");
+    expect(view.quarters.map((quarter) => `${quarter.label} ${quarter.labor} + ${quarter.agent} = ${quarter.approx ? "≈ " : ""}${quarter.total}`)).toEqual([
+      "Q1 272.5 + 5.0 = ≈ 278.0",
+      "Q2 272.5 + 8.0 = ≈ 281.0",
+      "Q3 268.0 + 7.5 = ≈ 276.0",
+      "Q4 268.0 + 7.5 = ≈ 276.0",
+    ]);
+    expect(view.quarterApproxNote).toBe("各项分别取整到 0.5 万，合计按未取整金额加总后再取整，可能差 0.5 万。");
     expect(view.aiRatio).toBe("72 : 28");
     const blob = JSON.stringify(view);
     expect(blob).not.toContain("1 人入职");
@@ -128,6 +136,9 @@ describe("负责人按范围进入，小组成本在接口里就是区间", () =
     expect(view.yearEnd.annualLabel).toBe("4,845.5");
     expect(view.yearEnd.equation).toBe("≈ ① + ②");
     expect(view.yearEnd.roundingNote).toBe("各项分别取整到 0.5 万，合计按未取整金额加总后再取整，可能差 0.5 万。");
+    expect(view.annualApproxNote).toBeNull();
+    expect(view.quarters.map((quarter) => `${quarter.label} ${quarter.approx ? "≈ " : ""}${quarter.total}`)).toEqual(["Q1 1,192.0", "Q2 1,211.5", "Q3 ≈ 1,221.0", "Q4 ≈ 1,221.0"]);
+    expect(view.quarterApproxNote).toBe("各项分别取整到 0.5 万，合计按未取整金额加总后再取整，可能差 0.5 万。");
     expect(view.conclusion.text).toContain("4,845.5 万");
     expect(view.conclusion.text).toContain("120.5");
     expect(view.conclusion.text).toContain("4,791.0 万");

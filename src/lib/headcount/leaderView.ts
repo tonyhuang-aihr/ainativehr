@@ -1,5 +1,5 @@
 import { conclusionFacts, directChildFacts, templateConclusion, type ConclusionFacts } from "@/lib/headcount/conclusion";
-import { LEADER_DEPT_ROUNDING_NOTE, ROUNDING_EQUATION_NOTE } from "@/lib/headcount/copy";
+import { LEADER_DEPT_ROUNDING_NOTE, OD_DEPT_QUARTER_NOTE, ROUNDING_EQUATION_NOTE } from "@/lib/headcount/copy";
 import { deptStat, subtreeIds, type PlanResult } from "@/lib/headcount/engine";
 import { anyRoundedGroupDisagrees, formatSignedWan, formatWan, quarterBand, roundToHalfWan, roundingGapNote, roundingGapWan, yearBand } from "@/lib/headcount/money";
 import { collectAgentLines, collectPersonLines, defaultDetailQuery, pageAgents, pagePeople, transitCrossLine, type DetailQuery, type PagedAgents, type PagedPeople } from "@/lib/headcount/rosterPage";
@@ -38,7 +38,9 @@ export type LeaderView = {
     equation: "= ① + ②" | "≈ ① + ②" | null;
     roundingNote: string | null;
   };
-  quarters: { label: string; labor: string; agent: string; total: string }[];
+  quarters: { label: string; labor: string; agent: string; total: string; approx: boolean }[];
+  /** 有季度合计对不上人工 + Agent 时的 ⓘ。不影响全年预计的 ≈。 */
+  quarterApproxNote: string | null;
   quarterSummary: string;
   people: PagedPeople;
   agentsPage: PagedAgents;
@@ -182,6 +184,19 @@ export function buildLeaderView(
   const childFacts = directChildFacts(result, departmentId);
   const equation = mask ? { equation: null, roundingNote: null } : yearEndEquation(facts);
   const copyAudience = options.copyAudience ?? "leader";
+  const quarters = ["Q1", "Q2", "Q3", "Q4"].map((label, index) => {
+    const laborYuan = stat.quarterFormal[index] + stat.quarterOther[index];
+    const agentYuan = stat.quarterAgent[index];
+    const totalYuan = facts.quartersYuan[index] ?? 0;
+    const approx = !mask && roundingGapWan(roundToHalfWan(laborYuan + agentYuan), [roundToHalfWan(laborYuan), roundToHalfWan(agentYuan)]) !== 0;
+    return {
+      label,
+      labor: mask ? quarterBand(laborYuan, 1) : formatWan(laborYuan),
+      agent: mask ? quarterBand(agentYuan, 1) : formatWan(agentYuan),
+      total: mask ? quarterBand(totalYuan, 1) : formatWan(totalYuan),
+      approx,
+    };
+  });
   const annualApproxNote =
     mask || !anyRoundedGroupDisagrees(facts.annualYuan, [facts.quartersYuan.map((value) => roundToHalfWan(value))])
       ? null
@@ -240,15 +255,11 @@ export function buildLeaderView(
       equation: equation.equation,
       roundingNote: equation.roundingNote,
     },
-    quarters: ["Q1", "Q2", "Q3", "Q4"].map((label, index) => ({
-      label,
-      labor: mask ? quarterBand(stat.quarterFormal[index] + stat.quarterOther[index], 1) : formatWan(stat.quarterFormal[index] + stat.quarterOther[index]),
-      agent: mask ? quarterBand(stat.quarterAgent[index], 1) : formatWan(stat.quarterAgent[index]),
-      total: mask ? quarterBand(facts.quartersYuan[index] ?? 0, 1) : formatWan(facts.quartersYuan[index] ?? 0),
-    })),
+    quarters,
+    quarterApproxNote: quarters.some((quarter) => quarter.approx) ? OD_DEPT_QUARTER_NOTE : null,
     quarterSummary: mask
       ? "季度成本按区间显示 · 人工 + Agent"
-      : facts.quartersYuan.map((value, index) => `Q${index + 1} ${formatWan(value)}`).join(" · ") + " 万 · 人工 + Agent",
+      : quarters.map((quarter) => `${quarter.label} ${quarter.approx ? `≈ ${quarter.total}` : quarter.total}`).join(" · ") + " 万 · 人工 + Agent",
     people: peoplePage,
     agentsPage,
     transitNote,

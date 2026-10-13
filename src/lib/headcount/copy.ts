@@ -44,6 +44,7 @@ export const TOOLTIPS = [
   { page: "OD 底座 · 部门页", metric: "当前成本（年化）", text: "在岗人员按职级均值（外包等按类型人均）+ 在用 Agent 的席位费和算力费，按全年 12 个月计算。" },
   { page: "OD 底座 · 部门页", metric: "接下来会变", text: "已确认、还没生效的变动，按生效日折算到当年，增加为正、减少为负。点任一行，打开对应明细并自动选中「在途」。" },
   { page: "OD 底座 · 部门页", metric: "年底预计", text: "年底人数 = 现在 + 加入 − 离开（正式员工）；全年成本 = 当前成本（年化）+ 在途影响，即 ① + ②。" },
+  { page: "OD 底座 · 部门页", metric: "≈ 合计", text: "各项分别取整到 0.5 万，合计按未取整金额加总后再取整，可能差 0.5 万。" },
   { page: "OD 底座 · 部门页", metric: "用工类型", text: "编制只算正式员工；外包、实习、顾问单列人数，成本按各类型人均估算，计入人工成本。" },
   { page: "OD 底座 · 部门页", metric: "人员排序", text: "人员行不能按成本排序。只选在途时按生效日从早到晚，其余按汇报层级。" },
   { page: "OD 底座 · 部门页", metric: "人员全年成本", text: "按职级均值和当年在岗天数折算，非本人薪资；精确估算取整到 0.5 万。" },
@@ -103,6 +104,8 @@ export const BUDGET_NOTE = slot("OD 底座 · 总览", "部门预算");
 export const GAP_NOTE = slot("OD 底座 · 总览", "差额");
 export const ONE_OFF_NOTE = slot("OD 底座 · 总览", "一次性费用 vs 预留");
 export const ROUNDING_EQUATION_NOTE = slot("OD 底座 · 部门页", "≈ ① + ②");
+/** 季度合计的分项是人工和 Agent。这一季各自取整后加不回合计时，悬停用这一条。 */
+export const OD_DEPT_QUARTER_NOTE = slot("OD 底座 · 部门页", "≈ 合计");
 export const LEADER_OVERVIEW_ROUNDING_NOTE = slot("负责人视图 · 总览（多部门，赵一）", "≈ 合计");
 export const LEADER_DEPT_ROUNDING_NOTE = slot("负责人视图 · 单部门（钱二）", "≈ 合计");
 export const OD_OVERVIEW_ROUNDING_NOTE = slot("OD 底座 · 总览", "≈ 合计");

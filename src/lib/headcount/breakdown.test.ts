@@ -18,7 +18,7 @@ import { SCOPE_TOTAL_NOTE, TOOLTIPS, UNATTRIBUTED_AGENT_NOTE } from "@/lib/headc
 import { loadTooltipFile } from "@/lib/headcount/tooltipFile";
 import { computePlan, deptStat } from "@/lib/headcount/engine";
 import { buildScopeOverview } from "@/lib/headcount/overview";
-import { formatWan, ROUNDING_GAP_NOTE } from "@/lib/headcount/money";
+import { formatWan, ROUNDING_GAP_NOTE, roundToHalfWan, roundingGapWan } from "@/lib/headcount/money";
 import { DEPT, samplePlan } from "@/lib/headcount/sample";
 import { evaluateScenario, formalAverageAnnual, presetScenarios, quarterChangeLabels, evaluateBaseline, type ScenarioAgentChange, type ScenarioDefinition } from "@/lib/headcount/scenario";
 import { buildScenarioBoard, DEFAULT_PREFILL_NOTE } from "@/lib/headcount/scenarioView";
@@ -190,6 +190,34 @@ describe("部门持续成本和未归属 Agent", () => {
     expect(plain).toContain("≈ 16,098.5");
     expect(defaultMarks.notes).toBe(defaultMarks.marks);
   });
+
+  it("基线和基准的部门持续成本 ≈ 来自未取整季度先相加再取整", () => {
+    const board = buildScenarioBoard(result, presets, "jj", DEFAULT_PREFILL_NOTE);
+    const baseline = evaluateBaseline(result);
+    const reference = evaluateScenario(result, presets.find((item) => item.id === "jz")!);
+    const roundedQuarterSum = (item: { quarters: { labor: number; agent: number }[] }) =>
+      item.quarters.reduce((total, quarter) => total + roundToHalfWan(quarter.labor + quarter.agent), 0);
+    const splitSum = (item: { quarters: { labor: number; agent: number }[] }) =>
+      item.quarters.reduce((total, quarter) => total + roundToHalfWan(quarter.labor) + roundToHalfWan(quarter.agent), 0);
+    expect(roundedQuarterSum(baseline)).toBe(16070.5);
+    expect(splitSum(baseline)).toBe(16071);
+    expect(roundedQuarterSum(reference)).toBe(16070.5);
+    expect(splitSum(reference)).toBe(16070);
+    expect(roundingGapWan(16071, [16070.5])).toBe(0.5);
+    expect(roundingGapWan(16070, [16070.5])).toBe(-0.5);
+    expect(board.columns.find((column) => column.name === "基线")).toMatchObject({ daily: "16,071.0", approx: true });
+    expect(board.columns.find((column) => column.name === "基准")).toMatchObject({ daily: "16,070.0", approx: true });
+    const departmentSum = (name: string) => {
+      const column = board.columns.find((item) => item.name === name);
+      const wan = (text: string) => Number(text.replace(/,/g, ""));
+      return (column?.dailyParts ?? []).reduce((total, part) => total + wan(part.text), 0) + wan(column?.unattributed ?? "0");
+    };
+    expect(departmentSum("基线")).toBe(16071);
+    expect(departmentSum("基准")).toBe(16070);
+    const page = renderToStaticMarkup(createElement(ScenarioBoardView, { board }));
+    const timeline = page.slice(page.indexOf('id="scenario-timeline"'));
+    expect(timeline).not.toMatch(/≈ /);
+  });
 });
 
 describe("林的事业部口径", () => {
@@ -231,6 +259,15 @@ describe("林的事业部口径", () => {
     expect(dailyRow).toContain(ROUNDING_GAP_NOTE);
     expect(dailyRow).not.toContain("≈ 4,878.5");
     expect(dailyRow).not.toContain("≈ 4,765.0");
+    const focused = buildScenarioBoard(result, definitions, "bu-prod1-jz", DEFAULT_PREFILL_NOTE, { mode: "business", rootId: root });
+    const partSum = focused.timelineRows.reduce((total, row) => total + Number(row.labor.replace(/,/g, "")) + Number(row.agentCost.replace(/,/g, "")), 0);
+    const quarterSum = focused.timelineRows.reduce((total, row) => total + Number(row.total.replace(/,/g, "")), 0);
+    expect(partSum).toBe(4877.5);
+    expect(quarterSum).toBe(4878.5);
+    expect(focused.columns.find((column) => column.id === "bu-prod1-jz")?.approx).toBe(false);
+    const timeline = linHtml.slice(linHtml.indexOf('id="scenario-timeline"'));
+    expect(timeline).not.toMatch(/≈ /);
+    expect(timeline).toContain("1,236.0");
     const labels = (id: string) => buildScenarioBoard(result, definitions, id, DEFAULT_PREFILL_NOTE, { mode: "business", rootId: root }).timelineLabels;
     expect(labels("bu-prod1-jz")).toEqual([
       "Q1 离职未补位 3 人（含基线变动共 150→148）",
@@ -289,17 +326,18 @@ describe("林的事业部口径", () => {
   });
 });
 
-describe("悬停文案是 62 条", () => {
-  it("去掉 Q2 离职未补位，补上四个 ≈ 合计，并与文件原文一致", () => {
+describe("悬停文案是 63 条", () => {
+  it("部门页季度 ≈ 用 OD 底座 · 部门页的 ≈ 合计，并与文件原文一致", () => {
     const file = loadTooltipFile();
-    expect(file).toHaveLength(62);
+    expect(file).toHaveLength(63);
     expect(file.at(-1)?.metric).toBe("场景总成本（HRBP 版）");
-    expect(TOOLTIPS).toHaveLength(62);
+    expect(TOOLTIPS).toHaveLength(63);
     expect(file.some((item) => item.metric === "Q2 离职未补位标签")).toBe(false);
     expect(file.filter((item) => item.metric === "≈ 合计").map((item) => item.page)).toEqual([
       "负责人视图 · 总览（多部门，赵一）",
       "负责人视图 · 单部门（钱二）",
       "OD 底座 · 总览",
+      "OD 底座 · 部门页",
       "场景与时间轴 v2",
     ]);
     expect(TOOLTIPS.slice(-8).map((item) => item.metric)).toEqual(["≈ 合计", "时间轴", "未归属部门 Agent ⓘ", "仅产品研发一部 ⓘ", "外包（部门）", "范围合计 ⓘ", "离职未补位标签（含出缺不补）", "场景总成本（HRBP 版）"]);

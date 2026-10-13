@@ -359,6 +359,7 @@ export type ScenarioBoardOptions = {
   departmentNames?: string[];
 };
 
+/** 先把这一季未取整的人工和 Agent 加总，再取整。不要先分别取整再相加。 */
 function dailyQuarterWan(item: ScenarioResult): number[] {
   return item.quarters.map((quarter) => roundToHalfWan(quarter.labor + quarter.agent));
 }
