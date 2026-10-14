@@ -8,25 +8,46 @@
 .gm{display:flex;gap:10px;margin-bottom:14px}.gm .av2{width:32px;height:32px;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
 .gm .nm{font-size:12px;color:#8f959e;margin-bottom:3px}.gm .bb2{background:#fff;border-radius:10px;padding:8px 12px;font-size:13px;line-height:1.7;max-width:560px}
 .sys{text-align:center;font-size:12px;color:#a0a6af;margin:6px 0 14px}
-.gm .fc{max-width:460px}
+.gm .fc{max-width:480px}.rcd{font-size:11px;color:#a0a6af;margin:-8px 0 12px 42px}.sw{display:flex;gap:6px;align-items:center;font-size:13px;margin-bottom:10px}.sw a{padding:4px 12px;border-radius:14px;background:#fff;border:1px solid #dee0e3;color:#646a73;text-decoration:none}.sw a.on{background:#3370ff;color:#fff;border-color:#3370ff}.sw .muted{margin-left:10px}
 </style></head><body>
 <div class="top"><div class="lg">AI Native 招聘 · 飞书群</div><div class="srch">🔍 搜索人选、需求……</div><div class="role"><span class="av">王</span>王磊 ▾<div class="dd"><a href="manager.html" class="on">以用人经理身份</a></div></div></div>
 <div class="pw">
-<div class="flowbar" style="border:0;margin:0 0 8px"><span>来自：</span><a href="demand.html">需求对话 · 拉群一起聊</a><span class="ar">→</span><b>在群里定需求变更</b><span class="ar">→</span><span>去向：需求卡 v3 · 同步职位描述 / 关键词 / 面试题</span></div>
-<div class="fs"><div class="side"><div class="tt">消息</div>
-<div class="cv on">高级 HRIS · 需求<div class="pv">招聘助手：需求卡 v3 变更建议</div></div><div class="cv">🤖 招聘助手<div class="pv">赵敏一面面评待提交</div></div><div class="cv">陈静<div class="pv">好的</div></div></div>
-<div class="mc"><div class="mh">高级 HRIS · 需求<span>王磊、陈静、招聘助手 · 3 人</span></div><div class="ms" id="ms">
-<div class="sys">王磊 通过「拉群一起聊」创建群聊，邀请了 陈静、招聘助手</div>
-<div class="gm"><div class="av2" style="background:#3370ff">助</div><div><div class="nm">招聘助手</div><div class="fc"><div class="fch g"><div class="src">需求对话摘要（转发）</div>高级 HRIS 产品经理 · 当前 v2</div><div class="fcb">必须：主导过系统迁移 · 5 年以上 HR 系统经验<br>加分：数据治理（10/13 新增）、薪酬 / 审批流<br>进展：在面 3 人，赵敏一面已完成<br><span class="muted">王磊刚才说：数据治理好像比想象的重要</span></div><div class="fcf"><a href="demand.html">看完整对话</a></div></div></div></div>
-<div class="gm"><div class="av2" style="background:#d46b08">王</div><div><div class="nm">王磊</div><div class="bb2">面了 3 个人，数据治理比我想的重要。新系统上线后数据不能再乱，我想把它改成必须。</div></div></div>
-<div class="gm"><div class="av2" style="background:#13c2c2">陈</div><div><div class="nm">陈静</div><div class="bb2">改成必须的话，在面的 3 人里钟宇不符合，赵敏、韩露还行；寻访范围大概少 40%。</div></div></div>
-<div class="gm"><div class="av2" style="background:#d46b08">王</div><div><div class="nm">王磊</div><div class="bb2">可以接受，宁缺毋滥。</div></div></div>
-<div class="gm"><div class="av2" style="background:#3370ff">助</div><div><div class="nm">招聘助手</div><div class="fc"><div class="fch o"><div class="src">需求卡 v3 变更建议 · 待王磊确认</div>数据治理：加分项 → 必须项</div><div class="fcb">
-<div class="lb">影响</div>在面 3 人中 2 人仍符合；寻访范围约减少 40%；职级、编制不变
-<div class="lb">确认后自动同步</div>职位描述、寻访关键词、面试题（标「因需求 v3 已同步」）；职位描述发布等陈静确认
-</div><div class="fcf"><span class="pri" id="ok">确认写回</span><span>改一下</span></div></div></div></div>
-<div class="gm" id="done" style="display:none"><div class="av2" style="background:#3370ff">助</div><div><div class="nm">招聘助手</div><div class="rec2 ok" style="background:#fff;max-width:460px"><b>已写回需求卡 v3</b>（王磊确认）。职位描述、寻访关键词、面试题已标「因需求 v3 已同步」；职位描述发布等陈静确认。<a>撤销</a></div></div></div>
-</div><div style="padding:10px 18px;background:#fff;border-top:1px solid #eceef1;color:#a0a6af;font-size:12px">发送消息到 高级 HRIS · 需求</div></div></div>
+<div class="sw"><span>场景：</span><a id="t-demand" href="?topic=demand">需求变更</a><a id="t-zl" href="?topic=zhaomin-level">赵敏定级讨论</a><span class="muted">系统发起对话、带上下文；群里结论经你确认后写回系统</span></div>
+<div class="flowbar" style="border:0;margin:0 0 8px" id="fb"></div>
+<div class="fs"><div class="side"><div class="tt">消息</div><div id="side"></div></div>
+<div class="mc"><div class="mh" id="mh"></div><div class="ms" id="ms"></div><div style="padding:10px 18px;background:#fff;border-top:1px solid #eceef1;color:#a0a6af;font-size:12px" id="ft"></div></div></div>
 </div>
-<script>document.getElementById('ok').onclick=function(){this.textContent='已确认';this.className='';document.getElementById('done').style.display='flex';var m=document.getElementById('ms');m.scrollTop=m.scrollHeight;}</script>
+<script>
+var AV={助:'#3370ff',王:'#d46b08',陈:'#13c2c2',周:'#722ed1',刘:'#cf1322'},NM={助:'招聘助手',王:'王磊 · 用人经理',陈:'陈静 · 招聘负责人',周:'周晓 · HRBP',刘:'刘总'};
+function m(w,h){return '<div class="gm"><div class="av2" style="background:'+AV[w]+'">'+w+'</div><div><div class="nm">'+NM[w]+'</div>'+h+'</div></div>'}
+function t(w,x){return m(w,'<div class="bb2">'+x+'</div>')}
+function rc(n){return '<div class="rcd">招聘助手 · 已记录 '+n+' 条要点</div>'}
+function wb(o){return m('助','<div class="fc"><div class="fch o"><div class="src">写回系统 · 待'+o.who+'确认</div>'+o.title+'</div><div class="fcb"><div class="lb">结论</div>'+o.c+'<div class="lb">写回到</div>'+o.to+'<div class="lb">来源消息</div>'+o.src+'</div><div class="fcf" id="wf"><span class="pri" id="ok">确认写回</span><span>修改后写回</span><span>不写回</span></div></div>')+'<div class="gm" id="done" style="display:none"><div class="av2" style="background:#3370ff">助</div><div><div class="nm">招聘助手</div><div class="rec2 ok" style="background:#fff;max-width:460px"><b>'+o.done+'</b><div class="muted">'+o.tr+' · 已记入操作记录</div><a href="'+o.back+'">去看</a> · <a href="#" onclick="this.parentNode.innerHTML=\'<b>已撤销写回</b><div class=muted>撤销已记录 · 陈静 · 10/14 21:12</div>\';return false">撤销</a></div></div></div>'}
+var S={
+demand:{title:'高级 HRIS · 需求',mem:'王磊、陈静、周晓、招聘助手 · 4 人',fb:'<span>来自：</span><a href="demand.html">需求卡 · 转发到群讨论</a><span class="ar">→</span><b>在群里定需求变更</b><span class="ar">→</span><span>去向：需求卡版本记录 v3</span>',
+side:['高级 HRIS · 需求','招聘助手：写回需求卡 v3？'],
+html:'<div class="sys">王磊 从需求卡「转发到群讨论」创建群聊，邀请了 陈静、周晓、招聘助手</div>'+
+m('助','<div class="fc"><div class="fch g"><div class="src">系统转发 · 需求卡上下文</div>高级 HRIS 产品经理 · 当前 v2</div><div class="fcb">必须：主导过系统迁移 · 5 年以上 HR 系统经验<br>加分：数据治理（10/13 新增）、薪酬 / 审批流<br>进展：在面 3 人，赵敏一面已完成</div><div class="fcf"><a href="demand.html">打开需求卡</a></div></div>')+
+t('王','面了 3 个人，数据治理比我想的重要。新系统上线后数据不能再乱，我想把它改成必须。')+rc(1)+
+t('陈','改成必须的话，在面的 3 人里钟宇不符合，赵敏、韩露还行；寻访范围大概少 40%。')+rc(2)+
+t('周','编制和职级不受影响，我这边没问题。')+t('王','可以接受，宁缺毋滥。')+rc(3)+
+wb({who:'王磊',title:'需求卡 v3：数据治理 加分项 → 必须项',c:'数据治理改为必须；职级、编制不变；在面 3 人中 2 人仍符合',to:'需求卡版本记录 v3（标「来自群聊 · 10/14 王磊确认」）；职位描述、寻访关键词、面试题同步',src:'王磊 10/14 15:02「我想把它改成必须」· 陈静 15:05 影响评估 · 王磊 15:07「可以接受」',done:'已写回需求卡 v3',tr:'来源 3 条消息 · 王磊确认 · 10/14 15:08',back:'demand.html'})},
+'zhaomin-level':{title:'赵敏 · 定级讨论',mem:'王磊、陈静、周晓、招聘助手 · 4 人',fb:'<span>来自：</span><a href="profile.html?role=ta">赵敏画像 / 决策页 · 转发到群讨论</a><span class="ar">→</span><b>在群里讨论定级</b><span class="ar">→</span><span>去向：赵敏画像时间线 · 面评结论</span>',
+side:['赵敏 · 定级讨论','招聘助手：写回赵敏画像？'],
+html:'<div class="sys">陈静 从赵敏画像「转发到群讨论」创建群聊，邀请了 王磊、周晓、招聘助手</div>'+
+m('助','<div class="fc"><div class="fch g"><div class="src">系统转发 · 赵敏定级上下文</div>赵敏 · 高级 HRIS 产品经理 · 终面后</div><div class="fcb"><div class="lb">时间线</div>一面 王磊 P7 → 二面 何涛 → 终面 刘总 P8 → <b>当前：安排加面 / 进入录用决策</b><div class="lb">关键问答</div><div class="qa2"><b>一面 王磊 · P7</b>　问：之后怎么防止数据再变脏？　答：月度稽核，机制不具体</div><div class="qa2"><b>终面 刘总 · P8</b>　问：治理项目你带过几个人？　答：带 3 人小组推完主数据治理</div><div class="muted">需求卡 P7；P8 需 HRBP 确认编制</div></div><div class="fcf"><a href="profile.html?role=ta">打开赵敏画像</a></div></div>')+
+t('王','我给 P7 主要是数据治理那块答得虚，不是能力不行。')+rc(1)+
+t('陈','刘总那边看到她带过 3 人治理小组。要不加一场数据治理专项，孙晴来面？')+rc(2)+
+t('周','P8 编制我可以协调，但希望先有加面结论再定。')+rc(3)+
+t('王','同意，先加面孙晴，结论出来再进录用决策。')+rc(4)+
+wb({who:'王磊',title:'赵敏：加面孙晴（数据治理），再进录用决策',c:'加面 · 孙晴（数据治理负责人），考察数据治理落地、带团队；加面后再定 P7 / P8',to:'赵敏画像时间线（下一步改为加面 · 孙晴）；面评结论备注「定级待加面」',src:'王磊 10/14 16:10「先加面孙晴」· 陈静 16:06 提议 · 周晓 16:08「先有加面结论再定」',done:'已写回赵敏画像',tr:'来源 3 条消息 · 王磊确认 · 10/14 16:12',back:'profile.html?role=ta'})}};
+var k=new URLSearchParams(location.search).get('topic');if(!S[k])k='demand';var o=S[k];
+document.getElementById(k=='demand'?'t-demand':'t-zl').className='on';
+document.title='飞书群 · '+o.title;document.getElementById('fb').innerHTML=o.fb;
+document.getElementById('mh').innerHTML=o.title+'<span>'+o.mem+'</span>';document.getElementById('ft').textContent='发送消息到 '+o.title;
+document.getElementById('side').innerHTML='<div class="cv on">'+o.side[0]+'<div class="pv">'+o.side[1]+'</div></div><div class="cv">'+(k=='demand'?S['zhaomin-level']:S.demand).title+'</div><div class="cv">🤖 招聘助手<div class="pv">已记录要点</div></div>';
+document.getElementById('ms').innerHTML=o.html;
+document.getElementById('ok').onclick=function(){document.getElementById('wf').innerHTML='<span class="muted">已确认</span>';document.getElementById('done').style.display='flex';var x=document.getElementById('ms');x.scrollTop=x.scrollHeight;};
+</script>
+
 <script src="role.js"></script><script src="story.js"></script></body></html>

@@ -24,3 +24,6 @@
   bar.onclick=function(){set(false)}; document.body.appendChild(bar);
   set(!c.dataset.open);
 })();
+/* v0.8.2 转发到群讨论：先弹确认卡 */
+(function(){var D={demand:{t:'高级 HRIS · 需求',m:'王磊（用人经理）、陈静（招聘负责人）、周晓（HRBP）、招聘助手',c:['需求卡 v2 必须项 / 加分项','在面人选进展（3 人，仅姓名和阶段）','本次对话摘要'],x:'候选人薪资期望、联系方式'},'zhaomin-level':{t:'赵敏 · 定级讨论',m:'王磊（用人经理）、陈静（招聘负责人）、周晓（HRBP）、招聘助手',c:['赵敏时间线（一面 → 终面 → 当前）','王磊 P7、刘总 P8 的关键问答','需求卡定级 P7、P8 需确认编制'],x:'薪酬（期望薪资、录用通知方案、团队分位）'}};
+document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a.fwd');if(!a)return;e.preventDefault();var k=new URL(a.href).searchParams.get('topic')||'demand',o=D[k]||D.demand;var w=document.createElement('div');w.className='fwdm';w.innerHTML='<div class="fwdc"><div class="fwdh">转发到飞书群 · '+o.t+'</div><div class="lb">拉谁进群</div>'+o.m+'<div class="lb">转发哪些内容</div><ul>'+o.c.map(function(x){return '<li>'+x+'</li>'}).join('')+'</ul><div class="fwdx">已按群成员权限去掉：'+o.x+'<span class="muted">（按群里权限最低的人过滤：王磊看不到薪酬）</span></div><div class="fwdf"><span class="btn" data-x>取消</span><span class="btn p" data-ok>确认并进群</span></div></div>';document.body.appendChild(w);w.onclick=function(ev){if(ev.target===w||ev.target.hasAttribute('data-x'))w.remove();if(ev.target.hasAttribute('data-ok'))location.href=a.href}},true)})();
