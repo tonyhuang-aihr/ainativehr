@@ -34,3 +34,16 @@ tr.sel td{background:#f7f9ff}tr[data-r]{cursor:pointer}
 .storybar .pg{display:flex;gap:3px}.storybar .pg i{width:18px;height:4px;border-radius:2px;background:#eceef1}.storybar .pg i.on{background:#ff8800}
 body.story-on .wrap,body.story-on .pw,body.story-on .dw{margin-top:88px!important}body.story-on .wrap,body.story-on .dw{height:calc(100vh - 88px)!important}
 .vtag{display:inline-block;font-size:12px;padding:2px 10px;border-radius:10px;background:#eef3ff;color:#3370ff;margin-left:8px}
+/* 来源→动作→去向（hint） */
+.flowbar{display:flex;align-items:center;gap:8px;font-size:12px;color:#8f959e;margin:0 0 12px;padding:5px 0;border-bottom:1px dashed #eceef1}
+.flowbar a{color:#646a73;text-decoration:none;border-bottom:1px dashed #c9cdd4}.flowbar a:hover{color:#3370ff}
+.flowbar b{color:#d25f00;font-weight:500}.flowbar .ar{color:#c9cdd4}
+body.hint-on .btn.p:not(.main){background:#fff;color:#4e5969;border-color:#dee0e3}
+.btn.main{position:relative}.btn.main.pulse{animation:hpulse 1.2s ease-out 2}
+@keyframes hpulse{0%{box-shadow:0 0 0 0 rgba(51,112,255,.45)}100%{box-shadow:0 0 0 10px rgba(51,112,255,0)}}
+.dest{display:inline-block;font-size:12px;color:#8f959e;margin:7px 12px 0 0;white-space:nowrap;vertical-align:top;line-height:26px}
+.htoast{position:fixed;left:50%;bottom:40px;transform:translateX(-50%);background:#1f2329;color:#fff;font-size:13px;padding:10px 16px;border-radius:10px;z-index:50;box-shadow:0 6px 20px rgba(0,0,0,.2);opacity:0;transition:opacity .2s}.htoast.on{opacity:1}.htoast a{color:#7aa2ff;margin-left:10px;text-decoration:none}
+.flowbar .fbact{margin-left:auto;display:flex;align-items:center}.flowbar .fbact .btn{margin:0}.flowbar .fbact .dest{margin:0 0 0 6px}
+.hsticky{position:sticky;bottom:0;background:#fff;padding:10px 0;margin:0!important;z-index:3;border-top:1px solid #eceef1}.hsticky .btn{margin-top:0}.hsticky .dest{margin-top:0}
+/* 助手确认卡按钮豁免弱化 */
+body.hint-on .chat .m.ai[style*="ffb46b"] .btn.p,body.hint-on .cdk .btn.p{background:#3370ff;color:#fff;border-color:#3370ff}
