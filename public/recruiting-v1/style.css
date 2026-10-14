@@ -47,3 +47,24 @@ body.hint-on .btn.p:not(.main){background:#fff;color:#4e5969;border-color:#dee0e
 .hsticky{position:sticky;bottom:0;background:#fff;padding:10px 0;margin:0!important;z-index:3;border-top:1px solid #eceef1}.hsticky .btn{margin-top:0}.hsticky .dest{margin-top:0}
 /* 助手确认卡按钮豁免弱化 */
 body.hint-on .chat .m.ai[style*="ffb46b"] .btn.p,body.hint-on .cdk .btn.p{background:#3370ff;color:#fff;border-color:#3370ff}
+/* v0.8 助手：记录决定 + 收起态 */
+.rec2{font-size:12px;color:#4e5969;background:#f7f8fa;border:1px solid #eceef1;border-radius:10px;padding:8px 10px;margin:8px 0;line-height:1.7}.rec2 b{color:#1f2329}.rec2 a{color:#3370ff;margin-left:8px;cursor:pointer}
+.rec2.ok::before{content:"✓ ";color:#1f8a4c}
+body.asst-min .chat{display:none}
+.abar{position:fixed;right:20px;bottom:18px;z-index:40;background:#fff;border:1px solid #dee0e3;border-radius:20px;padding:8px 14px;font-size:12px;color:#4e5969;box-shadow:0 4px 14px rgba(0,0,0,.08);cursor:pointer;max-width:460px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.abar b{color:#3370ff;margin-right:6px}.abar.alert{border-color:#ffb46b}.abar.alert b{color:#d25f00}
+.chmin{float:right;font-size:12px;color:#8f959e;cursor:pointer;font-weight:400}
+/* 已按标准完成 · 撤销 */
+.htoast .ud{color:#ffd591;margin-left:10px;cursor:pointer}
+.htoast .bs{display:block;font-size:11px;color:#c9cdd4;margin-top:2px}
+/* 画像人选时间线 */
+.ptl{position:sticky;top:0;z-index:4;width:860px;margin:0 auto 12px;background:#fff;border:1px solid #eceef1;border-radius:10px;padding:10px 14px;font-size:12px;color:#646a73;box-shadow:0 2px 6px rgba(0,0,0,.04)}
+.ptl .st3{display:flex;gap:8px;align-items:center}.ptl .st3 span{padding:3px 10px;border-radius:8px;background:#f2f3f5}.ptl .st3 span.cur{background:#fff4e5;color:#d46b08;font-weight:500}.ptl .st3 i{font-style:normal;color:#c9cdd4}
+.ptl .sg{margin-top:7px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}.ptl .sg b{color:#1f2329;font-weight:500}.ptl .lv{color:#3370ff}.ptl .btn{margin:0;padding:3px 10px}
+/* v0.8 飞书卡片通用 */
+.fc{background:#fff;border:1px solid #e3e6eb;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.04);font-size:13px;line-height:1.7}
+.fch{padding:10px 14px;color:#fff;background:#3370ff}.fch .src{font-size:11px;opacity:.85}.fch.o{background:#ff8800}.fch.g{background:#8f959e}.fch.v{background:#7a5af8}
+.fcb{padding:12px 14px}.fcb .lb{font-size:12px;color:#8f959e;margin-top:8px}.fcb .orow{display:flex;gap:6px;align-items:center;margin:6px 0}.fcb .orow>span:first-child{width:64px;font-size:12px;color:#646a73}
+.ch3{padding:3px 12px;border:1px solid #dee0e3;border-radius:8px;background:#fff;font-size:12px;cursor:pointer}.ch3.on{border-color:#3370ff;color:#3370ff;background:#eef3ff}
+.fcf{display:flex;border-top:1px solid #f0f1f2}.fcf a,.fcf span{flex:1;text-align:center;padding:10px 6px;font-size:13px;color:#3370ff;text-decoration:none;border-right:1px solid #f0f1f2;cursor:pointer}.fcf>*:last-child{border-right:0}.fcf .pri{background:#3370ff;color:#fff}
+.fto{font-size:12px;color:#8f959e;margin:0 0 6px}.lock2{font-size:11px;color:#d46b08;background:#fff4e5;border-radius:6px;padding:0 6px}

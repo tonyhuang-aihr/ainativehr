@@ -1,32 +1,38 @@
 <!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><title>录用决策 · 赵敏</title><link rel="stylesheet" href="style.css"><style>
 .todo{border-left:3px solid #ffb46b}.statc{border:1px dashed #dee0e3;background:#fcfcfd}
-.ck{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid #f2f3f5;font-size:13px}.ck:last-child{border:0}.ck .ok{color:#1f8a4c}.ck .wa{color:#d46b08}
 .flow{display:flex;gap:8px;align-items:center;font-size:12px;color:#646a73;margin:6px 0}.flow span{padding:4px 10px;border-radius:8px;background:#f2f3f5}.flow span.cur{background:#fff4e5;color:#d46b08}
+.kt td,.kt th{font-size:13px}.kt .key{font-size:11px;padding:1px 6px;border-radius:6px;background:#eef3ff;color:#3370ff;margin-left:6px}.kt .ref{font-size:11px;color:#a0a6af;margin-left:6px}
+.diff{background:#fff4e5;color:#d46b08;padding:1px 8px;border-radius:8px;font-weight:600}
+.note2{font-size:12px;color:#8f959e;margin-top:8px;line-height:1.7}
 </style></head><body data-hint-step="5">
 <div class="top"><div class="lg">AI Native 招聘</div><div class="srch">🔍 搜索人选、需求……</div><div class="role"><span class="av">陈</span>陈静 ▾<div class="dd"><a href="ta.html" class="on">以TA身份</a></div></div></div>
 <div class="wrap"><div class="main">
 <a class="back" href="pipeline.html">← 返回 Pipeline</a>
 <div style="font-size:20px;font-weight:600;margin-bottom:4px">录用决策 · <a class="pl" href="profile.html?role=ta">赵敏</a></div>
-<div class="muted">高级 HRIS 产品经理 v2 · 用人经理王磊 · TA 陈静发起</div>
-<div class="flow"><span>Agent 检查</span>→<span class="cur">有分歧：TA 发起决策会</span>→<span>仍有分歧：隔级上级刘总拍板</span>→<span>提交结论 → Offer</span></div>
+<div class="muted">高级 HRIS 产品经理 · 需求卡 P7 · 用人经理王磊 · TA 陈静</div>
+<div class="flow"><span>Agent 检查</span>→<span class="cur">关键面试官定级不一致：开决策会</span>→<span>仍不一致：隔级上级拍板</span>→<span>结论 → 录用通知审批</span></div>
 
-<div class="sec"><span><i class="tg2 g">状态</i>Agent 检查结果</span></div>
-<div class="card statc">
-<div class="ck"><span class="ok">✓</span><div style="flex:1"><b>面试轮次完整</b><div class="muted">一面 王磊 · 二面 何涛 · HRBP 面 周晓，3 份面评都已提交</div></div></div>
-<div class="ck"><span class="ok">✓</span><div style="flex:1"><b>考察维度覆盖</b><div class="muted">系统迁移、数据治理、推动力、追问简历，都有至少 1 位面试官打分</div></div></div>
-<div class="ck"><span class="wa">!</span><div style="flex:1"><b>有 1 处分歧：数据治理</b><div class="muted">王磊「一般」（没讲怎么防止数据再变脏）· 何涛「强」（主数据审批流有案例）</div></div></div>
-<div class="ck"><span class="ok">✓</span><div style="flex:1"><b>定岗定级建议</b><div class="muted">P7，与需求卡一致。薪酬方案在 Offer 审批链里生成</div></div></div>
-</div>
+<div class="sec"><span><i class="tg2 g">状态</i>Agent 检查结果<span class="tip">ⓘ<em>只有关键面试官（各级上级、部门负责人）结论冲突才开决策会：一人通过一人不通过，或都通过但建议定级不同。单维度分歧只放画像参考。</em></span></span></div>
+<div class="card statc"><table class="kt">
+<tr><th>面试官</th><th>轮次</th><th>结论</th><th>建议定级</th><th>一句总评</th></tr>
+<tr><td>王磊<span class="key">关键 · 直属上级</span></td><td>一面</td><td>通过</td><td><span class="diff">P7</span></td><td class="muted">迁移经验扎实，治理机制还需带</td></tr>
+<tr><td>刘总<span class="key">关键 · 部门负责人</span></td><td>终面</td><td>通过</td><td><span class="diff">P8</span></td><td class="muted">能独立带主数据治理，可带小组</td></tr>
+<tr><td>何涛<span class="ref">参考</span></td><td>二面</td><td>通过</td><td>—</td><td class="muted">推动力强</td></tr>
+<tr><td>周晓<span class="ref">参考 · HRBP</span></td><td>HRBP 面</td><td>通过</td><td>—</td><td class="muted">动机清晰</td></tr>
+</table>
+<div class="note2">✓ 面试轮次完整，4 份面评已提交　✓ 维度覆盖：系统迁移、数据治理、推动力、追问简历<br>
+<b style="color:#d46b08">! 冲突：关键面试官都通过，但定级不同（P7 / P8）→ 需开决策会</b><br>
+· 「数据治理」单维度看法不同（王磊一般 / 何涛强）不触发决策会，已放在<a class="pl" href="profile.html?role=ta">画像</a>参考<br>
+· P8 超出需求卡 P7，定 P8 需 HRBP 周晓确认编制职级</div></div>
 
 <div class="sec"><span><i class="tg2 o">待办</i>需要我处理</span></div>
-<div class="card todo"><div class="item"><span class="tag o">发起决策会</span><div style="flex:1"><div class="t">数据治理判断不一致，建议开 30 分钟决策会</div><div class="d">参会：王磊、何涛、你；HRBP 周晓可选旁听。会上没对齐的，交隔级上级刘总拍板。没有分歧时可直接提交结论。</div><span class="btn p">发起决策会</span><span class="btn">分歧不影响，直接提交</span></div></div></div>
-<div class="card todo" style="opacity:.6"><div class="item"><span class="tag">之后</span><div style="flex:1"><div class="t">提交录用结论</div><div class="d">结论：录用 / 不录用（需写原因）。Agent 不会自动淘汰；提交后进入 Offer。</div><span class="btn">录用 · 进入 Offer</span><span class="btn">不录用</span><span class="btn">交刘总拍板</span></div></div></div>
+<div class="card todo"><div class="item"><span class="tag o">定级决策会</span><div style="flex:1"><div class="t">议题：赵敏定 P7 还是 P8</div><div class="d">参会：王磊、刘总、你；HRBP 周晓确认编制。Agent 会带上双方依据和同级对比。会上仍不一致，交隔级上级拍板。</div><span class="btn p">发起决策会</span><span class="btn">两位已口头对齐，直接录结论</span></div></div></div>
+<div class="card todo" style="opacity:.6"><div class="item"><span class="tag">之后</span><div style="flex:1"><div class="t">录入决策会结论</div><div class="d">录用 + 定级；不录用需写原因。Agent 不会自动淘汰。录入后自动生成录用通知方案推给审批人。</div><span class="btn">录用 · P8</span><span class="btn">录用 · P7</span><span class="btn">不录用</span></div></div></div>
 <div class="muted">原型示例数据</div>
 </div>
-<div class="chat"><div class="ch"><b>招聘助手</b><div class="muted" style="margin-top:4px">当前：赵敏 · 录用决策</div></div><div class="msgs">
-<div class="m me">这处分歧大吗？</div>
-<div class="m ai">差一档。王磊看的是「之后怎么防止变脏」，何涛看的是「已经建了审批流」。两位的依据都在画像评论里。判断只基于能力证据。</div>
-<div class="m me">约个会吧</div>
-<div class="m ai" style="background:#fff;border:1px solid #ffb46b"><b>确认后我来执行</b><div class="muted" style="margin:6px 0;line-height:1.7">发飞书会议邀请「赵敏 · 录用决策会」<br>时间：10/16 15:00–15:30<br>发给：王磊、何涛、周晓（可选）<br>附：双方依据 + 画像链接</div><span class="btn p" style="margin:0">确认执行</span> <span class="btn" style="margin:0">改一下</span></div>
-</div><div class="in">问进展，或者告诉我要调整什么……</div></div></div>
+<div class="chat" data-open="1" data-last="需要你判断：王磊 P7 / 刘总 P8 定级不一致"><div class="ch"><b>招聘助手</b><div class="muted" style="margin-top:4px">记录你的决定，触发后续流程</div></div><div class="msgs">
+<div class="m ai" style="border:1px solid #ffb46b;background:#fffaf5"><b style="color:#d25f00">需要你判断</b><br>关键面试官定级不一致：王磊 P7、刘总 P8。按规则要开决策会。你点「发起决策会」后，我按往例约 30 分钟并带上双方依据。</div>
+<div class="m ai">已记录：数据治理单维度分歧不触发决策会，已挂在画像评论里供参考。</div>
+<div class="rec2">示例 · 会后：<b>已记录：定 P8</b>。录用通知方案已按 P8 重算，推给沈蔚审批；P8 超需求卡，已同步周晓确认编制。<a>撤销</a></div>
+</div><div class="in">告诉我你的决定，我来推后续……</div></div></div>
 <script src="role.js"></script><script src="story.js"></script></body></html>

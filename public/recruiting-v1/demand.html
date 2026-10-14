@@ -18,7 +18,13 @@
 <div class="kv"><span>职级 · 编制</span><b>P7 · 占用 1 个（12/15 → 13/15）</b></div>
 <div class="kv"><span>面试安排</span><b>一面 王磊 · 二面 何涛 · HRBP 面 周晓</b></div>
 <div class="muted" style="margin-top:8px">Agent 只按能力和经历描述人选要求，不写性别、年龄、婚育、地域。</div>
-<span class="btn p">确认需求卡</span><span class="btn">再聊聊</span>
+<span class="btn p">确认需求卡</span><span class="btn" onclick="document.getElementById('grp').style.display='block'">👥 拉群一起聊</span>
+<div id="grp" class="rec2" style="display:none;margin-top:10px"><b>拉群一起聊</b>：建飞书群「高级 HRIS · 需求」，成员王磊、TA 陈静、招聘助手；转发本次对话摘要。<br>群里的结论由 Agent 整理成 <b>需求卡 v3 变更建议</b>，你确认后生效。内部动作，随时可撤销。<a class="btn p" style="margin:6px 0 0;text-decoration:none" href="feishu-group.html">拉群并打开群聊</a></div>
+<div class="sub2" style="margin-top:14px">版本记录</div>
+<div class="kv"><span>v1 · 10/08</span><b>系统迁移 · P7 · 加分薪酬/审批流</b></div>
+<div class="kv"><span>v2 · 10/13</span><b>新增加分项：数据治理（你在对话中提出）</b></div>
+<div class="kv"><span style="color:#d46b08">v3 · 建议中</span><b>群里结论：数据治理从加分改为必须 <span class="tag o">待你确认</span></b></div>
+<div class="muted" style="margin-top:6px">v3 确认后：JD、寻访关键词、面试题标「因需求 v3 已同步」；JD 发布仍等陈静确认。</div>
 </div>
 
 <div class="sec"><span><i class="tg2 g">状态</i>版本时间线<span class="tip">ⓘ<em>Time to Hire 从编制获批日 10/08 算起，不因需求变更重置</em></span></span></div>
@@ -29,13 +35,12 @@
 </div></div>
 <div class="muted">原型示例数据</div>
 </div>
-<div class="chat"><div class="ch"><b>招聘助手</b><div class="muted" style="margin-top:4px">10/08 · 编制已获批，聊聊要什么样的人</div></div><div class="msgs">
-<div class="m ai">王磊你好，OD 刚批了 HR 数字化部 1 个 P7 编制。这个人来了主要做什么？</div>
-<div class="m me">核心人事系统要迁到自研平台，需要一个能扛迁移的产品经理</div>
-<div class="m ai">明白。迁移规模大概多大？更看重做过迁移，还是懂 HR 业务？</div>
-<div class="m me">2 万人，必须真做过迁移。懂薪酬审批流加分</div>
-<div class="m ai act">已生成 <b>需求卡 v1 · 10/08</b>：系统迁移 · P7 · 加分薪酬/审批流。你确认后我去写 JD、开始 Sourcing。</div>
+<div class="chat" data-open="1" data-last="v3 变更建议待你确认"><div class="ch"><b>招聘助手</b><div class="muted" style="margin-top:4px">10/08 · 编制已获批，聊聊要什么样的人</div></div><div class="msgs">
+<div class="m ai">OD 批了 HR 数字化部 1 个 P7 编制。这个人来了主要做什么？</div>
+<div class="m me">核心人事系统要迁到自研平台，需要一个能扛迁移的产品经理，2 万人，懂薪酬审批流加分</div>
+<div class="rec2 ok"><b>已记录：需求卡 v1 · 10/08</b>（系统迁移 · P7）。已按往例写好 JD 草稿、开始寻访；JD 发布等陈静确认。<a>撤销</a></div>
 <div class="m me">10/13：面下来觉得数据治理也重要</div>
-<div class="m ai">已改成 <b>v2</b>，新增「数据治理」加分项。人才池里多出 2 位合适的人，等你确认需求卡后我交给陈静判断。</div>
+<div class="rec2 ok"><b>已记录：需求卡 v2</b>，新增加分项数据治理。寻访关键词、面试题标「因需求 v2 已同步」；人才库多出 2 人，已交陈静判断。<a>撤销</a></div>
+<div class="rec2"><b>群里结论 → v3 建议</b>：数据治理改为必须。等你点需求卡上的「确认」生效。</div>
 </div><div class="in">说说你要什么样的人……</div></div></div>
 <script src="role.js"></script><script src="story.js"></script></body></html>

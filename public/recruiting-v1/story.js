@@ -5,7 +5,7 @@
    ['ta.html','TA','陈静','审核 Agent Sourcing 结果，赵敏进入人选'],
    ['pipeline.html','TA','陈静','简历评估：推进赵敏到面试'],
    ['profile.html?role=interviewer','面试官','王磊','赵敏一面：采纳 Agent 评论，提交面评'],
-   ['decision.html','TA','陈静','录用决策：Agent 查轮次与分歧，HRBP 周晓旁听'],
+   ['decision.html','TA','陈静','录用决策：关键面试官定级 P7/P8 不一致，开决策会'],
    ['approver-offer.html','审批人','沈蔚（HRBP Leader）','审批赵敏 Offer（薪酬仅审批链可见）'],
    ['feishu-card.html','TA','陈静','背调：第三方派单，结果回写画像（飞书通知）'],
    ['pipeline.html','HR','—','入职：需求完成，OD 编制回写']];
@@ -29,27 +29,27 @@
        source:{text:'OD 编制获批 · HRBP 周晓 10/08', href:'hrbp.html'},
        action:'确认需求卡', target:'TA 陈静 · Sourcing',
        btn:'确认需求卡', dest:'→ 推给 TA 陈静',
-       toast:'需求卡 v2 已确认，已推给 TA 陈静 · 进入第 2 步 Sourcing'},
+       basis:'需求确认流程', toast:'需求卡 v2 已确认，已推给 TA 陈静 · 进入第 2 步 Sourcing'},
     2:{on:true, anchor:'.main',
        source:{text:'需求卡 v2 · 王磊', href:'demand.html', step:1},
        action:'确认 Sourcing 人选', target:'简历评估 · Pipeline',
        btn:'全部纳入', dest:'→ 简历评估',
-       toast:'8 位新人选（含赵敏）已纳入简历评估 · 第 3 步 Pipeline'},
+       basis:'Agent 已查重 + 你过往全部纳入的做法', toast:'8 位新人选（含赵敏）已纳入简历评估 · 第 3 步 Pipeline'},
     3:{on:true, anchor:'.pw', create:true,
        source:{text:'Sourcing · TA 陈静', href:'ta.html', step:2},
        action:'推进赵敏到一面', target:'面试官 王磊',
        btn:'推进赵敏到一面', dest:'→ 面试官 王磊',
-       toast:'赵敏已推进到一面，面试日程已发到王磊飞书 · 第 4 步'},
+       basis:'简历评估标准：必须项全满足', toast:'赵敏已推进到一面，面试日程已发到王磊飞书 · 第 4 步'},
     4:{on:true, role:'interviewer', anchor:'.doc', sticky:true,
        source:{text:'飞书待办 · 面试日程 · 王磊', href:'interviewer.html', step:3},
        action:'提交一面面评', target:'录用决策 · TA 陈静',
        btn:'确认打分并提交', dest:'→ 交给 TA 陈静',
-       toast:'一面面评已提交，进入第 5 步录用决策 · 交给 TA 陈静'},
+       basis:'面评提交即进入下一环节', toast:'一面面评已提交，进入第 5 步录用决策 · 交给 TA 陈静'},
     5:{on:true, anchor:'.main',
-       source:{text:'面评 · 王磊 / 何涛 / 周晓', href:'profile.html?role=ta', step:4},
-       action:'发起决策会', target:'王磊、何涛 · 会后进 Offer',
-       btn:'发起决策会', dest:'→ 王磊、何涛',
-       toast:'决策会已约 10/16 15:00；会后提交结论 → 第 6 步 Offer 审批'},
+       source:{text:'关键面试官：王磊 P7 / 刘总 P8', href:'profile.html?role=ta', step:4},
+       action:'发起定级决策会', target:'王磊、刘总 · 会后进录用通知审批',
+       btn:'发起决策会', dest:'→ 王磊、刘总', basis:'规则：关键面试官定级不一致需开会',
+       toast:'决策会已约 10/16 15:00（内部日程）；会后录入结论 → 第 6 步审批'},
     6:{on:true, anchor:'.doc',
        source:{text:'录用决策 · TA 陈静 10/16', href:'decision.html', step:5},
        action:'审批赵敏 Offer', target:'CHO 终审 → 发 Offer',
@@ -59,12 +59,12 @@
        source:{text:'Offer 已接受 · 赵敏', href:'approver-offer.html', step:6},
        action:'确认背调无异常', target:'入职 · HR',
        btn:'确认背调无异常', dest:'→ 入职',
-       toast:'背调无异常，已通知 HR 办理入职 · 第 8 步'},
+       basis:'第三方背调无异常项', toast:'背调无异常，已通知 HR 办理入职 · 第 8 步'},
     8:{on:true, anchor:'.pw', create:true,
        source:{text:'背调通过 · 飞书通知', href:'feishu-card.html', step:7},
        action:'确认需求完成', target:'OD 编制已回写',
        btn:'确认需求完成', dest:'→ OD 编制已回写',
-       toast:'需求已完成：OD 编制回写 13/15，招聘洞察回流 HRBP 周晓'}
+       basis:'入职完成即关闭需求', toast:'需求已完成：OD 编制回写 13/15，招聘洞察回流 HRBP 周晓'}
   };
   var q=new URLSearchParams(location.search), story=q.get('story')==='1';
   var decl=(document.body.dataset.hintStep||'').split(/\s+/).map(Number).filter(Boolean);
@@ -96,8 +96,8 @@
   if(c.sticky){var w=btn.parentNode;w.classList.add('hsticky');}
   btn.addEventListener('click',function(){
     var t=document.createElement('div');t.className='htoast';
-    t.innerHTML='✓ '+c.toast+(n<8?'<a href="'+stepUrl(n+1)+'">去看 →</a>':'<a href="index.html">回总入口 →</a>');
+    t.innerHTML='✓ '+(c.basis?'已按'+c.basis+'完成 · ':'')+c.toast+(c.basis?'<span class="ud">撤销</span>':'')+(n<8?'<a href="'+stepUrl(n+1)+'">去看 →</a>':'<a href="index.html">回总入口 →</a>');
     document.body.appendChild(t);requestAnimationFrame(function(){t.classList.add('on')});
-    setTimeout(function(){t.classList.remove('on');setTimeout(function(){t.remove()},300)},3500);
+    var u=t.querySelector('.ud');if(u)u.onclick=function(){t.innerHTML='已撤销，恢复到操作前';};setTimeout(function(){t.classList.remove('on');setTimeout(function(){t.remove()},300)},4500);
   });
 })();
