@@ -1,0 +1,75 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><title>飞书卡片入口示意</title><link rel="stylesheet" href="style.css"><style>
+.pw{margin-top:52px;padding:24px 32px;background:#f0f1f2;min-height:calc(100vh - 52px);box-sizing:border-box}
+.note{background:#fff;border-radius:12px;padding:14px 18px;margin-bottom:16px;font-size:13px;line-height:1.8;color:#4e5969;border:1px solid #eceef1}
+.note b{color:#1f2329}
+.fs{display:flex;gap:0;background:#fff;border-radius:14px;overflow:hidden;border:1px solid #dee0e3;box-shadow:0 4px 20px rgba(0,0,0,.06);height:620px}
+.side{width:220px;background:#edf1f7;border-right:1px solid #dde3ec;display:flex;flex-direction:column}
+.side .tt{padding:14px 16px;font-weight:600;font-size:14px;border-bottom:1px solid #dde3ec}
+.cv{padding:10px 14px;cursor:pointer;border-bottom:1px solid #e6ebf2}.cv.on{background:#fff}.cv .n{font-size:13px;font-weight:500}.cv .p{font-size:11px;color:#8f959e;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mainc{flex:1;display:flex;flex-direction:column;background:#f5f6f7}
+.mh{padding:12px 18px;background:#fff;border-bottom:1px solid #eceef1;font-weight:600;font-size:14px}
+.msgs{flex:1;padding:18px 24px;overflow:auto}
+.day{text-align:center;font-size:11px;color:#a0a6af;margin:8px 0 14px}
+.bubble{max-width:420px;margin-bottom:14px}
+.card{background:#fff;border-radius:12px;border:1px solid #e3e6eb;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.card .hd{background:linear-gradient(135deg,#3370ff,#5b8cff);color:#fff;padding:12px 16px;font-size:13px}
+.card .hd .src{opacity:.85;font-size:11px;margin-bottom:4px}
+.card .bd{padding:14px 16px;font-size:13px;line-height:1.7;color:#1f2329}
+.card .bd .muted{color:#8f959e;font-size:12px;margin-top:6px}
+.card .ft{display:flex;border-top:1px solid #f0f1f2}
+.card .ft a{flex:1;text-align:center;padding:11px 8px;font-size:13px;color:#3370ff;text-decoration:none;border-right:1px solid #f0f1f2;font-weight:500}
+.card .ft a:last-child{border-right:0}.card .ft a.pri{background:#f7f9ff}
+.tagx{display:inline-block;padding:1px 8px;border-radius:8px;background:#fff4e5;color:#d46b08;font-size:11px;margin-right:6px}
+.foot{padding:10px 18px;background:#fff;border-top:1px solid #eceef1;color:#a0a6af;font-size:12px}
+</style></head><body>
+<div class="top"><div class="lg">AI Native 招聘</div><div class="srch">🔍 搜索人选、需求……</div><div class="role"><span class="av">王</span>王磊 ▾<div class="dd"><div class="muted">切换身份</div><a href="ta.html">以TA身份</a><a href="manager.html" class="on">以用人经理身份</a><a href="interviewer.html">以面试官身份</a><a href="approver.html">以审批人身份</a><a href="hrbp.html">以HRBP身份</a></div></div></div>
+<div class="pw">
+  <div class="note"><b>飞书卡片入口示意（一期）</b>　招聘助手把「需要人判断」的事推到飞书。卡片上可直接做轻决策（同意 / 约会议），点「看详情」进系统对应待办页。Agent 只准备材料，不自动淘汰人选；薪酬细节仍只在审批链路可见。<br><span class="muted">下面模拟：用人经理王磊在飞书里收到「判断分歧」卡片。</span></div>
+  <div class="fs">
+    <div class="side">
+      <div class="tt">消息</div>
+      <div class="cv on"><div class="n">🤖 招聘助手</div><div class="p">需要你决定：李想「推动力」…</div></div>
+      <div class="cv"><div class="n">陈静</div><div class="p">高级 HRIS 变更已同步</div></div>
+      <div class="cv"><div class="n">周晓 · HRBP</div><div class="p">编制确认已收到</div></div>
+      <div class="cv"><div class="n">面试日程</div><div class="p">今天 14:00 赵敏一面</div></div>
+    </div>
+    <div class="mainc">
+      <div class="mh">招聘助手</div>
+      <div class="msgs">
+        <div class="day">今天 09:12</div>
+        <div class="bubble">
+          <div class="card">
+            <div class="hd"><div class="src">AI Native 招聘 · 待你判断</div><div><span class="tagx">判断分歧</span>李想 · 「推动力」你和 TA 判断不同</div></div>
+            <div class="bd">
+              你认为推进力偏弱；TA 陈静依据三面记录认为够用。<br>
+              Agent 已整理双方依据，并建议 10/14 10:30 对齐会议。<br>
+              <div class="muted">不会增加填表 · 点按钮即可轻决策，或进系统看完整画像</div>
+            </div>
+            <div class="ft">
+              <a href="manager.html">同意约会议</a>
+              <a href="candidate-doc.html">看画像</a>
+              <a class="pri" href="manager.html">进待办详情</a>
+            </div>
+          </div>
+        </div>
+        <div class="day">今天 08:40</div>
+        <div class="bubble">
+          <div class="card">
+            <div class="hd" style="background:linear-gradient(135deg,#1f8a4c,#3cb371)"><div class="src">AI Native 招聘 · 面试安排</div><div>赵敏 · 一面确认 · 今天 14:00</div></div>
+            <div class="bd">
+              考察：系统迁移、数据治理。Agent 已准备 3 个问题。<br>
+              <div class="muted">你既是用人经理也是面试官 · 确认后日历自动写入</div>
+            </div>
+            <div class="ft">
+              <a href="interviewer.html">确认参加</a>
+              <a href="interviewer.html">改时间</a>
+              <a class="pri" href="candidate-doc.html">看画像和问题</a>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="foot">一期可从飞书卡片直接做轻决策；复杂判断点进系统。HRBP 类卡片同理链到 hrbp.html 待办。</div>
+    </div>
+  </div>
+</div>
+</body></html>
