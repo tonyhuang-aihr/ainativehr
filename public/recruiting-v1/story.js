@@ -6,7 +6,7 @@
    ['pipeline.html','TA','陈静','简历评估：推进赵敏到面试'],
    ['profile.html?role=interviewer','面试官','王磊','赵敏一面：采纳 Agent 评论，提交面评'],
    ['decision.html','TA','陈静','录用决策：Agent 查轮次与分歧，HRBP 周晓旁听'],
-   ['approver-offer.html','审批人','HRBP Leader','审批赵敏 Offer（薪酬仅审批链可见）'],
+   ['approver-offer.html','审批人','沈蔚（HRBP Leader）','审批赵敏 Offer（薪酬仅审批链可见）'],
    ['feishu-card.html','TA','陈静','背调：第三方派单，结果回写画像（飞书通知）'],
    ['pipeline.html','HR','—','入职：需求完成，OD 编制回写']];
   var q=new URLSearchParams(location.search), n=parseInt(q.get('step'));

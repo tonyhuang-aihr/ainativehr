@@ -5,7 +5,7 @@
 .fs{display:flex;gap:0;background:#fff;border-radius:14px;overflow:hidden;border:1px solid #dee0e3;box-shadow:0 4px 20px rgba(0,0,0,.06);height:620px}
 .side{width:220px;background:#edf1f7;border-right:1px solid #dde3ec;display:flex;flex-direction:column}
 .side .tt{padding:14px 16px;font-weight:600;font-size:14px;border-bottom:1px solid #dde3ec}
-.cv{padding:10px 14px;cursor:pointer;border-bottom:1px solid #e6ebf2}.cv.on{background:#fff}.cv .n{font-size:13px;font-weight:500}.cv .p{font-size:11px;color:#8f959e;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cv{padding:10px 14px;cursor:pointer;border-bottom:1px solid #e6ebf2}.cv.on{background:#fff}.cv .n{font-size:13px;font-weight:500}.cv .pv{font-size:11px;color:#8f959e;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mainc{flex:1;display:flex;flex-direction:column;background:#f5f6f7}
 .mh{padding:12px 18px;background:#fff;border-bottom:1px solid #eceef1;font-weight:600;font-size:14px}
 .msgs{flex:1;padding:18px 24px;overflow:auto}
@@ -22,20 +22,28 @@
 .tagx{display:inline-block;padding:1px 8px;border-radius:8px;background:#fff4e5;color:#d46b08;font-size:11px;margin-right:6px}
 .foot{padding:10px 18px;background:#fff;border-top:1px solid #eceef1;color:#a0a6af;font-size:12px}
 </style></head><body>
-<div class="top"><div class="lg">AI Native 招聘</div><div class="srch">🔍 搜索人选、需求……</div><div class="role"><span class="av">王</span>王磊 ▾<div class="dd"><div class="muted">切换身份</div><a href="ta.html">以TA身份</a><a href="manager.html" class="on">以用人经理身份</a><a href="interviewer.html">以面试官身份</a><a href="approver.html">以审批人身份</a><a href="hrbp.html">以HRBP身份</a></div></div></div>
+<div class="top"><div class="lg">AI Native 招聘</div><div class="srch">🔍 搜索人选、需求……</div><div class="role"><span class="av">陈</span>陈静 ▾<div class="dd"><div class="muted">切换身份</div><a href="ta.html" class="on">以TA身份</a><a href="manager.html">以用人经理身份</a><a href="interviewer.html">以面试官身份</a><a href="approver.html">以审批人身份</a><a href="hrbp.html">以HRBP身份</a></div></div></div>
 <div class="pw">
-  <div class="note"><b>飞书卡片入口示意（一期）</b>　招聘助手把「需要人判断」的事推到飞书。卡片上可直接做轻决策（同意 / 约会议），点「看详情」进系统对应待办页。Agent 只准备材料，不自动淘汰人选；薪酬细节仍只在审批链路可见。<br><span class="muted">下面模拟：用人经理王磊在飞书里收到「判断分歧」卡片。</span></div>
+  <div class="note"><b>飞书卡片入口示意（一期）</b>　招聘助手把「需要人判断」的事推到飞书。卡片上可直接做轻决策（同意 / 约会议），点「看详情」进系统对应待办页。Agent 只准备材料，不自动淘汰人选；薪酬细节仍只在审批链路可见。<br><span class="muted">下面模拟：招聘助手在飞书里推送的卡片——最新一条是赵敏的背调派单通知，下方是王磊收到的「判断分歧」卡片。</span></div>
   <div class="fs">
     <div class="side">
       <div class="tt">消息</div>
-      <div class="cv on"><div class="n">🤖 招聘助手</div><div class="p">需要你决定：李想「推动力」…</div></div>
-      <div class="cv"><div class="n">陈静</div><div class="p">高级 HRIS 变更已同步</div></div>
-      <div class="cv"><div class="n">周晓 · HRBP</div><div class="p">编制确认已收到</div></div>
-      <div class="cv"><div class="n">面试日程</div><div class="p">今天 14:00 赵敏一面</div></div>
+      <div class="cv on"><div class="n">🤖 招聘助手</div><div class="pv">赵敏 · 已派第三方背调</div></div>
+      <div class="cv"><div class="n">陈静</div><div class="pv">高级 HRIS 变更已同步</div></div>
+      <div class="cv"><div class="n">周晓 · HRBP</div><div class="pv">编制确认已收到</div></div>
+      <div class="cv"><div class="n">面试日程</div><div class="pv">今天 14:00 赵敏一面</div></div>
     </div>
     <div class="mainc">
       <div class="mh">招聘助手</div>
       <div class="msgs">
+        <div class="day">10/17 10:05 · 发给 TA 陈静</div>
+        <div class="bubble">
+          <div class="card">
+            <div class="hd" style="background:linear-gradient(135deg,#8f959e,#b0b6bf)"><div class="src">AI Native 招聘 · 背调派单</div><div>赵敏 · 高级 HRIS 产品经理 · 已派第三方背调</div></div>
+            <div class="bd">Offer 已获赵敏接受，Agent 已按授权向第三方背调机构派单，预计 3 个工作日返回。<br>结果会写入画像；只有异常项会推给你判断。<div class="muted">赵敏已在授权 H5 同意背调 · 用人经理王磊、HRBP 周晓同步知悉</div></div>
+            <div class="ft"><a href="pipeline.html">看 Pipeline</a><a href="consent.html">看授权记录</a><a class="pri" href="profile.html?role=ta">看画像</a></div>
+          </div>
+        </div>
         <div class="day">今天 09:12</div>
         <div class="bubble">
           <div class="card">
