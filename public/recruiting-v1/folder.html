@@ -1,0 +1,116 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><title>我的人才文件夹</title><link rel="stylesheet" href="style.css"><style>
+.pw{margin-top:52px;padding:24px 32px;background:#f5f6f7;min-height:calc(100vh - 52px);box-sizing:border-box}
+.hd{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:14px}.hd h2{margin:0;font-size:20px}.vl{font-size:12px;color:#8f959e;margin-top:6px}
+.lg2{font-size:12px;color:#8f959e;display:flex;gap:14px}.sq{display:inline-block;width:10px;height:10px;border-radius:3px;vertical-align:-1px;margin-right:4px}
+.tabs2{display:flex;gap:4px;background:#fff;border-radius:10px;padding:4px;width:fit-content;margin-bottom:16px;border:1px solid #eceef1}
+.tabs2 span{padding:7px 16px;border-radius:8px;font-size:13px;color:#4e5969;cursor:pointer}.tabs2 span.on{background:#eef3ff;color:#3370ff;font-weight:500}
+.pane{display:none}.pane.on{display:block}
+.cols{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}.col{flex:1;min-width:130px}.ctt{font-size:12px;color:#646a73;margin:0 2px 8px;display:flex;justify-content:space-between}.ctt b{color:#1f2329;font-size:15px}
+.pc{background:#fff;border-radius:10px;padding:9px 11px;margin-bottom:7px;font-size:12px;border:1px solid transparent;line-height:1.5}.pc .d{font-size:11px;color:#8f959e;margin-top:2px}.pc.h{border-color:#ffb46b;background:#fffaf5}.pc.h .d{color:#d25f00}
+.pc.empty{background:#fafbfc;color:#c9cdd4;text-align:center;border:1px dashed #dee0e3}
+.tbx{background:#fff;border-radius:12px;overflow:hidden}.tbx table{width:100%;border-collapse:collapse;table-layout:fixed}
+.tbx th,.tbx td{text-align:left;padding:12px 14px;border-bottom:1px solid #f2f3f5;font-size:13px;vertical-align:top}.tbx th{color:#8f959e;font-weight:400;background:#fafbfc}.tbx tr:last-child td{border:0}.tbx tr:hover td{background:#f7f9ff}
+.nm a{color:#1f2329;text-decoration:none;font-weight:500;border-bottom:1px dashed #c9cdd4}.nm a:hover{color:#3370ff}
+.note{font-size:12px;color:#4e5969;line-height:1.7}.note-wrap{display:flex;gap:8px;align-items:flex-start}.note-wrap .btn{margin:0;flex-shrink:0;padding:3px 8px}
+.stg{white-space:nowrap;padding:2px 8px;border-radius:10px;font-size:12px;background:#f2f3f5;color:#646a73}.stg.iv{background:#eef3ff;color:#3370ff}.stg.of{background:#fff4e5;color:#d46b08}.stg.in{background:#e8f7ee;color:#1f8a4c}.stg.none{background:#f2f3f5;color:#a0a6af}
+.bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.flt{display:flex;gap:6px;flex-wrap:wrap}.ch2{padding:4px 12px;border-radius:14px;border:1px solid #dee0e3;font-size:12px;background:#fff;color:#4e5969}.ch2.on{background:#eef3ff;border-color:#c9d8ff;color:#3370ff}
+.qs{display:flex;gap:8px;align-items:center;background:#fff;border:1px solid #dee0e3;border-radius:10px;padding:8px 12px;margin-bottom:10px}
+.qs input{flex:1;border:0;outline:0;font-size:13px;font-family:inherit}.qs .sc{display:flex;gap:4px}.qs .sc span{font-size:12px;padding:3px 10px;border-radius:12px;background:#f2f3f5;color:#646a73}.qs .sc span.on{background:#eef3ff;color:#3370ff}
+.qk{display:flex;gap:6px;align-items:center;margin-bottom:12px;font-size:12px;color:#8f959e;flex-wrap:wrap}
+mark.k{background:#fff1b8;padding:0 2px;border-radius:3px}
+.hitc{font-size:11px;color:#3370ff;margin-top:3px}
+.del{color:#a0a6af;font-size:12px;cursor:pointer;margin-left:6px}.del:hover{color:#d4380d}
+.sync{font-size:12px;color:#646a73;margin-bottom:10px;padding:8px 12px;background:#fff;border-radius:8px;border:1px solid #eceef1}
+</style></head><body>
+<div class="top"><div class="lg">AI Native 招聘</div><div class="srch">🔍 搜索人选、需求……</div><div class="role"><span class="av">陈</span>陈静 ▾<div class="dd"><div class="muted">切换身份</div><a href="ta.html" class="on">以TA身份</a><a href="manager.html">以用人经理身份</a><a href="interviewer.html">以面试官身份</a><a href="approver.html">以审批人身份</a><a href="hrbp.html">以HRBP身份</a></div></div></div>
+<div class="pw">
+  <div class="hd"><div><a class="back" href="ta.html">← 返回 TA 工作台</a><h2>我的人才文件夹</h2><div class="vl">共 14 人（示例数据）· 当前筛选命中 3 人 · 私人收藏，不进入职位流程 · 列表和总览共用同一批筛选结果</div></div>
+  <div class="lg2"><span><i class="sq" style="background:#ffb46b"></i>等人判断</span><span><i class="sq" style="background:#dee0e3"></i>仅收藏 / Agent 在推进</span></div></div>
+
+  <div class="tabs2"><span class="on" data-p="list">人选列表</span><span data-p="board">阶段总览</span></div>
+
+  <div class="pane on" id="list">
+    <div class="qs">🔍 <input value="TikTok" placeholder="搜公司、职位或我的备注里的关键词"><div class="sc"><span class="on">全部</span><span>当前公司职位</span><span>我的备注</span></div></div>
+    <div class="qk">常用：<span class="ch2">阿里 · 电商</span><span class="ch2 on">字节 · TikTok</span><span class="ch2">腾讯 · 微信</span><span class="ch2">+ 存为常用</span><span style="margin-left:auto">找到 3 人 · 共 14 人　<a href="#" style="color:#3370ff">清除</a></span></div>
+    <div class="bar">
+      <div class="flt"><span class="ch2 on">全部 · 3</span><span class="ch2">未进入流程</span><span class="ch2">流程中</span><span class="ch2">已入职</span></div>
+      <span class="btn p" style="margin:0">＋ 添加人选</span>
+    </div>
+    <div class="tbx"><table>
+      <thead><tr>
+        <th style="width:9%">姓名</th>
+        <th style="width:15%">关联职位</th>
+        <th style="width:17%">当前公司 · 职位</th>
+        <th style="width:13%">招聘阶段</th>
+        <th style="width:40%">我的备注 <span style="color:#d46b08">· 仅自己可见</span></th>
+        <th style="width:6%"></th>
+      </tr></thead>
+      <tbody>
+        <tr>
+          <td class="nm"><a href="talent.html">陆晨</a></td>
+          <td>—</td>
+          <td><mark class="k">字节跳动</mark> - <mark class="k">TikTok</mark> 商家后台产品经理<div class="hitc">命中：当前公司职位</div></td>
+          <td><span class="stg none">未进入流程</span></td>
+          <td><div class="note-wrap"><div class="note">做过 <mark class="k">TikTok</mark> Shop 东南亚商家入驻，海外合规经验强。想回深圳，明年 Q1 可动。</div><span class="btn">编辑</span></div></td>
+          <td><span class="del">移除</span></td>
+        </tr>
+        <tr>
+          <td class="nm"><a href="talent.html">苏杭</a></td>
+          <td><a class="pl" href="pipeline.html">高级 HRIS 产品经理</a></td>
+          <td>某 SaaS 公司 - 人力系统产品负责人</td>
+          <td><span class="stg">简历评估</span></td>
+          <td><div class="note-wrap"><div class="note">2019-2022 在 <mark class="k">TikTok</mark> 做内部 HR 系统，全球多地区薪资方案。现公司规模小，想去大平台。<div class="hitc">命中：我的备注</div></div><span class="btn">编辑</span></div></td>
+          <td><span class="del">移除</span></td>
+        </tr>
+        <tr>
+          <td class="nm"><a href="talent.html">韩露</a></td>
+          <td>薪酬产品经理</td>
+          <td><mark class="k">字节跳动</mark> - 飞书人事产品经理<div class="hitc">命中：当前公司职位 · 我的备注</div></td>
+          <td><span class="stg iv">面试 · 一面</span></td>
+          <td><div class="note-wrap"><div class="note">飞书人事薪酬模块，之前支持过 <mark class="k">TikTok</mark> 海外团队上线。表达好，期望 50K+。</div><span class="btn">编辑</span></div></td>
+          <td><span class="del">移除</span></td>
+        </tr>
+      </tbody>
+    </table></div>
+    <div class="muted" style="font-size:12px;margin-top:10px">按备注搜索只查你自己写的备注。筛选状态两个 Tab 共用：列表筛到的人，阶段总览也只显示这些人。从文件夹移除不会影响职位流程进度。</div>
+  </div>
+
+  <div class="pane" id="board">
+    <div class="sync">与列表共用当前筛选「字节 · TikTok」· 显示 <b>3</b> 人（陆晨、苏杭、韩露）· 清除筛选后回全量 14 人</div>
+    <div class="muted" style="font-size:12px;margin-bottom:10px">按人选当前占联系锁的流程显示；没进流程的在最左。Pipeline 阶段变化会同步过来。</div>
+    <div class="cols">
+      <div class="col"><div class="ctt">未进入流程 <b>1</b></div>
+        <div class="pc"><a class="pl" href="talent.html">陆晨</a><div class="d">TikTok 商家后台 · 仅收藏</div></div>
+      </div>
+      <div class="col"><div class="ctt">简历评估 <b>1</b></div>
+        <div class="pc h"><a class="pl" href="talent.html">苏杭</a><div class="d">高级 HRIS · Agent 评估中</div></div>
+      </div>
+      <div class="col"><div class="ctt">面试 <b>1</b></div>
+        <div class="pc h"><a class="pl" href="talent.html">韩露</a><div class="d">薪酬产品经理 · 一面</div></div>
+      </div>
+      <div class="col"><div class="ctt">背调 <b>0</b></div>
+        <div class="pc empty">空</div>
+      </div>
+      <div class="col"><div class="ctt">录用决策 <b>0</b></div>
+        <div class="pc empty">空</div>
+      </div>
+      <div class="col"><div class="ctt">Offer <b>0</b></div>
+        <div class="pc empty">空</div>
+      </div>
+      <div class="col"><div class="ctt">入职 <b>0</b></div>
+        <div class="pc empty">空</div>
+      </div>
+      <div class="col"><div class="ctt">已入职 <b>0</b></div>
+        <div class="pc empty">空</div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+document.querySelectorAll('.tabs2 span').forEach(t=>t.onclick=()=>{
+  document.querySelectorAll('.tabs2 span').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.pane').forEach(x=>x.classList.remove('on'));
+  t.classList.add('on');document.getElementById(t.dataset.p).classList.add('on');
+});
+</script>
+</body></html>

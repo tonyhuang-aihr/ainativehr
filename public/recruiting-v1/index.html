@@ -1,0 +1,67 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><title>一期原型导航 · AI Native 招聘</title><link rel="stylesheet" href="style.css"><style>
+.pw{margin-top:52px;padding:28px 40px;max-width:1080px;margin-left:auto;margin-right:auto}
+h1{font-size:22px;margin:0 0 6px} .sub{color:#8f959e;font-size:13px;margin-bottom:22px;line-height:1.7}
+.sec2{font-size:13px;color:#8f959e;margin:22px 0 10px;font-weight:500;display:flex;align-items:center;gap:8px}
+.sec2::after{content:"";flex:1;height:1px;background:#eceef1}
+.roles{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:8px}
+.rolec{display:block;background:#fff;border:1px solid #eceef1;border-radius:14px;padding:16px 14px;text-decoration:none;color:inherit;transition:.15s;cursor:pointer}
+.rolec:hover{border-color:#3370ff;box-shadow:0 4px 14px rgba(51,112,255,.12);transform:translateY(-1px)}
+.rolec .av{width:36px;height:36px;border-radius:50%;background:#3370ff;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;margin-bottom:10px}
+.rolec .av.g{background:#1f8a4c}.rolec .av.o{background:#d46b08}.rolec .av.p{background:#722ed1}.rolec .av.t{background:#13c2c2}
+.rolec b{display:block;font-size:14px;margin-bottom:4px}.rolec span{font-size:12px;color:#8f959e;line-height:1.5}
+.hint{background:#f7f9ff;border:1px solid #c9d8ff;border-radius:10px;padding:10px 14px;font-size:12px;color:#4e5969;margin-bottom:8px;line-height:1.7}
+.list{background:#fff;border:1px solid #eceef1;border-radius:14px;overflow:hidden}
+.row{display:flex;align-items:center;gap:14px;padding:13px 18px;border-bottom:1px solid #f2f3f5;text-decoration:none;color:inherit}
+.row:last-child{border:0}.row:hover{background:#f7f9ff}
+.row .t{flex:1;min-width:0}.row .t b{font-size:14px;font-weight:500}.row .t .d{font-size:12px;color:#8f959e;margin-top:3px}
+.row .go{font-size:12px;color:#3370ff;white-space:nowrap}
+.row.dim{opacity:.45;pointer-events:none;cursor:default}.row.dim .go{color:#a0a6af}
+.tag2{font-size:11px;padding:1px 7px;border-radius:8px;background:#f2f3f5;color:#646a73;margin-left:6px}
+.tag2.off{background:#f2f3f5;color:#a0a6af}
+.old{margin-top:8px}.old .row{opacity:.7}
+</style></head><body>
+<div class="top"><div class="lg">AI Native 招聘 · 一期原型</div><div class="srch" style="opacity:.5">原型导航（示例数据）</div><div class="role"><span class="av">导</span>导航 ▾<div class="dd"><div class="muted">切换身份进入工作台</div><a href="ta.html">以TA身份</a><a href="manager.html">以用人经理身份</a><a href="interviewer.html">以面试官身份</a><a href="approver.html">以审批人身份</a><a href="hrbp.html">以HRBP身份</a></div></div></div>
+<div class="pw">
+  <h1>一期原型导航</h1>
+  <div class="sub">这是可点击的原型总入口，数据均为示例。选身份进入工作台（与 OD 同一套账号体系的概念：一人多角色，切换即进入对应视图）。Agent 在后台推进，人只做判断。</div>
+
+  <div class="sec2">① 选身份进入工作台</div>
+  <div class="hint">点下方角色卡片即可进入对应工作台。顶栏「切换身份」在各页通用，同一账号可切换 TA / 用人经理 / 面试官 / 审批人 / HRBP。</div>
+  <div class="roles">
+    <a class="rolec" href="ta.html"><div class="av t">陈</div><b>TA · 陈静</b><span>审核 Agent 产出、推进 Pipeline</span></a>
+    <a class="rolec" href="manager.html"><div class="av o">王</div><b>用人经理 · 王磊</b><span>判断分歧、需求确认、到岗风险</span></a>
+    <a class="rolec" href="interviewer.html"><div class="av">王</div><b>面试官 · 王磊</b><span>看问题与预评价、提交面评</span></a>
+    <a class="rolec" href="approver.html"><div class="av p">陈</div><b>审批人</b><span>Offer 方案与审批（含薪酬）</span></a>
+    <a class="rolec" href="hrbp.html"><div class="av g">周</div><b>HRBP · 周晓</b><span>编制、冲突、到岗风险、审批</span></a>
+  </div>
+
+  <div class="sec2">② 核心场景</div>
+  <div class="list">
+    <a class="row" href="pipeline.html"><div class="t"><b>Pipeline</b><div class="d">按需求看 7 列阶段；橙色=等人判断</div></div><span class="go">打开 →</span></a>
+    <a class="row" href="pool.html"><div class="t"><b>人才库</b><div class="d">自然语言搜索 · Agent 精选 · 行点击打开画像抽屉</div></div><span class="go">打开 →</span></a>
+    <a class="row" href="folder.html"><div class="t"><b>人才文件夹</b><div class="d">私人收藏 · 列表与阶段总览共用筛选</div></div><span class="go">打开 →</span></a>
+    <a class="row" href="candidate-doc.html"><div class="t"><b>人选画像 · 文档式</b><div class="d">飞书文档形态 · 划词评论 · 面评锁</div></div><span class="go">打开 →</span></a>
+    <a class="row" href="talent.html"><div class="t"><b>人才画像 · TA 视角</b><div class="d">简历主体 · 跨需求评价</div></div><span class="go">打开 →</span></a>
+    <a class="row" href="talent-pool.html"><div class="t"><b>人才库画像 · 锁面评</b><div class="d">未加入职位前隐藏过往面评（抽屉内页）</div></div><span class="go">打开 →</span></a>
+    <a class="row" href="approver-offer.html"><div class="t"><b>Offer 审批详情</b><div class="d">方案 / 简历与面评双 Tab · 薪酬仅审批链路</div></div><span class="go">打开 →</span></a>
+  </div>
+
+  <div class="sec2">③ 入口示意</div>
+  <div class="list">
+    <a class="row" href="feishu-card.html"><div class="t"><b>飞书卡片</b><div class="d">聊天里收到待办卡 → 轻决策或进系统待办页</div></div><span class="go">打开 →</span></a>
+  </div>
+
+  <div class="sec2">④ 一期不做</div>
+  <div class="list">
+    <div class="row dim"><div class="t"><b>招聘运营 · COE<span class="tag2 off">一期不做</span></b><div class="d">人才库规模与质量、合并待办、数据完整率 — 后续再做</div></div><span class="go">暂不开放</span></div>
+  </div>
+
+  <div class="sec2">⑤ 旧版 / 备用</div>
+  <div class="list old">
+    <a class="row" href="candidate.html"><div class="t"><b>candidate.html</b><div class="d">旧版人选页 · 可作备用对照</div></div><span class="go">打开 →</span></a>
+    <a class="row" href="candidate-iv.html"><div class="t"><b>candidate-iv.html</b><div class="d">面试官侧旧版画像 · 可作备用对照</div></div><span class="go">打开 →</span></a>
+  </div>
+
+  <div class="muted" style="margin-top:20px;font-size:12px;line-height:1.8">串联路径示例：TA 工作台 → Pipeline / 人才库 / 文件夹 → 画像 → Offer / 面评。<br>上级目录 ../index.html 为 v0.1，请勿当作一期入口。</div>
+</div>
+</body></html>

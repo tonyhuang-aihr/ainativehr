@@ -1,0 +1,20 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "redirects": [
+    {
+      "source": "/recruiting-v1",
+      "destination": "/recruiting-v1/",
+      "permanent": false
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/recruiting-v1/",
+      "destination": "/public/recruiting-v1/index.html"
+    },
+    {
+      "source": "/recruiting-v1/:path*",
+      "destination": "/public/recruiting-v1/:path*"
+    }
+  ]
+}

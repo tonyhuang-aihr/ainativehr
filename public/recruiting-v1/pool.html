@@ -1,0 +1,132 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><title>人才库</title><link rel="stylesheet" href="style.css"><style>
+.pw{margin-top:52px;padding:24px 32px;background:#f5f6f7;min-height:calc(100vh - 52px);box-sizing:border-box}
+.hd{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:14px}.hd h2{margin:0;font-size:20px}.vl{font-size:12px;color:#8f959e;margin-top:6px}
+.sb{background:#fff;border-radius:12px;padding:14px 18px;font-size:14px;color:#1f2329;display:flex;gap:10px;align-items:center;margin-bottom:10px;border:1px solid #dee0e3}
+.sb .ph{color:#a0a6af;flex:1}.sb .go{background:#3370ff;color:#fff;border:0;border-radius:8px;padding:7px 14px;font-size:13px}
+.echo{font-size:12px;color:#646a73;margin:-2px 0 12px;padding-left:4px}.echo .ag{font-size:11px;color:#3370ff;background:#eef3ff;border-radius:6px;padding:1px 6px;margin-left:6px}
+.chips{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;align-items:center}.ch2{padding:4px 12px;border-radius:14px;border:1px solid #dee0e3;font-size:12px;background:#fff;color:#4e5969;display:inline-flex;align-items:center;gap:6px}.ch2.on{background:#eef3ff;border-color:#c9d8ff;color:#3370ff}.ch2 .x{color:#a0a6af;font-size:11px;cursor:pointer}
+.rs{background:#fff;border-radius:12px}
+table.tl{width:100%;border-collapse:collapse;table-layout:fixed}table.tl th,table.tl td{text-align:left;padding:14px 16px;border-bottom:1px solid #f2f3f5;font-size:13px;vertical-align:middle}table.tl th{color:#8f959e;font-weight:400;background:#fafbfc}table.tl tr:last-child td{border:0}table.tl tr.dim{opacity:.55}
+.nm a{color:#1f2329;text-decoration:none;font-weight:500;border-bottom:1px dashed #c9cdd4}.nm a:hover{color:#3370ff}
+.ops{display:flex;gap:6px;flex-wrap:nowrap}.ops .btn{margin:0}.ops .btn.ghost{background:#fff;color:#3370ff;border-color:#c9d8ff}.ops .btn.dis{background:#f2f3f5;color:#a0a6af;border-color:#eceef1;cursor:default}
+.itag{white-space:nowrap;padding:2px 8px;border-radius:10px;font-size:12px}.itag.y{background:#e8f7ee;color:#1f8a4c}.itag.m{background:#fff4e5;color:#d46b08}.itag.n{background:#f2f3f5;color:#646a73}
+.it{position:relative;display:inline-block;cursor:help}.it em{display:none;position:absolute;left:0;top:26px;width:260px;background:#1f2329;color:#fff;font-style:normal;font-size:12px;line-height:1.7;padding:9px 11px;border-radius:8px;z-index:9;white-space:normal}.it:hover em,.it.show em{display:block}
+.st{font-size:12px;color:#8f959e;margin-top:2px}.stg{font-size:13px}
+tr.ck{cursor:pointer}tr.ck:hover td{background:#f7f9ff}
+.mask{display:none;position:fixed;inset:0;background:rgba(15,20,30,.35);z-index:20}.mask.on{display:block}
+.drw{position:absolute;top:0;right:0;bottom:0;width:1320px;background:#fff;box-shadow:-8px 0 24px rgba(0,0,0,.12);display:flex;flex-direction:column}
+.dh{display:flex;justify-content:space-between;align-items:center;padding:12px 20px;border-bottom:1px solid #eceef1;font-size:13px;color:#646a73}.dh b{color:#1f2329;font-size:15px;margin-right:8px}
+.drw iframe{flex:1;border:0;width:100%}
+.pw{margin-right:400px}
+.cp{position:fixed;top:52px;right:0;bottom:0;width:400px;background:#fff;border-left:1px solid #eceef1;display:flex;flex-direction:column;z-index:4}
+.cph{padding:14px 16px;border-bottom:1px solid #eceef1;font-weight:600;display:flex;justify-content:space-between;align-items:center}
+.cpm{flex:1;overflow:auto;padding:12px 16px;font-size:13px}.bb{margin:8px 0;padding:9px 12px;border-radius:12px;line-height:1.7;max-width:92%}.bb.me{background:#3370ff;color:#fff;margin-left:auto}.bb.ai{background:#f2f3f5}
+.cdk{border:1px solid #c9d8ff;background:#f7f9ff;border-radius:12px;padding:10px 12px;margin:8px 0;line-height:1.8}.cdk b{color:#3370ff}.cdk .btn{margin-top:6px}
+.cpi{margin:10px 16px 14px;border:1px solid #dee0e3;border-radius:12px;padding:10px 12px;color:#a0a6af;font-size:13px}
+.why{font-size:12px;color:#646a73;margin-top:3px}.ag2{font-size:11px;color:#3370ff;background:#eef3ff;border-radius:6px;padding:1px 6px;margin-right:4px}
+.subbar{background:#fff;border:1px solid #c9d8ff;border-radius:10px;padding:9px 14px;font-size:13px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center}.subbar b{color:#3370ff}
+.hint{font-size:12px;color:#8f959e;margin-top:10px}
+.pick{position:relative;display:inline-block}
+.pick .menu{display:none;position:absolute;right:0;top:32px;width:260px;background:#fff;border:1px solid #dee0e3;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:10px;z-index:12}
+.pick.open .menu{display:block}
+.pick .menu .ttl{font-size:12px;color:#8f959e;margin-bottom:8px}
+.pick .menu .opt{display:block;width:100%;text-align:left;padding:8px 10px;border-radius:8px;border:1px solid #eceef1;background:#fafbfc;font-size:13px;color:#1f2329;margin-bottom:6px;cursor:pointer}
+.pick .menu .opt:hover,.pick .menu .opt.on{border-color:#c9d8ff;background:#eef3ff;color:#3370ff}
+.pick .menu .cfm{margin-top:4px;width:100%;background:#3370ff;color:#fff;border:0;border-radius:8px;padding:7px 10px;font-size:13px;cursor:pointer}
+.pick .menu .cfm:disabled{background:#c9d8ff;cursor:default}
+.pick .menu .note{font-size:11px;color:#8f959e;margin-top:6px;line-height:1.5}
+</style></head><body>
+<div class="top"><div class="lg">AI Native 招聘</div><div class="srch">🔍 搜索人选、需求……</div><div class="role"><span class="av">陈</span>陈静 ▾<div class="dd"><div class="muted">切换身份</div><a href="ta.html" class="on">以TA身份</a><a href="manager.html">以用人经理身份</a><a href="interviewer.html">以面试官身份</a><a href="approver.html">以审批人身份</a><a href="hrbp.html">以HRBP身份</a></div></div></div>
+<div class="pw">
+  <div class="hd"><div><h2>人才库</h2><div class="vl">包括正在其他职位流程中的人选 · 敏感岗位人选按权限隐藏</div></div></div>
+
+  <div class="sb">🔍 <span class="ph">找做过 HR 系统迁移、在深圳、意向还有效、35 岁以下的人</span><button class="go">搜索</button></div>
+  <div class="echo">Agent 理解为：技能=系统迁移 · 城市=深圳 · 意向=有意向 <span class="ag">已忽略「35 岁以下」：不按年龄筛选</span></div>
+
+  <div class="chips">
+    <span style="font-size:12px;color:#8f959e">搜索标签</span>
+    <span class="ch2 on">高级 HRIS 产品经理 <span class="x">×</span></span>
+    <span class="ch2">系统迁移 <span class="x">×</span></span>
+    <span class="ch2">深圳 <span class="x">×</span></span>
+    <span class="ch2">有意向 <span class="x">×</span></span>
+  </div>
+
+  <div class="subbar"><span>🔔 <b>正在盯</b>　HRIS 产品经理 · 系统迁移或主数据 · 深圳/广州 · 有意向　<span class="muted">每天 9:00 推送 · 今天新进 2 人</span></span><span class="muted">管理订阅</span></div>
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span style="font-size:13px"><b>Agent 精选 20 人</b> <span class="muted">· 从 23 个匹配人选里按你说的优先级排序</span></span><span class="muted">切换：全部结果 · 23</span></div>
+<div class="rs">
+    <table class="tl">
+      <thead><tr><th style="width:22%">姓名 · Agent 推荐理由</th><th style="width:22%">当前公司 · 职位</th><th style="width:18%">最近流程</th><th style="width:13%">意向</th><th style="width:25%">操作</th></tr></thead>
+      <tbody>
+        <tr class="ck" onclick="op()">
+          <td class="nm"><a href="javascript:void 0">赵敏</a><div class="why">主导 2 万人系统迁移，和 v2 新增的数据治理最贴</div></td>
+          <td>某互联网公司 - HRIS 产品经理</td>
+          <td><div class="stg">高级 HRIS 产品经理</div><div class="st">一面 · 今天 14:00</div></td>
+          <td><span class="it"><span class="itag y">有意向 ⓘ</span><em>依据：10/08 主动投递「高级 HRIS 产品经理」<br>近 2 个月内有投递记录</em></span></td>
+          <td><div class="ops"><span class="btn dis">已加入本职位</span><span class="btn">加入我的文件夹</span></div></td>
+        </tr>
+        <tr class="ck" onclick="op()">
+          <td class="nm"><a href="javascript:void 0">林岚</a><div class="why">主数据治理 + 人效报表，补数据治理短板</div></td>
+          <td>某 SaaS 公司 - HR 数据产品经理</td>
+          <td><div class="stg">薪酬产品经理</div><div class="st">二面 · 10/12</div></td>
+          <td><span class="it"><span class="itag y">有意向 ⓘ</span><em>依据：09/28 猎头「某某咨询」联系过，人选表示愿意看机会</em></span></td>
+          <td><div class="ops"><span class="pick" data-mode="queue"><span class="btn ghost trig" title="她在「薪酬产品经理」二面。加入后自动排队，不打扰人选，也不需要对方 TA 确认。">加入职位并排队</span><div class="menu"><div class="ttl">选择要排队加入的职位</div><button type="button" class="opt" data-job="高级 HRIS 产品经理">高级 HRIS 产品经理</button><button type="button" class="opt" data-job="Java 开发工程师">Java 开发工程师</button><button type="button" class="cfm" disabled>确认排队加入</button><div class="note">不选则默认进「高级 HRIS 产品经理」（当前搜索职位）</div></div></span><span class="btn">加入我的文件夹</span></div></td>
+        </tr>
+        <tr class="ck" onclick="op()">
+          <td class="nm"><a href="javascript:void 0">郑一</a><div class="why">Workday 实施经验，迁移项目做过 2 次</div></td>
+          <td>某咨询公司 - HRIS 产品经理</td>
+          <td><div class="stg">高级 HRIS 产品经理</div><div class="st">简历评估中</div></td>
+          <td><span class="it"><span class="itag y">有意向 ⓘ</span><em>依据：10/11 回复 Agent 邮件，表示在看新机会</em></span></td>
+          <td><div class="ops"><span class="pick" data-mode="join"><span class="btn p trig">加入职位</span><div class="menu"><div class="ttl">陈静负责的职位 · 先选目标</div><button type="button" class="opt" data-job="高级 HRIS 产品经理">高级 HRIS 产品经理</button><button type="button" class="opt" data-job="Java 开发工程师">Java 开发工程师</button><button type="button" class="cfm" disabled>确认加入</button></div></span><span class="btn">加入我的文件夹</span></div></td>
+        </tr>
+        <tr class="ck" onclick="op()">
+          <td class="nm"><a href="javascript:void 0">何川</a><div class="why"><span class="ag2">今天新进</span>SAP SF 迁移，架构背景</div></td>
+          <td>某制造集团 - HR 系统架构师</td>
+          <td><div class="stg muted">从未进入流程</div><div class="st">2024 年入库</div></td>
+          <td><span class="it"><span class="itag m">暂未确认 ⓘ</span><em>依据：近 2 个月没有投递，也没有接触记录<br>Agent 可以发一条意向确认</em></span></td>
+          <td><div class="ops"><span class="pick" data-mode="join"><span class="btn p trig">加入职位</span><div class="menu"><div class="ttl">陈静负责的职位 · 先选目标</div><button type="button" class="opt" data-job="高级 HRIS 产品经理">高级 HRIS 产品经理</button><button type="button" class="opt" data-job="Java 开发工程师">Java 开发工程师</button><button type="button" class="cfm" disabled>确认加入</button></div></span><span class="btn">加入我的文件夹</span></div></td>
+        </tr>
+        <tr class="dim ck" onclick="op()">
+          <td class="nm"><a href="javascript:void 0">吴桐</a><div class="why">审批流扎实，但近期不看机会</div></td>
+          <td>某 HR SaaS - HR SaaS 产品经理</td>
+          <td><div class="stg">HR SaaS 产品经理（9 月）</div><div class="st">一面后暂缓</div></td>
+          <td><span class="it"><span class="itag n">无意向 ⓘ</span><em>依据：09/20 TA 陈静电话沟通，人选说最近不看工作机会</em></span></td>
+          <td><div class="ops"><span class="pick" data-mode="join"><span class="btn p trig">加入职位</span><div class="menu"><div class="ttl">陈静负责的职位 · 先选目标</div><button type="button" class="opt" data-job="高级 HRIS 产品经理">高级 HRIS 产品经理</button><button type="button" class="opt" data-job="Java 开发工程师">Java 开发工程师</button><button type="button" class="cfm" disabled>确认加入</button></div></span><span class="btn">加入我的文件夹</span></div></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="hint">从这里手动加入职位的人选会标记「TA 手动加入」，和 Agent 推荐的人选分开统计转化率。「加入我的文件夹」只放进你的私人收藏，不会进入任何职位流程。<div class="hint" style="margin-top:4px">意向按近 2 个月的记录判断：有投递或猎头接触、表示在看机会，算「有意向」；接触过但明确说不看机会，算「无意向」；没有记录，算「暂未确认」。鼠标悬停可以看依据。</div><div class="hint" style="margin-top:4px">双期限：意向有效期约 2 个月（过期只灰显，仍可搜可推）；留存授权按个保法另计，到期前 Agent 续权，未续权才下架/匿名。吴桐无意向行保留灰显示意。</div>
+</div>
+</div>
+<div class="cp"><div class="cph"><span>💬 招聘助手</span><span class="muted" style="font-weight:400">帮你找人、帮你盯人</span></div>
+<div class="cpm">
+<div class="bb me">帮我找高级 HRIS 产品经理的人，最好做过系统迁移，也懂主数据治理。深圳广州都行，要还在看机会的。别给我太多，我只想看最该看的。</div>
+<div class="bb ai">从 3,284 人里找到 23 个匹配的，我挑了最该看的 20 个放在左边，按这个顺序排：<br>① 系统迁移和数据治理都做过<br>② 意向有效<br>③ 只做过其中一项<br>每个人旁边写了推荐理由。没有按年龄、性别筛选。</div>
+<div class="bb me">好的。以后每天有符合的新人也告诉我</div>
+<div class="cdk">🔔 <b>确认订阅这个条件？</b><br>HRIS 产品经理 · 系统迁移或主数据 · 深圳/广州 · 有意向<br>
+<span class="muted">每天 9:00 有新人才推送，没有新人就不打扰你</span><br>
+推送到：<span class="tag b">页面提醒</span> <span class="tag" title="接入飞书后可选">飞书（接入后可选）</span><br>
+<span class="btn p">确认订阅</span><span class="btn">改一下条件</span></div>
+<div class="bb ai">已订阅。今天新进了 2 个人，其中何川排在第 4，已在左边标「今天新进」。</div>
+</div><div class="cpi">告诉我你想找什么样的人……</div></div>
+<div class="mask" id="mk" onclick="if(event.target===this)this.classList.remove('on')"><div class="drw"><div class="dh"><span><b>吴桐</b>某 HR SaaS - HR SaaS 产品经理</span><span><a href="talent.html" style="color:#3370ff;text-decoration:none;margin-right:16px">新页面打开 ↗</a><span style="cursor:pointer" onclick="document.getElementById('mk').classList.remove('on')">✕</span></span></div><iframe src="talent-pool.html"></iframe></div></div>
+<script>
+function op(){document.getElementById('mk').classList.add('on')}
+document.querySelectorAll('.ops .btn').forEach(b=>b.onclick=e=>e.stopPropagation())
+document.querySelectorAll('.pick').forEach(pk=>{
+  const trig=pk.querySelector('.trig'), menu=pk.querySelector('.menu'), cfm=pk.querySelector('.cfm');
+  let job='';
+  trig.onclick=e=>{e.stopPropagation();document.querySelectorAll('.pick.open').forEach(x=>{if(x!==pk)x.classList.remove('open')});pk.classList.toggle('open')}
+  menu.onclick=e=>e.stopPropagation();
+  menu.querySelectorAll('.opt').forEach(o=>o.onclick=()=>{menu.querySelectorAll('.opt').forEach(x=>x.classList.remove('on'));o.classList.add('on');job=o.dataset.job;cfm.disabled=false});
+  cfm.onclick=()=>{
+    if(!job && pk.dataset.mode==='queue') job='高级 HRIS 产品经理';
+    if(!job) return;
+    const short=job.length>10?job.slice(0,10)+'…':job;
+    const label=pk.dataset.mode==='queue'?('已排队 · '+short):('已加入 · '+short);
+    pk.classList.remove('open');
+    pk.innerHTML='<span class="btn dis">'+label+'</span>';
+  };
+});
+document.addEventListener('click',()=>document.querySelectorAll('.pick.open').forEach(x=>x.classList.remove('open')));
+</script></body></html>
