@@ -109,7 +109,7 @@ tr.ck{cursor:pointer}tr.ck:hover td{background:#f7f9ff}
 <span class="btn p">确认订阅</span><span class="btn">改一下条件</span></div>
 <div class="bb ai">已订阅。今天新进了 2 个人，其中何川排在第 4，已在左边标「今天新进」。</div>
 </div><div class="cpi">告诉我你想找什么样的人……</div></div>
-<div class="mask" id="mk" onclick="if(event.target===this)this.classList.remove('on')"><div class="drw"><div class="dh"><span><b>吴桐</b>某 HR SaaS - HR SaaS 产品经理</span><span><a href="talent.html" style="color:#3370ff;text-decoration:none;margin-right:16px">新页面打开 ↗</a><span style="cursor:pointer" onclick="document.getElementById('mk').classList.remove('on')">✕</span></span></div><iframe src="talent-pool.html"></iframe></div></div>
+<div class="mask" id="mk" onclick="if(event.target===this)this.classList.remove('on')"><div class="drw"><div class="dh"><span><b>吴桐</b>某 HR SaaS - HR SaaS 产品经理</span><span><a href="profile.html?role=pool" style="color:#3370ff;text-decoration:none;margin-right:16px">新页面打开 ↗</a><span style="cursor:pointer" onclick="document.getElementById('mk').classList.remove('on')">✕</span></span></div><iframe src="profile.html?role=pool"></iframe></div></div>
 <script>
 function op(){document.getElementById('mk').classList.add('on')}
 document.querySelectorAll('.ops .btn').forEach(b=>b.onclick=e=>e.stopPropagation())
@@ -129,4 +129,4 @@ document.querySelectorAll('.pick').forEach(pk=>{
   };
 });
 document.addEventListener('click',()=>document.querySelectorAll('.pick.open').forEach(x=>x.classList.remove('open')));
-</script></body></html>
+</script><script src="role.js"></script><script src="story.js"></script></body></html>

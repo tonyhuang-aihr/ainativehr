@@ -19,12 +19,13 @@ h1{font-size:22px;margin:0 0 6px} .sub{color:#8f959e;font-size:13px;margin-botto
 .tag2{font-size:11px;padding:1px 7px;border-radius:8px;background:#f2f3f5;color:#646a73;margin-left:6px}
 .tag2.off{background:#f2f3f5;color:#a0a6af}
 .old{margin-top:8px}.old .row{opacity:.7}
-</style></head><body>
+.lane{width:100%;border-collapse:separate;border-spacing:4px;table-layout:fixed;margin-bottom:6px}.lane th{font-size:12px;color:#646a73;font-weight:500;padding:4px;text-align:center}.lane tr th:first-child{width:70px;text-align:right}.lane td{padding:0;border:0;height:46px}.lane td a{display:block;height:100%;background:#fff;border:1px solid #ffd8b0;border-radius:8px;padding:5px 6px;font-size:12px;color:#1f2329;text-decoration:none;line-height:1.4}.lane td a:hover{background:#fffaf5;border-color:#ff8800}.lane td a i{display:block;font-style:normal;color:#a0a6af;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.lane td:empty{background:#fafbfc;border-radius:8px}.pw{max-width:1240px}</style></head><body>
 <div class="top"><div class="lg">AI Native 招聘 · 一期原型</div><div class="srch" style="opacity:.5">原型导航（示例数据）</div><div class="role"><span class="av">导</span>导航 ▾<div class="dd"><div class="muted">切换身份进入工作台</div><a href="ta.html">以TA身份</a><a href="manager.html">以用人经理身份</a><a href="interviewer.html">以面试官身份</a><a href="approver.html">以审批人身份</a><a href="hrbp.html">以HRBP身份</a></div></div></div>
 <div class="pw">
   <h1>一期原型导航</h1>
   <div class="sub">这是可点击的原型总入口，数据均为示例。选身份进入工作台（与 OD 同一套账号体系的概念：一人多角色，切换即进入对应视图）。Agent 在后台推进，人只做判断。</div>
 
+  <div class="sec2">⓪ 故事线 · 赵敏 × 高级 HRIS 产品经理</div><div class="hint" style="display:flex;justify-content:space-between;align-items:center"><span>跟一个人走完一期全流程。点格子进对应页；或从第 1 步开始，每页顶部有上一步/下一步，可随时关闭。</span><a class="btn p" style="margin:0;text-decoration:none" href="demand.html?story=1&step=1">▶ 开始故事线</a></div><table class="lane"><tr><th></th><th>1. 需求对话</th><th>2. Sourcing</th><th>3. 简历评估</th><th>4. 面试</th><th>5. 录用决策</th><th>6. Offer</th><th>7. 背调</th><th>8. 入职</th></tr><tr><th>用人经理</th><td><a href="demand.html">王磊 对话澄清需求<i>demand.html</i></a></td><td></td><td></td><td><a href="manager.html">看面试进展<i>manager.html</i></a></td><td><a href="decision.html">参会 / 分歧对齐<i>decision.html</i></a></td><td></td><td><a href="feishu-card.html">飞书收通知<i>feishu-card.html</i></a></td><td></td></tr><tr><th>TA</th><td></td><td><a href="ta.html">陈静 审 Sourcing<i>ta.html</i></a></td><td><a href="pipeline.html">陈静 简历评估<i>pipeline.html</i></a></td><td></td><td><a href="decision.html">陈静 发起决策会<i>decision.html</i></a></td><td></td><td><a href="pipeline.html">第三方背调 · 看异常<i>pipeline.html</i></a></td><td><a href="pipeline.html">入职 · 需求完成<i>pipeline.html</i></a></td></tr><tr><th>面试官</th><td></td><td></td><td></td><td><a href="profile.html?role=interviewer">王磊 赵敏一面<i>profile.html?role=interviewer</i></a></td><td></td><td></td><td></td><td></td></tr><tr><th>审批人</th><td></td><td></td><td></td><td></td><td></td><td><a href="approver-offer.html">审批赵敏 Offer<i>approver-offer.html</i></a></td><td></td><td></td></tr><tr><th>HRBP</th><td><a href="hrbp.html">周晓 旁看编制<i>hrbp.html</i></a></td><td></td><td></td><td></td><td><a href="hrbp.html">周晓 旁听<i>hrbp.html</i></a></td><td><a href="approver.html">Leader 节点审批<i>approver.html</i></a></td><td></td><td><a href="hrbp.html">OD 编制回写<i>hrbp.html</i></a></td></tr></table>
   <div class="sec2">① 选身份进入工作台</div>
   <div class="hint">点下方角色卡片即可进入对应工作台。顶栏「切换身份」在各页通用，同一账号可切换 TA / 用人经理 / 面试官 / 审批人 / HRBP。</div>
   <div class="roles">
@@ -40,14 +41,15 @@ h1{font-size:22px;margin:0 0 6px} .sub{color:#8f959e;font-size:13px;margin-botto
     <a class="row" href="pipeline.html"><div class="t"><b>Pipeline</b><div class="d">按需求看 7 列阶段；橙色=等人判断</div></div><span class="go">打开 →</span></a>
     <a class="row" href="pool.html"><div class="t"><b>人才库</b><div class="d">自然语言搜索 · Agent 精选 · 行点击打开画像抽屉</div></div><span class="go">打开 →</span></a>
     <a class="row" href="folder.html"><div class="t"><b>人才文件夹</b><div class="d">私人收藏 · 列表与阶段总览共用筛选</div></div><span class="go">打开 →</span></a>
-    <a class="row" href="candidate-doc.html"><div class="t"><b>人选画像 · 文档式</b><div class="d">飞书文档形态 · 划词评论 · 面评锁</div></div><span class="go">打开 →</span></a>
-    <a class="row" href="talent.html"><div class="t"><b>人才画像 · TA 视角</b><div class="d">简历主体 · 跨需求评价</div></div><span class="go">打开 →</span></a>
-    <a class="row" href="talent-pool.html"><div class="t"><b>人才库画像 · 锁面评</b><div class="d">未加入职位前隐藏过往面评（抽屉内页）</div></div><span class="go">打开 →</span></a>
+    <a class="row" href="profile.html?role=ta"><div class="t"><b>人选画像（统一）</b><div class="d">文档式画像 · 按 ?role=ta|interviewer|manager|approver|pool 切权限视图</div></div><span class="go">打开 →</span></a>
+    <a class="row" href="demand.html"><div class="t"><b>需求对话</b><div class="d">编制获批后和 Agent 聊出需求卡 · v1→v2 时间线</div></div><span class="go">打开 →</span></a>
+    <a class="row" href="decision.html"><div class="t"><b>录用决策</b><div class="d">Agent 查轮次/维度/分歧 → 决策会 → 隔级拍板 → Offer</div></div><span class="go">打开 →</span></a>
     <a class="row" href="approver-offer.html"><div class="t"><b>Offer 审批详情</b><div class="d">方案 / 简历与面评双 Tab · 薪酬仅审批链路</div></div><span class="go">打开 →</span></a>
   </div>
 
   <div class="sec2">③ 入口示意</div>
   <div class="list">
+    <a class="row" href="consent.html"><div class="t"><b>候选人授权 H5</b><div class="d">个保法同意：简历留存、录音转写可单独拒绝、留存期限</div></div><span class="go">打开 →</span></a>
     <a class="row" href="feishu-card.html"><div class="t"><b>飞书卡片</b><div class="d">聊天里收到待办卡 → 轻决策或进系统待办页</div></div><span class="go">打开 →</span></a>
   </div>
 
@@ -56,12 +58,7 @@ h1{font-size:22px;margin:0 0 6px} .sub{color:#8f959e;font-size:13px;margin-botto
     <div class="row dim"><div class="t"><b>招聘运营 · COE<span class="tag2 off">一期不做</span></b><div class="d">人才库规模与质量、合并待办、数据完整率 — 后续再做</div></div><span class="go">暂不开放</span></div>
   </div>
 
-  <div class="sec2">⑤ 旧版 / 备用</div>
-  <div class="list old">
-    <a class="row" href="candidate.html"><div class="t"><b>candidate.html</b><div class="d">旧版人选页 · 可作备用对照</div></div><span class="go">打开 →</span></a>
-    <a class="row" href="candidate-iv.html"><div class="t"><b>candidate-iv.html</b><div class="d">面试官侧旧版画像 · 可作备用对照</div></div><span class="go">打开 →</span></a>
-  </div>
 
   <div class="muted" style="margin-top:20px;font-size:12px;line-height:1.8">串联路径示例：TA 工作台 → Pipeline / 人才库 / 文件夹 → 画像 → Offer / 面评。<br>上级目录 ../index.html 为 v0.1，请勿当作一期入口。</div>
 </div>
-</body></html>
+<script src="role.js"></script><script src="story.js"></script></body></html>

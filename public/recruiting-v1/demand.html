@@ -1,0 +1,41 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><title>需求对话</title><link rel="stylesheet" href="style.css"><style>
+.todo{border-left:3px solid #ffb46b}.statc{border:1px dashed #dee0e3;background:#fcfcfd}
+.rq .kv b{font-weight:500}.vtl{display:flex;gap:0;align-items:flex-start;margin-top:6px}.vtl .v{flex:1;border-top:3px solid #dee0e3;padding-top:8px;font-size:13px}.vtl .v.cur{border-color:#ff8800}.vtl .v .muted{line-height:1.6}
+.add{color:#d46b08;background:#fff4e5;padding:0 6px;border-radius:6px}
+</style></head><body>
+<div class="top"><div class="lg">AI Native 招聘</div><div class="srch">🔍 搜索人选、需求……</div><div class="role"><span class="av">王</span>王磊 ▾<div class="dd"><a href="manager.html" class="on">以用人经理身份</a></div></div></div>
+<div class="wrap"><div class="main">
+<a class="back" href="manager.html">← 返回用人经理工作台</a>
+<div style="font-size:20px;font-weight:600;margin-bottom:4px">高级 HRIS 产品经理 · 需求</div>
+<div class="muted">HR 数字化部 · 10/08 编制获批（OD 同步）· TA 陈静 · HRBP 周晓<span class="tip">ⓘ<em>编制获批后 Agent 自动建需求并约你聊；你只需说，不用填表</em></span></div>
+
+<div class="sec"><span><i class="tg2 o">待办</i>确认需求卡 · v2</span></div>
+<div class="card todo rq">
+<div style="display:flex;justify-content:space-between"><b>需求卡 · v2 · 10/13</b><span class="tag o">待你确认</span></div>
+<div class="kv"><span>这件事是什么</span><b>把核心人事系统迁到自研平台，并建立主数据治理机制</b></div>
+<div class="kv"><span>必须</span><b>5 年以上 HR 系统产品经验，主导过系统迁移</b></div>
+<div class="kv"><span>加分</span><b><span class="add">10/13 新增</span> 数据治理；薪酬、审批流模块</b></div>
+<div class="kv"><span>职级 · 编制</span><b>P7 · 占用 1 个（12/15 → 13/15）</b></div>
+<div class="kv"><span>面试安排</span><b>一面 王磊 · 二面 何涛 · HRBP 面 周晓</b></div>
+<div class="muted" style="margin-top:8px">Agent 只按能力和经历描述人选要求，不写性别、年龄、婚育、地域。</div>
+<span class="btn p">确认需求卡</span><span class="btn">再聊聊</span>
+</div>
+
+<div class="sec"><span><i class="tg2 g">状态</i>版本时间线<span class="tip">ⓘ<em>Time to Hire 从编制获批日 10/08 算起，不因需求变更重置</em></span></span></div>
+<div class="card statc"><div class="vtl">
+<div class="v"><b>v1 · 10/08</b><div class="muted">编制获批 → 对话 12 分钟 → 你确认<br>方向：系统迁移</div></div>
+<div class="v cur"><b>v2 · 10/13</b><div class="muted">面了 3 人后你提出<br>新增加分项：数据治理<br>Agent 已同步 JD、Sourcing、面试题</div></div>
+<div class="v"><b style="color:#a0a6af">下一次变更</b><div class="muted">面试和录用决策中的新认知<br>会生成修正建议给你确认</div></div>
+</div></div>
+<div class="muted">原型示例数据</div>
+</div>
+<div class="chat"><div class="ch"><b>招聘助手</b><div class="muted" style="margin-top:4px">10/08 · 编制已获批，聊聊要什么样的人</div></div><div class="msgs">
+<div class="m ai">王磊你好，OD 刚批了 HR 数字化部 1 个 P7 编制。这个人来了主要做什么？</div>
+<div class="m me">核心人事系统要迁到自研平台，需要一个能扛迁移的产品经理</div>
+<div class="m ai">明白。迁移规模大概多大？更看重做过迁移，还是懂 HR 业务？</div>
+<div class="m me">2 万人，必须真做过迁移。懂薪酬审批流加分</div>
+<div class="m ai act">已生成 <b>需求卡 v1 · 10/08</b>：系统迁移 · P7 · 加分薪酬/审批流。你确认后我去写 JD、开始 Sourcing。</div>
+<div class="m me">10/13：面下来觉得数据治理也重要</div>
+<div class="m ai">已改成 <b>v2</b>，新增「数据治理」加分项。人才池里多出 2 位合适的人，等你确认需求卡后我交给陈静判断。</div>
+</div><div class="in">说说你要什么样的人……</div></div></div>
+<script src="role.js"></script><script src="story.js"></script></body></html>
