@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>P2.1 负责人卡片 + 协作视图</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+/* ---- P2.1 specific ---- */
+.collableg{height:32px;background:#fff;border:1px solid #E5E7EB;border-radius:8px;display:flex;align-items:center;gap:8px;padding:0 10px;font-size:11.5px;color:#6B7280}
+.collableg svg{display:block}
+.slabel{position:absolute;z-index:6;transform:translate(-50%,-50%);font-size:11px;font-weight:700;line-height:18px;padding:0 7px;border-radius:9px;background:#F5F3FF;border:1px solid #DDD6FE;color:#6D28D9;font-family:"Inter","Noto Sans CJK SC",sans-serif}
+.slabel.hi{background:#7C3AED;border-color:#7C3AED;color:#fff;box-shadow:0 2px 6px rgba(124,58,237,.3)}
+.leadsel{display:inline-flex;align-items:center;gap:4px;background:#EEF2FF;border:1px solid #4F46E5;color:#4F46E5;border-radius:5px;padding:0 6px 0 2px;margin-left:-3px;line-height:16px;font-weight:500}
+.leadsel .ava{width:14px;height:14px;border-radius:50%;background:#4F46E5;color:#fff;display:flex;align-items:center;justify-content:center}
+.leadsel .ava svg{width:9px;height:9px}
+.bagent{background:#fff;border:1px solid #DDD6FE;padding:11px 14px 11px}
+.bagent .ptr{top:-7px;border-top:1px solid #DDD6FE;border-left:1px solid #DDD6FE}
+.bagent .bh{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:#7C3AED}
+.bagent .bh .tg{margin-left:auto}
+.bagent .tx{font-size:12.5px;line-height:20px;color:#1F2937;margin-top:5px}
+.bagent .ac{display:flex;gap:14px;margin-top:6px;font-size:12px}
+/* panel: 负责人卡片 */
+.lhead{height:60px;flex:none;display:flex;align-items:center;gap:10px;padding:0 14px 0 16px;border-bottom:1px solid #F1F2F4}
+.lhead .pa{width:36px;height:36px;border-radius:50%;background:#EEF2FF;border:1.5px solid #4F46E5;color:#4F46E5;display:flex;align-items:center;justify-content:center;flex:none}
+.lhead .nm{font-size:15px;font-weight:700;line-height:20px;display:flex;align-items:center;gap:6px}
+.lhead .sb{font-size:11.5px;color:#6B7280;line-height:16px;margin-top:1px}
+.lhead .back{margin-left:auto;font-size:12px;color:#4F46E5;display:flex;align-items:center;gap:2px;white-space:nowrap}
+.lhead .xx{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;color:#6B7280;margin-left:4px}
+.lbody{flex:1;min-height:0;overflow:hidden;padding:10px 16px 10px;display:flex;flex-direction:column;gap:8px}
+.sec{padding:9px 12px 8px}
+.sh{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700}
+.sh svg{color:#4F46E5}
+.sh .m{margin-left:auto;font-size:11px;font-weight:400;color:#9CA3AF}
+.orow{display:flex;gap:7px;align-items:flex-start;margin-top:6px}
+.obadge{flex:none;width:18px;height:18px;border-radius:4px;background:#4F46E5;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:1px;font-family:Inter,sans-serif}
+.otext{font-size:12.5px;font-weight:700;line-height:20px}
+.align{display:flex;align-items:center;gap:5px;font-size:11.5px;color:#6B7280;margin:3px 0 4px 25px}
+.align b{color:#374151;font-weight:500}
+.kr{margin-left:25px;padding:2px 0}
+.kr .kt{display:flex;align-items:center;font-size:12px;line-height:18px;color:#374151}
+.kr .kt .kn{color:#9CA3AF;font-size:11px;width:26px;flex:none;font-family:Inter,sans-serif;font-weight:600}
+.kr .kt .pc{margin-left:auto;font-weight:700;color:#111827;font-family:Inter,sans-serif;font-size:12px}
+.bar{height:5px;border-radius:3px;background:#EEF0F3;margin:3px 0 0 26px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:3px;background:#4F46E5}
+.kr.flag{background:#FFFBEB;border:1px solid #FDE68A;border-left:3px solid #F59E0B;border-radius:8px;padding:5px 8px 5px 6px;margin-top:4px}
+.kr.flag .bar i{background:#F59E0B}
+.kr.flag .fl{display:flex;align-items:center;gap:5px;font-size:11.5px;color:#B45309;margin:5px 0 0 26px}
+.kr.flag .fl a{margin-left:auto;color:#4F46E5}
+.prow{display:flex;align-items:center;gap:8px;font-size:12px;color:#374151;height:22px}
+.prow .pn{flex:1}
+.prow .pb{width:90px;height:5px;border-radius:3px;background:#EEF0F3;overflow:hidden}
+.prow .pb i{display:block;height:100%;background:#818CF8;border-radius:3px}
+.prow .pw{width:34px;text-align:right;font-weight:700;font-family:Inter,sans-serif;color:#111827}
+.pnote{display:flex;align-items:center;gap:5px;font-size:11px;color:#9CA3AF;margin-top:4px}
+.crow{display:flex;align-items:center;gap:7px;height:24px;font-size:12px;color:#111827;padding:0 4px;border-radius:6px}
+.crow .cn{white-space:nowrap}
+.crow .cn span{color:#6B7280}
+.crow .tag{font-size:10.5px;line-height:16px;padding:0 5px}
+.crow .cb{margin-left:auto;width:64px;height:5px;border-radius:3px;background:#EEF0F3;overflow:hidden}
+.crow .cb i{display:block;height:100%;background:#8B5CF6;border-radius:3px}
+.crow .cs{width:22px;text-align:right;font-weight:700;font-family:Inter,sans-serif}
+.crow .cv{color:#9CA3AF;width:14px;display:flex}
+.cexp{background:#F5F3FF;border:1px solid #EDE9FE;border-radius:8px;padding:2px 4px 6px;margin:2px 0 2px}
+.cexp .crow{padding:0}
+.cdet{display:flex;align-items:center;gap:6px;font-size:11.5px;color:#4C1D95;margin-top:2px;white-space:nowrap}
+.cdet b{font-family:Inter,sans-serif}
+.cdet .eq{margin-left:auto;font-weight:700;color:#6D28D9;font-family:Inter,sans-serif}
+.lfoot{flex:none;padding:9px 16px 11px;border-top:1px solid #F1F2F4;font-size:11px;color:#6B7280;line-height:17px;background:#FCFCFD}
+.lfoot .f2{display:flex;align-items:center;gap:5px;margin-top:4px;color:#6B7280}
+.lfoot .f2 .lk{display:inline-flex;align-items:center;gap:4px;color:#374151;background:#F3F4F6;border-radius:4px;padding:0 6px;line-height:18px}
+</style></head>
+<body><div class="app">
+<header class="topnav">
+  <div class="logo">OD</div><div class="brand">AI Native OD</div>
+  <div class="vdiv"></div>
+  <div class="crumb">组织设计沙盘<span class="sep">/</span><b>2026 Q4 研发中心组织调整</b><span class="tag yellow">示例数据</span></div>
+  <div class="switcher"><span>基线</span><span class="on">方案 A</span><span>方案 B</span><span class="new">+ 新建方案</span></div>
+  <div class="navright">
+    <div class="iconbtn"><svg class="i s18" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/></svg></div><div class="iconbtn dis"><svg class="i s18" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5A5.5 5.5 0 0 0 9.5 20H13"/></svg></div>
+    <div style="width:6px"></div>
+    <button class="btn">方案对比</button><button class="btn primary">提交审批</button>
+    <div class="avatar">黄</div>
+  </div>
+</header>
+
+<section class="metrics">
+  <div class="metric"><div class="l">总人数</div><div class="v"><b class="num">486</b><span class="delta n">较基线 0</span></div></div>
+  <div class="metric"><div class="l">层级数</div><div class="v"><b class="num">5</b><span class="delta g">−1</span></div></div>
+  <div class="metric"><div class="l">平均管理幅度</div><div class="v"><b class="num">6.4</b><span class="delta g">+1.3</span></div></div>
+  <div class="metric"><div class="l">人力成本（年）</div><div class="v"><b>¥1.46 亿</b><span class="delta g">−2.8%</span></div></div>
+  <div class="metric"><div class="l">算力成本（年）</div><div class="v"><b>¥92 万</b><span class="delta o">+¥38 万</span></div></div>
+  <div class="metric"><div class="l">人机比（人 : AI，按工时）</div><div class="v"><b class="num">69 : 31</b><span class="delta g">AI +9pt</span></div></div>
+</section>
+
+<main class="body">
+<nav class="lefttb">
+  <div class="tool on"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M4.037 4.688a.495.495 0 0 1 .651-.651l16 6.5a.5.5 0 0 1-.063.947l-6.124 1.58a2 2 0 0 0-1.438 1.435l-1.579 6.126a.5.5 0 0 1-.947.063z"/></svg></div>
+  <div class="tool"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8 12h8"/><path d="M12 8v8"/></svg></div>
+  <div class="tool"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M16 3h5v5"/><path d="M8 3H3v5"/><path d="M12 22v-8.3a4 4 0 0 0-1.172-2.872L3 3"/><path d="m15 9 6-6"/></svg></div>
+  <div class="tool"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="m8 6 4-4 4 4"/><path d="M12 2v10.3a4 4 0 0 1-1.172 2.872L4 22"/><path d="m20 22-5-5"/></svg></div>
+  <div class="tool"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><rect x="16" y="16" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="9" y="2" width="6" height="6" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"/><path d="M12 12V8"/></svg></div>
+  <div class="sp"></div>
+  <div class="tool"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/></svg></div>
+  <div class="tool"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg></div>
+  <div class="tool bottom"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg></div>
+</nav>
+
+<section class="canvas">
+  <div class="ctb">
+    <div class="search"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>搜索部门或人员</div>
+  <div class="dd"><span class="k">着色：</span>人均人力成本<svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div>
+  <div class="costleg">低&nbsp;<i style="background:#E0E7FF"></i><i style="background:#C7D2FE"></i><i style="background:#A5B4FC"></i><i style="background:#6366F1"></i><i style="background:#4F46E5"></i>&nbsp;高</div>
+
+    <div class="right">
+      <div class="toggle on"><span class="sw"></span><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="4.5" r="2.5"/><path d="m10.2 6.3-3.9 3.9"/><circle cx="4.5" cy="12" r="2.5"/><path d="M7 12h10"/><circle cx="19.5" cy="12" r="2.5"/><path d="m13.8 17.7 3.9-3.9"/><circle cx="12" cy="19.5" r="2.5"/></svg>协作视图</div>
+      <div class="collableg">
+        <svg width="54" height="10" viewBox="0 0 54 10"><g stroke="#8B5CF6" stroke-dasharray="4 3" fill="none"><path d="M1 5H14" stroke-width="1.5"/><path d="M20 5H33" stroke-width="3"/><path d="M39 5H53" stroke-width="5"/></g></svg>
+        线越粗协作越强 · 仅部门间 · 近 90 天
+      </div>
+    </div>
+  </div>
+
+  <svg class="links" viewBox="0 0 1000 756">
+    <g stroke="#CBD5E1" stroke-width="1.2" fill="none">
+      <path d="M500 165V210M116 210H884M116 210V236M308 210V236M500 210V236M692 210V236M884 210V236"/>
+      <path d="M500 312V338M420 338H580M420 338V364M580 338V364"/>
+    </g>
+    <!-- department-to-department collaboration lines (dashed violet, width = strength) -->
+    <g stroke="#8B5CF6" fill="none" stroke-linecap="round">
+      <path d="M570 313 Q727 430 884 313" stroke-width="6" stroke-dasharray="10 8" stroke-opacity=".85"/>
+      <path d="M440 313 Q285 420 130 313" stroke-width="3.5" stroke-dasharray="8 6" stroke-opacity=".7"/>
+      <path d="M650 236 Q500 150 350 236" stroke-width="3.5" stroke-dasharray="8 6" stroke-opacity=".7"/>
+      <path d="M160 236 Q212 200 264 236" stroke-width="1.5" stroke-dasharray="5 4" stroke-opacity=".7"/>
+    </g>
+  </svg>
+  <div class="slabel hi" style="left:727px;top:372px">86</div>
+  <div class="slabel" style="left:285px;top:366px">62</div>
+  <div class="slabel" style="left:540px;top:193px">58</div>
+  <div class="slabel" style="left:212px;top:219px">35</div>
+
+  <div class="node" style="left:391px;top:89px;width:218px;height:76px;--stripe:#4F46E5"><div class="t">研发中心</div><div class="lead">负责人 · CTO</div><div class="chips"><span class="chip">486 人</span><span class="chip">幅度 5</span></div></div>
+  <div class="node" style="left:33px;top:236px;width:166px;height:76px;--stripe:#6366F1"><div class="t">产品研发一部</div><div class="lead">负责人 · 研发总监</div><div class="chips"><span class="chip">144 人</span><span class="chip">幅度 7.0</span></div></div>
+  <div class="node" style="left:225px;top:236px;width:166px;height:76px;--stripe:#4F46E5"><div class="t">产品研发二部</div><div class="lead">负责人 · 研发总监</div><div class="chips"><span class="chip">131 人</span><span class="chip">幅度 6.8</span></div></div>
+  <div class="node warnb" style="left:417px;top:236px;width:166px;height:76px;--stripe:#818CF8"><div class="t">平台部<span style="color:#D97706;display:flex"><svg class="i s13" viewBox="0 0 24 24" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span></div><div class="lead" style="margin-top:1px"><span class="leadsel"><span class="ava"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>负责人 · 平台总监</span></div><div class="chips" style="margin-top:4px"><span class="chip">62 人</span><span class="chip warn">幅度 2.1</span></div></div>
+  <div class="node" style="left:609px;top:236px;width:166px;height:76px;--stripe:#A5B4FC"><div class="t">质量与交付部</div><div class="lead">负责人 · 质量总监</div><div class="chips"><span class="chip">77 人</span><span class="chip">幅度 6.5</span></div></div>
+  <div class="node" style="left:801px;top:236px;width:166px;height:76px;--stripe:#6366F1"><div class="t">数据智能部</div><div class="lead">负责人 · 数据总监</div><div class="chips"><span class="chip">71 人</span><span class="chip">幅度 5.6</span></div></div>
+  <div class="node sm" style="left:347px;top:364px;width:146px;height:74px;--stripe:#A5B4FC"><div class="t">基础架构组</div><div class="lead">组长</div><div class="chips"><span class="chip">34 人</span></div></div>
+  <div class="node sm" style="left:507px;top:364px;width:146px;height:74px;--stripe:#A5B4FC"><div class="t">数据平台组</div><div class="lead">组长</div><div class="chips"><span class="chip">26 人</span></div></div>
+  <svg class="cursor" style="left:556px;top:275px" viewBox="0 0 24 24"><path d="M4.037 4.688a.495.495 0 0 1 .651-.651l16 6.5a.5.5 0 0 1-.063.947l-6.124 1.58a2 2 0 0 0-1.438 1.435l-1.579 6.126a.5.5 0 0 1-.947.063z" fill="#111827" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg>
+
+  <div class="bub bagent" style="left:660px;top:420px;width:308px"><i class="ptr" style="left:61px"></i>
+    <div class="bh"><svg class="i s13" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg>AI 提示 · 协作视图<span class="tag violet tg">协作数据</span></div>
+    <div class="tx">平台部和数据智能部协作强度排全公司前 5%，拆分平台部时建议保留这条协作通道</div>
+    <div class="ac"><span style="color:#4F46E5">在对话中处理 →</span><span style="color:#9CA3AF">忽略</span></div>
+  </div>
+
+  <div class="cbottom">
+    <span>提示：点击部门负责人头像或姓名查看负责人卡片；协作连线只到部门层级</span>
+    <div class="zoom"><div class="iconbtn"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg></div><span class="pct">100%</span><div class="iconbtn"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg></div><span class="fit">适应画布</span></div>
+
+  </div>
+</section>
+
+<aside class="panel">
+  <div class="lhead">
+    <div class="pa"><svg class="i s18" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+    <div><div class="nm">平台总监<span class="tag indigo">负责人卡片</span></div><div class="sb">平台部 · 62 人 · 汇报给 CTO</div></div>
+    <div class="back"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>返回 Agent</div>
+    <div class="xx"><svg class="i s18" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></div>
+  </div>
+  <div class="lbody">
+    <div class="card sec">
+      <div class="sh"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>OKR<span class="m">2026 Q4 · 本周期</span></div>
+      <div class="orow"><span class="obadge">O</span><span class="otext">提升研发基础设施稳定性与交付效率</span></div>
+      <div class="align"><svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>对齐上级 O：<b>CTO · 研发效率提升 30%</b><span class="tag green" style="margin-left:auto">已对齐</span></div>
+      <div class="kr"><div class="kt"><span class="kn">KR1</span>核心服务可用性 99.95%<span class="pc">70%</span></div><div class="bar"><i style="width:70%"></i></div></div>
+      <div class="kr"><div class="kt"><span class="kn">KR2</span>构建发布时长缩短 40%<span class="pc">55%</span></div><div class="bar"><i style="width:55%"></i></div></div>
+      <div class="kr flag"><div class="kt"><span class="kn">KR3</span>数据平台统一指标口径覆盖 80% 业务线<span class="pc">30%</span></div><div class="bar"><i style="width:30%"></i></div>
+        <div class="fl"><svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>未与协作方 数据智能部 对齐<a>查看对方 OKR</a></div></div>
+    </div>
+    <div class="card sec">
+      <div class="sh"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>绩效目标<span class="m">只展示目标与权重 · 不展示绩效评级</span></div>
+      <div style="margin-top:5px">
+        <div class="prow"><span class="pn">稳定性与故障复盘</span><span class="pb"><i style="width:40%"></i></span><span class="pw">40%</span></div>
+        <div class="prow"><span class="pn">交付效率提升</span><span class="pb"><i style="width:35%"></i></span><span class="pw">35%</span></div>
+        <div class="prow"><span class="pn">团队建设与人才培养</span><span class="pb"><i style="width:25%"></i></span><span class="pw">25%</span></div>
+      </div>
+    </div>
+    <div class="card sec">
+      <div class="sh"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>密切协作方<span class="m">协作强度 · 近 90 天</span></div>
+      <div style="margin-top:6px">
+        <div class="cexp">
+          <div class="crow"><span class="cn">数据智能部 <span>负责人</span></span><span class="tag violet">跨部门</span><span class="cb"><i style="width:71%"></i></span><span class="cs">71</span><span class="cv"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="m18 15-6-6-6 6"/></svg></span></div>
+          <div class="cdet">IM 消息密度 <b>82</b> · 共同会议 <b>76</b> · OKR 对齐 <b>40</b><span class="eq">→ 71</span></div>
+        </div>
+        <div class="crow"><span class="cn">基础架构组 <span>组长</span></span><span class="tag indigo">本部门</span><span class="cb"><i style="width:68%"></i></span><span class="cs">68</span><span class="cv"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span></div>
+        <div class="crow"><span class="cn">数据平台组 <span>组长</span></span><span class="tag indigo">本部门</span><span class="cb"><i style="width:66%"></i></span><span class="cs">66</span><span class="cv"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span></div>
+        <div class="crow"><span class="cn">产品研发一部 <span>负责人</span></span><span class="tag violet">跨部门</span><span class="cb"><i style="width:58%"></i></span><span class="cs">58</span><span class="cv"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span></div>
+        <div class="crow"><span class="cn">CTO</span><span class="tag violet">跨部门</span><span class="cb"><i style="width:52%"></i></span><span class="cs">52</span><span class="cv"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span></div>
+        <div class="crow"><span class="cn">质量与交付部 <span>负责人</span></span><span class="tag violet">跨部门</span><span class="cb"><i style="width:37%"></i></span><span class="cs">37</span><span class="cv"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span></div>
+      </div>
+    </div>
+  </div>
+  <div class="lfoot">
+    <div>协作强度 = 0.4×IM 消息密度 + 0.4×共同会议频率 + 0.2×OKR 对齐频率 · 近 90 天 · 仅统计次数，不读取内容</div>
+    <div class="f2"><span class="lk"><svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>仅授权角色可见</span><span style="color:#9CA3AF">OD 专家 / HRBP / 授权高管</span></div>
+    <div class="f2" style="margin-top:3px"><svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M8 13h2"/><path d="M14 13h2"/><path d="M8 17h2"/><path d="M14 17h2"/></svg>数据来源：Excel 统计模板导入 · 更新于 2026-09-30</div>
+  </div>
+</aside>
+</main>
+</div></body></html>

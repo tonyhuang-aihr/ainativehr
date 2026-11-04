@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>H1 数据导入与配置</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+/* ---- 编制与成本规划 module (wfp-*) ---- */
+.yr{position:absolute;left:640px;top:12px;height:32px;background:#F3F4F6;border-radius:8px;padding:0 12px;display:flex;align-items:center;gap:8px;font-size:12.5px;color:#374151;white-space:nowrap}
+.yr b{font-family:Inter,"Noto Sans CJK SC",sans-serif;color:#111827}
+.yr .tag{background:#fff}
+.who{display:flex;align-items:center;gap:8px;font-size:12.5px;color:#374151;white-space:nowrap}
+.who .rl{font-size:11px;color:#6B7280}
+.avatar.ow{background:#EEF2FF;color:#4F46E5;border-color:#C7D2FE}
+.page{flex:1;min-width:0;display:flex;flex-direction:column;padding:12px 20px 12px;gap:10px;background:#F6F7FB;position:relative}
+.ph{display:flex;align-items:center;gap:12px;height:34px;flex:none}
+.ph h1{font-size:19px;font-weight:700;line-height:28px;white-space:nowrap;display:flex;align-items:center;gap:8px}
+.ph .meta{font-size:12px;color:#6B7280;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.ph .meta b{color:#374151;font-weight:500}
+.ph .r{margin-left:auto;display:flex;gap:8px;align-items:center}
+.seg{display:flex;background:#EEF0F3;border-radius:8px;padding:3px;gap:2px;height:32px;flex:none}
+.seg>span{height:26px;padding:0 11px;border-radius:6px;display:flex;align-items:center;gap:5px;font-size:12.5px;color:#6B7280;white-space:nowrap}
+.seg>span.on{background:#fff;color:#4F46E5;font-weight:700;box-shadow:0 1px 2px rgba(16,24,40,.08)}
+.seg>span i{font-style:normal;font-family:Inter,sans-serif;font-size:11px;color:#9CA3AF;font-weight:500}
+.seg>span.on i{color:#6366F1}
+.seg.sm{height:28px}.seg.sm>span{height:22px;font-size:12px;padding:0 9px}
+.logn{font-size:11.5px;color:#6B7280;display:flex;align-items:center;gap:5px;white-space:nowrap}
+.ro{display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 8px;border-radius:6px;background:#F3F4F6;color:#4B5563;font-size:12px;white-space:nowrap}
+.banner{display:flex;align-items:center;gap:8px;height:34px;flex:none;padding:0 12px;border-radius:9px;font-size:12.5px;white-space:nowrap}
+.banner.v{background:#F5F3FF;border:1px solid #DDD6FE;color:#5B21B6}
+.banner.y{background:#FFFBEB;border:1px solid #FDE68A;color:#92400E}
+.banner .rt{margin-left:auto;font-size:11.5px;opacity:.85}
+/* KPI cards */
+.kcards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;flex:none}
+.kc{background:#fff;border:1px solid #E5E7EB;border-radius:12px;padding:11px 14px 10px;box-shadow:0 1px 2px rgba(16,24,40,.04);height:94px;display:flex;flex-direction:column;min-width:0}
+.kc .l{font-size:12px;color:#6B7280;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.kc .l .tag{margin-left:auto}
+.kc .vv{display:flex;align-items:baseline;gap:6px;margin-top:4px;white-space:nowrap}
+.kc .v{font-size:24px;font-weight:700;font-family:Inter,"Noto Sans CJK SC",sans-serif;letter-spacing:-.3px;line-height:30px}
+.kc .v.red{color:#DC2626}
+.kc .u{font-size:12.5px;color:#6B7280}
+.kc .sep{width:1px;height:18px;background:#E5E7EB;margin:0 8px;align-self:center}
+.kc .sub{font-size:11.5px;color:#6B7280;margin-top:auto;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.kc .sub b{font-family:Inter,"Noto Sans CJK SC",sans-serif;color:#374151;font-weight:600}
+.agv{font-size:13px;color:#7C3AED;font-family:Inter,"Noto Sans CJK SC",sans-serif;display:inline-flex;align-items:center;gap:4px}
+.agv svg{color:#8B5CF6}
+.oth{font-size:11.5px;color:#6B7280;margin-top:-4px;flex:none;display:flex;align-items:center;gap:6px;white-space:nowrap;height:16px}
+.oth b{font-family:Inter,sans-serif;color:#374151}
+/* generic card + table */
+.cardx{background:#fff;border:1px solid #E5E7EB;border-radius:12px;box-shadow:0 1px 2px rgba(16,24,40,.04);display:flex;flex-direction:column;min-height:0;overflow:hidden;position:relative}
+.ctl{display:flex;align-items:center;gap:8px;height:40px;flex:none;padding:0 14px;border-bottom:1px solid #F1F2F4;white-space:nowrap}
+.ctl h3{font-size:13.5px;font-weight:700;display:flex;align-items:center;gap:6px}
+.ctl .nt{font-size:11.5px;color:#9CA3AF}
+.ctl .rr{margin-left:auto;display:flex;align-items:center;gap:8px}
+.tabs{display:flex;gap:16px;height:40px;align-items:stretch}
+.tabs>span{display:flex;align-items:center;gap:5px;font-size:13px;color:#6B7280;border-bottom:2px solid transparent;white-space:nowrap}
+.tabs>span.on{color:#111827;font-weight:700;border-bottom-color:#4F46E5}
+.tabs>span i{font-style:normal;font-family:Inter,sans-serif;font-size:11px;color:#9CA3AF}
+table.t{width:100%;border-collapse:collapse;table-layout:fixed}
+.t th{height:30px;background:#F9FAFB;border-bottom:1px solid #E5E7EB;font-size:11.5px;font-weight:700;color:#4B5563;padding:0 10px;text-align:left;white-space:nowrap;overflow:hidden}
+.t th .s{font-weight:400;color:#9CA3AF;font-size:10.5px;margin-left:3px}
+.t th.r,.t td.r{text-align:right}
+.t td{height:28px;border-bottom:1px solid #F1F2F4;font-size:12.5px;color:#374151;padding:0 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t td.n,.t th.n{font-family:Inter,"Noto Sans CJK SC",sans-serif;font-feature-settings:"tnum";text-align:right}
+.t td.n{font-size:12px}
+.t td.mut,.t .mut{color:#9CA3AF}
+.t tr.g td{background:#F8F9FF;font-weight:700;color:#111827;border-bottom:1px solid #E8EAF6}
+.t tr.g td.n{color:#1F2937}
+.t tr.tot td{background:#F9FAFB;font-weight:700;color:#111827;border-top:1px solid #E5E7EB}
+.t tr.more td{color:#6B7280;font-size:12px;background:#FCFCFD}
+.t tr.hl td{background:#EEF2FF}
+.gx{display:inline-flex;align-items:center;gap:5px}
+.gx svg{color:#6B7280}
+.ind{display:inline-block;width:14px}
+.posn{color:#6B7280;font-weight:400;font-size:11.5px;margin-left:6px}
+.rng{color:#374151}
+.est{font-size:10px;color:#7C3AED;background:#F5F3FF;border-radius:3px;padding:0 3px;margin-left:3px;font-family:"Noto Sans CJK SC",sans-serif;font-weight:500}
+.srt{display:inline-flex;align-items:center;gap:2px;color:#4F46E5;font-weight:400;font-size:10.5px;background:#EEF2FF;border-radius:4px;padding:0 4px;line-height:16px;margin-left:4px}
+.st{font-size:11px;line-height:18px;padding:0 6px;border-radius:4px;white-space:nowrap;display:inline-block}
+.st.on{color:#6B7280;padding:0}
+.st.in{background:#F0FDF4;color:#16A34A}.st.tin{background:#EFF6FF;color:#2563EB}
+.st.out{background:#F3F4F6;color:#4B5563}
+.st.ag{background:#F5F3FF;color:#7C3AED}
+.ffoot{flex:none;height:30px;display:flex;align-items:center;gap:14px;padding:0 14px;border-top:1px solid #F1F2F4;font-size:11.5px;color:#9CA3AF;white-space:nowrap}
+.ffoot a{color:#4F46E5;text-decoration:none;display:inline-flex;align-items:center;gap:4px}
+.ffoot .rt{margin-left:auto}
+.pos{color:#16A34A}.neg{color:#DC2626}
+.tip{position:absolute;z-index:40;width:352px;background:#111827;color:#E5E7EB;border-radius:10px;padding:11px 13px 11px;font-size:12px;line-height:1.6;box-shadow:0 10px 30px rgba(16,24,40,.25)}
+.tip .ptr{position:absolute;width:10px;height:10px;background:#111827;transform:rotate(45deg)}
+.tip b{color:#fff}
+.tip .k{color:#9CA3AF}
+.tip .f{margin-top:6px;padding:6px 8px;border-radius:6px;background:#1F2937;font-family:Inter,"Noto Sans CJK SC",sans-serif;color:#F9FAFB;font-size:12px}
+.tip .ft{margin-top:6px;color:#9CA3AF;font-size:11px}
+.dot{width:8px;height:8px;border-radius:2px;display:inline-block;flex:none}
+.d-l{background:#6366F1}.d-a{background:#A78BFA}.d-o{background:#F59E0B}
+
+.fcs{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.fcs .k{font-size:11.5px;color:#6B7280;margin-right:2px}
+.fc{font-size:11.5px;line-height:20px;padding:0 7px;border-radius:5px;background:#F3F4F6;color:#374151;white-space:nowrap}.fc i{font-style:normal;color:#DC2626;margin-left:1px}
+.pv{border-radius:9px;background:#F8FAFC;border:1px solid #EEF0F3;padding:8px 10px;display:flex;flex-direction:column;gap:5px}
+.pr{display:flex;gap:7px;font-size:12px;color:#4B5563;line-height:1.55}.pr svg{color:#6366F1;margin-top:2px}.pr b{color:#111827}
+.stt{display:flex;gap:8px;padding:10px 14px}
+.stt>div{flex:1;border-radius:9px;background:#F0FDF4;padding:7px 10px;display:flex;align-items:baseline;gap:6px;white-space:nowrap}
+.stt>div b{font-size:20px;color:#15803D}.stt>div span{font-size:12px;color:#166534}.stt>div i{font-style:normal;font-size:11px;color:#6B7280;margin-left:auto}
+.stt>div.sk{background:#F3F4F6}.stt>div.sk b,.stt>div.sk span{color:#374151}
+.stt>div.fx{background:#FEF2F2}.stt>div.fx b,.stt>div.fx span{color:#B91C1C}
+.msg{display:flex;gap:8px;border:1px solid #EEF0F3;border-radius:9px;padding:7px 10px}
+.msg .mi{margin-top:1px}.msg.fx .mi{color:#DC2626}.msg.sk .mi{color:#6B7280}.msg.wn .mi{color:#D97706}
+.msg .mt{font-size:12.5px;font-weight:600;color:#111827}.msg .mb{font-size:11.5px;color:#4B5563;line-height:1.55;margin-top:1px}
+.msg .acts{margin-left:auto}
+.cv{border-radius:9px;background:#F5F3FF;border:1px solid #EDE9FE;padding:7px 10px}
+.cvt{font-size:12px;font-weight:600;color:#5B21B6;display:flex;align-items:center;gap:5px}
+.cvr{display:flex;align-items:center;gap:6px;margin-top:4px;font-size:12px;color:#374151;white-space:nowrap}.cvn{margin-left:auto;font-size:11px;color:#6B7280}
+.cfg .ctl{height:36px}.cfg .ctl .rr{color:#9CA3AF}
+.t.sm2 th{height:26px}.t.sm2 td{height:25px}
+.btn.dis{color:#9CA3AF;background:#F9FAFB}
+</style></head><body><div class="app"><header class="topnav">
+  <div class="logo">OD</div><div class="brand">AI Native OD</div>
+  <div class="vdiv"></div>
+  <div class="crumb">编制与成本规划<span class="sep">/</span>研发中心 2027 年度规划<span class="sep">/</span><b>数据导入与配置</b><span class="tag yellow">示例数据</span></div>
+  <div class="yr"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>规划年度 <b>2027</b> · 按自然季度<span class="tag gray">默认，待确认</span></div>
+  <div class="navright"><div class="who"><span>黄<span class="rl"> · OD / HRBP · HR 管理员</span></span></div><div class="avatar">黄</div></div>
+</header><div class="body"><nav class="lefttb"><div class="tool"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg></div><div class="tool"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg></div><div class="tool on"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg></div><div class="sp"></div><div class="tool"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></div><div class="tool"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/></svg></div><div class="tool bottom"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg></div></nav>
+<main class="page">
+ <div class="ph"><h1>数据导入与配置</h1><span class="meta">固定 Excel 模板 · 暂不对接招聘和 HR 系统 · 每次导入和配置修改都记日志</span>
+  <div class="r"><button class="btn sm"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>下载模板和示例数据</button><button class="btn sm dis"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>导入真实数据</button><button class="btn sm primary"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>导入示例数据</button></div></div>
+ <div class="banner y"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg><b>演示环境，只允许示例数据。</b>「导入真实数据」已停用：真实花名册要等迁到国内云并完成备案后才能导入。<span class="rt">当前环境：演示（Vercel）</span></div>
+ <div style="flex:1;min-height:0;display:flex;gap:10px">
+  <div style="width:560px;flex:none;display:flex;flex-direction:column;gap:10px"><div class="cardx" style="flex:none">
+ <div class="ctl"><h3><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M8 13h2"/><path d="M14 13h2"/><path d="M8 17h2"/><path d="M14 17h2"/></svg>花名册</h3><span class="tag green"><svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>已导入 486 行</span><span class="nt">roster-示例-20261003.xlsx</span><span class="rr"><button class="btn xs"><svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>模板</button><button class="btn xs">重新导入</button></span></div>
+ <div style="padding:10px 14px;display:flex;flex-direction:column;gap:8px">
+  <div class="fcs"><span class="k">模板字段</span><span class="fc">姓名<i>*</i></span><span class="fc">工号<i>*</i></span><span class="fc">部门<i>*</i></span><span class="fc">岗位<i>*</i></span><span class="fc">职级<i>*</i></span><span class="fc">直属上级<i>*</i></span><span class="fc">用工类型<i>*</i></span><span class="fc">入职日期<i>*</i></span><span class="fc">工作地<i>*</i></span></div>
+  <div class="pv">
+   <div class="pr"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/></svg><span><b>已忽略 3 列敏感信息</b>（月薪、绩效等级、身份证号）：在你的浏览器里直接丢掉，没有上传服务器。</span></div>
+   <div class="pr"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span><b>入职日期只在浏览器里使用</b>：按「部门 × 职级」算出平均司龄，只上传这 <b class="num">31</b> 组汇总数；不足 5 人的 <b class="num">9</b> 组并入上一级部门。</span></div>
+   <div class="pr"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>只有在途变动里标记为 N / N+1 的 <b class="num">2</b> 人，入职日期才上传，用于计算部门经济补偿汇总。</span></div>
+  </div>
+ </div>
+</div><div class="cardx" style="flex:1">
+ <div class="ctl"><h3><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M8 13h2"/><path d="M14 13h2"/><path d="M8 17h2"/><path d="M14 17h2"/></svg>在途变动 · 导入报告</h3><span class="nt">inflight-示例-20261003.xlsx · <span class="num">32</span> 行</span><span class="rr"><button class="btn xs"><svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>模板</button><button class="btn xs">重新导入</button></span></div>
+ <div class="stt"><div><b class="num">27</b><span>已导入</span><i>人员 22 · Agent 5</i></div><div class="sk"><b class="num">4</b><span>已跳过</span><i>状态不是已确认</i></div><div class="fx"><b class="num">1</b><span>需要修改</span><i>未导入</i></div></div>
+ <div style="padding:0 14px 10px;display:flex;flex-direction:column;gap:7px">
+  <div class="msg fx"><span class="mi"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg></span><div><div class="mt">第 12 行（离职 · 孟三十八）没有填「离职类型」，这一行没有导入</div><div class="mb">请在模板里选择离职类型后重新导入。离职类型只在你的浏览器里换算成补偿标记（不计 / N / N+1），类型本身不会上传。</div></div></div>
+  <div class="msg sk"><span class="mi"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg></span><div><div class="mt">已跳过 4 行：确认状态不是「已接受的 offer / 已审批的调动 / 已提交的离职」</div><div class="mb">第 8 行 offer 已发出但还没接受；第 15 行调动还在审批；第 21、26 行仍在协商。协商解除、裁员候选不能通过这张表导入。</div></div></div>
+  <div class="msg wn"><span class="mi"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span><div><div class="mt">第 22 行（转入 · 许十八）来源部门写的是「数据智能」，已匹配到部门树里的「数据智能部」</div><div class="mb">已按匹配结果导入，请确认。生效日早于规划年度开始、或者部门在部门树里找不到时，也会在这里提示。</div></div></div>
+  <div class="cv"><div class="cvt"><svg class="i s13" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>离职类型 → 补偿标记（在浏览器里换算）</div>
+   <div class="cvr"><span>7 笔离职</span><span class="tag gray">不计 5</span><span class="tag yellow">N 2</span><span class="tag yellow">N+1 0</span><span class="cvn">只上传补偿标记，且只有 OD / HR 能看到</span></div></div>
+ </div>
+</div></div>
+  <div style="flex:1;min-width:0;display:flex;gap:10px">
+   <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:10px"><div class="cardx cfg"><div class="ctl"><h3>职级薪酬带均值</h3><span class="tag yellow">口径待确认</span><span class="rr"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg></span></div>
+ <table class="t sm2"><colgroup><col><col style="width:150px"><col style="width:88px"></colgroup><thead><tr><th>职级</th><th class="n">年度人均成本<span class="s">元/年</span></th><th class="n">生效年度</th></tr></thead><tbody><tr><td class="num">P4</td><td class="n">170,000</td><td class="n">2027</td></tr><tr><td class="num">P5</td><td class="n">235,000</td><td class="n">2027</td></tr><tr><td class="num">P6</td><td class="n">300,000</td><td class="n">2027</td></tr><tr><td class="num">P7</td><td class="n">395,000</td><td class="n">2027</td></tr><tr><td class="num">P8</td><td class="n">520,000</td><td class="n">2027</td></tr><tr><td class="num">M2</td><td class="n">450,000</td><td class="n">2027</td></tr><tr><td class="num">M3</td><td class="n">545,000</td><td class="n">2027</td></tr><tr><td class="num">M4</td><td class="n">800,000</td><td class="n">2027</td></tr><tr><td class="num">M5</td><td class="n">1,400,000</td><td class="n">2027</td></tr></tbody></table>
+ <div class="ffoot" style="margin-top:auto">是否含社保公积金、年终奖，是否分城市，待确认</div></div><div class="cardx cfg"><div class="ctl"><h3>城市上年度职工月平均工资</h3><span class="nt">来源：示例数据</span><span class="rr"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg></span></div>
+ <table class="t sm2"><colgroup><col style="width:64px"><col style="width:52px"><col><col><col style="width:100px"></colgroup><thead><tr><th>城市</th><th class="n">年度</th><th class="n">月平均<span class="s">元</span></th><th class="n">3 倍上限</th><th>更新日期</th></tr></thead><tbody><tr><td>北京</td><td class="n">2025</td><td class="n">12,500</td><td class="n">37,500</td><td class="num mut" style="font-size:11.5px">2026-07-15</td></tr><tr><td>上海</td><td class="n">2025</td><td class="n">12,300</td><td class="n">36,900</td><td class="num mut" style="font-size:11.5px">2026-07-15</td></tr><tr><td>杭州</td><td class="n">2025</td><td class="n">10,600</td><td class="n">31,800</td><td class="num mut" style="font-size:11.5px">2026-07-15</td></tr><tr><td>成都</td><td class="n">2025</td><td class="n">8,900</td><td class="n">26,700</td><td class="num mut" style="font-size:11.5px">2026-07-15</td></tr></tbody></table>
+ <div class="ffoot" style="margin-top:auto">经济补偿月基数超过 3 倍时按 3 倍封顶，年限最多 12 年</div></div><div class="cardx cfg"><div class="ctl"><h3>外包 / 实习 / 顾问单价</h3><span class="tag yellow">来源待确认</span></div>
+ <table class="t sm2"><colgroup><col><col style="width:120px"></colgroup><thead><tr><th>用工类型</th><th class="n">元/人/月</th></tr></thead><tbody><tr><td>外包</td><td class="n">18,000</td></tr><tr><td>实习</td><td class="n">6,000</td></tr><tr><td>顾问</td><td class="n">30,000</td></tr></tbody></table></div></div>
+   <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:10px"><div class="cardx cfg"><div class="ctl"><h3>Agent 计价</h3><span class="nt">OD 手动配置</span><span class="rr"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg></span></div>
+ <table class="t sm2"><colgroup><col><col style="width:102px"><col style="width:96px"><col style="width:92px"></colgroup><thead><tr><th>Agent 类型</th><th class="n">席位费<span class="s">元/个/月</span></th><th class="n">算力<span class="s">元/个/月</span></th><th class="n">一次性<span class="s">元/个</span></th></tr></thead><tbody><tr><td>编码助手</td><td class="n">1,500</td><td class="n">2,000</td><td class="n"><span class=mut>—</span></td></tr><tr><td>运维助手</td><td class="n">1,200</td><td class="n">2,800</td><td class="n">15,000</td></tr><tr><td>测试助手</td><td class="n">800</td><td class="n">1,200</td><td class="n">10,000</td></tr><tr><td>数据助手</td><td class="n">2,000</td><td class="n">3,000</td><td class="n"><span class=mut>—</span></td></tr><tr><td>流程助手</td><td class="n">800</td><td class="n">700</td><td class="n"><span class=mut>—</span></td></tr><tr><td>知识助手</td><td class="n">600</td><td class="n">900</td><td class="n"><span class=mut>—</span></td></tr></tbody></table>
+ <div class="ffoot" style="margin-top:auto">一次性 = 实施 + 培训，暂记在上线生效当季</div></div><div class="cardx cfg"><div class="ctl"><h3>编制数</h3><span class="nt">只限正式员工</span><span class="rr"><button class="btn xs"><svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>批量导入</button></span></div>
+ <table class="t sm2"><colgroup><col><col style="width:110px"><col style="width:96px"></colgroup><thead><tr><th>部门</th><th class="n">人员编制</th><th class="n">Agent 编制</th></tr></thead><tbody><tr><td>研发中心直属</td><td class="n">1</td><td class="n">0</td></tr><tr><td>产品研发一部</td><td class="n">156</td><td class="n">6</td></tr><tr><td>产品研发二部</td><td class="n">134</td><td class="n">3</td></tr><tr><td>平台部</td><td class="n">66</td><td class="n">10</td></tr><tr><td>质量与交付部</td><td class="n">80</td><td class="n">4</td></tr><tr><td>数据智能部</td><td class="n">70</td><td class="n">2</td></tr><tr class="tot"><td>合计</td><td class="n">507</td><td class="n">25</td></tr></tbody></table></div><div class="cardx cfg"><div class="ctl"><h3>预算总包</h3><span class="nt">P0 手工录入</span><span class="rr"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg></span></div>
+ <table class="t sm2"><colgroup><col style="width:60px"><col style="width:110px"><col></colgroup><thead><tr><th>年度</th><th class="n">金额<span class="s">万元</span></th><th>口径</th></tr></thead>
+ <tbody><tr><td class="num">2027</td><td class="n">16,000.0</td><td>研发中心 · 人工 + Agent + 一次性</td></tr></tbody></table>
+ <div class="ffoot" style="margin-top:auto;color:#B45309"><svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>是否拆到部门待确认：未拆分前，负责人看到「未设置部门预算」</div></div></div>
+  </div>
+ </div>
+</main></div></div></body></html>

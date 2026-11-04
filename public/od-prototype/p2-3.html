@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>P2.3 部门决策轨迹</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+/* ---- P2.3 specific ---- */
+.panel{width:440px}
+.node.sel{border-color:#4F46E5;box-shadow:0 0 0 3px rgba(79,70,229,.18),0 4px 12px rgba(79,70,229,.14)}
+.node .ldava{display:inline-flex;align-items:center;gap:4px}
+.node .ldava .ava{width:14px;height:14px;border-radius:50%;background:#EEF2FF;border:1px solid #A5B4FC;color:#4F46E5;display:flex;align-items:center;justify-content:center}
+.node .ldava .ava svg{width:9px;height:9px}
+.selbadge{position:absolute;z-index:7;height:20px;padding:0 8px;border-radius:10px;background:#4F46E5;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;gap:4px;box-shadow:0 2px 6px rgba(79,70,229,.3);white-space:nowrap}
+.dlbadge{margin-left:auto;display:inline-flex;align-items:center;gap:3px;height:18px;padding:0 5px;border-radius:9px;letter-spacing:-.2px;background:#F5F3FF;border:1px solid #C4B5FD;color:#6D28D9;font-size:10px;font-weight:700;white-space:nowrap}
+.dlbadge.on{background:#7C3AED;border-color:#7C3AED;color:#fff;box-shadow:0 2px 6px rgba(124,58,237,.3)}
+.calloutc{position:absolute;z-index:8;font-size:11px;color:#6D28D9;background:#fff;border:1px solid #DDD6FE;border-radius:8px;padding:5px 9px;line-height:16px;box-shadow:0 4px 12px rgba(16,24,40,.08);white-space:nowrap}
+.calloutc b{font-weight:700}
+/* panel head */
+.lhead{height:54px;flex:none;display:flex;align-items:center;gap:10px;padding:0 14px 0 16px;border-bottom:1px solid #F1F2F4}
+.lhead .pa{width:36px;height:36px;border-radius:9px;background:#EEF2FF;border:1.5px solid #4F46E5;color:#4F46E5;display:flex;align-items:center;justify-content:center;flex:none}
+.lhead .nm{font-size:15px;font-weight:700;line-height:20px;display:flex;align-items:center;gap:6px}
+.lhead .sb{font-size:11.5px;color:#6B7280;line-height:16px;margin-top:1px}
+.lhead .back{margin-left:auto;font-size:12px;color:#4F46E5;display:flex;align-items:center;gap:2px;white-space:nowrap}
+.lhead .xx{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;color:#6B7280;margin-left:4px}
+.lbody{flex:1;min-height:0;overflow:hidden;padding:6px 14px 0;display:flex;flex-direction:column;gap:6px}
+.tabs{display:flex;border-bottom:1px solid #E5E7EB;gap:18px;flex:none;padding:0 2px}
+.tabs>span{height:28px;white-space:nowrap;display:flex;align-items:center;gap:5px;font-size:13px;color:#6B7280;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs>span.on{color:#4F46E5;font-weight:700;border-bottom-color:#4F46E5}
+.tabs>span i{font-style:normal;font-family:Inter,sans-serif;font-size:11px;font-weight:600;padding:0 5px;border-radius:4px;background:#EEF2FF;color:#4F46E5;line-height:16px}
+.tabs .tr{margin-left:auto;font-size:11px;color:#9CA3AF;display:flex;align-items:center;gap:4px}
+.meta{display:flex;align-items:center;gap:6px;font-size:11px;color:#6B7280;flex:none;white-space:nowrap}
+.meta .lg{margin-left:auto;display:flex;gap:4px}
+.pv{display:inline-flex;align-items:center;gap:2px;font-size:9.5px;line-height:14px;padding:0 4px;border-radius:3px;white-space:nowrap;flex:none;font-weight:500}
+.pv svg{width:9px;height:9px}
+.pv.ai{background:#F5F3FF;color:#7C3AED;box-shadow:inset 0 0 0 1px #E9E3FF}
+.pv.us{background:#EFF6FF;color:#2563EB;box-shadow:inset 0 0 0 1px #DBEAFE}
+/* timeline */
+.tl{position:relative;display:flex;flex-direction:column;gap:5px;padding-left:16px}
+.tl::before{content:"";position:absolute;left:4px;top:10px;bottom:16px;width:2px;background:#E5E7EB;border-radius:1px}
+.ent{position:relative;padding:6px 10px 6px 11px;border-radius:10px}
+.ent::before{content:"";position:absolute;left:-17px;top:10px;width:8px;height:8px;border-radius:50%;background:#fff;border:2px solid #4F46E5}
+.ent.inh::before{border-color:#A78BFA;background:#F5F3FF}
+.eh{display:flex;align-items:center;gap:6px;white-space:nowrap}
+.eh .dt{font-family:Inter,sans-serif;font-weight:700;font-size:12px;color:#111827}
+.eh .pn{font-size:12px;font-weight:700;color:#111827;overflow:hidden;text-overflow:ellipsis}
+.eh .tag{font-size:10px;line-height:16px;padding:0 5px}
+.eh .who{margin-left:auto;font-size:10.5px;color:#9CA3AF}
+.diff{display:flex;align-items:center;gap:6px;margin-top:4px;height:20px;padding:0 8px;border-radius:6px;background:#F8FAFC;border:1px solid #EEF0F3;font-size:11.5px;color:#374151;white-space:nowrap}
+.diff svg{color:#6366F1}
+.diff b{font-weight:700;color:#111827}
+.diff .n{font-family:Inter,sans-serif}
+.diff .ar{color:#9CA3AF}
+.diff .k{font-size:10.5px;color:#9CA3AF;margin-right:2px}
+.fl{display:grid;grid-template-columns:50px 1fr;gap:1px 6px;margin-top:5px}
+.fl .k{font-size:10.5px;color:#9CA3AF;line-height:16px;white-space:nowrap}
+.fl .v{font-size:11.5px;color:#1F2937;line-height:16px;display:flex;align-items:center;gap:5px;min-width:0}
+.fl .v .tx{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fl .v .pv{margin-left:auto}
+.kr{display:inline-flex;align-items:center;gap:3px;font-size:10.5px;line-height:16px;padding:0 5px;border-radius:4px;background:#EEF2FF;color:#4338CA;white-space:nowrap;flex:none}
+.kr svg{width:10px;height:10px}
+.num{font-family:Inter,"Noto Sans CJK SC",sans-serif}
+.opn{margin-top:5px;padding:4px 8px;border-radius:6px;background:#FAFAFB;border-left:2px solid #C7D2FE;font-size:11px;color:#374151;line-height:16px;display:flex;gap:6px;align-items:flex-start}
+.opn .k{color:#6B7280;white-space:nowrap;flex:none}
+.opn .k b{color:#111827}
+.rv{margin-top:4px;border:1px solid #DDD6FE;border-radius:8px;background:linear-gradient(#FAF8FF,#fff);padding:4px 8px 5px}
+.rv .rh{display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;color:#5B21B6;white-space:nowrap}
+.rv .rh .r{margin-left:auto;font-weight:400;font-size:10.5px;color:#9CA3AF}
+.rv table{width:100%;border-collapse:collapse;margin-top:3px;table-layout:fixed}
+.rv th{font-size:10px;color:#9CA3AF;font-weight:400;text-align:left;height:16px}
+.rv td{font-size:11px;color:#374151;height:18px;white-space:nowrap}
+.rv td.n{font-family:Inter,sans-serif;font-weight:600;color:#111827}
+.rv .ok{color:#16A34A}.rv .pt{color:#D97706}
+.rv .rc{font-size:10.5px;color:#6B7280;margin-top:2px;line-height:15px}
+.due{display:inline-flex;align-items:center;gap:3px;font-size:10px;line-height:15px;padding:0 5px;border-radius:3px;background:#FFFBEB;color:#B45309;box-shadow:inset 0 0 0 1px #FDE68A;white-space:nowrap}
+.inhtag{background:#F5F3FF;color:#6D28D9;box-shadow:inset 0 0 0 1px #DDD6FE}
+/* rejected */
+.rej{flex:none;border:1px dashed #D1D5DB;border-radius:10px;background:#FAFAFA;padding:6px 10px 6px}
+.rej .rh{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#374151;white-space:nowrap}
+.rej .rh .r{margin-left:auto;font-size:10.5px;font-weight:400;color:#9CA3AF;display:flex;align-items:center;gap:3px}
+.rej .ri{margin-top:5px;padding-top:5px;border-top:1px solid #EEF0F3}
+.rej .eh .pn{color:#4B5563}
+.rej .diff{background:#fff;color:#6B7280}
+.rej .opn{background:#fff;border-left-color:#FCA5A5}
+.pfootn{flex:none;margin-top:auto;padding:6px 0 7px;border-top:1px solid #F1F2F4;display:flex;align-items:center;justify-content:center;gap:5px;font-size:11px;color:#6B7280}
+.pfootn svg{color:#9CA3AF}
+.pfootn b{color:#374151;font-weight:700}
+.rrow{display:flex;align-items:center;gap:8px;height:17px;font-size:11px;color:#374151;white-space:nowrap;margin-top:2px}
+.rrow .m{width:104px}
+.rrow .pe,.rrow .pa{width:76px;color:#6B7280}
+.rrow b{font-family:Inter,sans-serif;font-weight:700;color:#111827}
+.rrow .tag{font-size:10px;line-height:16px;margin-left:auto}
+.tabs .tr .pv{margin-left:2px}
+.fl .v .tx b{font-weight:700;color:#111827}
+</style></head>
+<body><div class="app">
+<header class="topnav">
+  <div class="logo">OD</div><div class="brand">AI Native OD</div>
+  <div class="vdiv"></div>
+  <div class="crumb">组织设计沙盘<span class="sep">/</span><b>2026 Q4 研发中心组织调整</b><span class="tag yellow">示例数据</span></div>
+  <div class="switcher"><span>基线</span><span class="on">方案 A</span><span>方案 B</span><span class="new">+ 新建方案</span></div>
+  <div class="navright">
+    <div class="iconbtn"><svg class="i s18" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/></svg></div><div class="iconbtn dis"><svg class="i s18" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5A5.5 5.5 0 0 0 9.5 20H13"/></svg></div>
+    <div style="width:6px"></div>
+    <button class="btn">方案对比</button><button class="btn primary">提交审批</button>
+    <div class="avatar">黄</div>
+  </div>
+</header>
+
+<section class="metrics">
+  <div class="metric"><div class="l">总人数</div><div class="v"><b class="num">486</b><span class="delta n">较基线 0</span></div></div>
+  <div class="metric"><div class="l">层级数</div><div class="v"><b class="num">5</b><span class="delta g">−1</span></div></div>
+  <div class="metric"><div class="l">平均管理幅度</div><div class="v"><b class="num">6.4</b><span class="delta g">+1.3</span></div></div>
+  <div class="metric"><div class="l">人力成本（年）</div><div class="v"><b>¥1.46 亿</b><span class="delta g">−2.8%</span></div></div>
+  <div class="metric"><div class="l">算力成本（年）</div><div class="v"><b>¥92 万</b><span class="delta o">+¥38 万</span></div></div>
+  <div class="metric"><div class="l">人机比（人 : AI，按工时）</div><div class="v"><b class="num">69 : 31</b><span class="delta g">AI +9pt</span></div></div>
+</section>
+
+<main class="body">
+<nav class="lefttb">
+  <div class="tool on"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M4.037 4.688a.495.495 0 0 1 .651-.651l16 6.5a.5.5 0 0 1-.063.947l-6.124 1.58a2 2 0 0 0-1.438 1.435l-1.579 6.126a.5.5 0 0 1-.947.063z"/></svg></div>
+  <div class="tool"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8 12h8"/><path d="M12 8v8"/></svg></div>
+  <div class="tool"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M16 3h5v5"/><path d="M8 3H3v5"/><path d="M12 22v-8.3a4 4 0 0 0-1.172-2.872L3 3"/><path d="m15 9 6-6"/></svg></div>
+  <div class="tool"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="m8 6 4-4 4 4"/><path d="M12 2v10.3a4 4 0 0 1-1.172 2.872L4 22"/><path d="m20 22-5-5"/></svg></div>
+  <div class="tool"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><rect x="16" y="16" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="9" y="2" width="6" height="6" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"/><path d="M12 12V8"/></svg></div>
+  <div class="sp"></div>
+  <div class="tool"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/></svg></div>
+  <div class="tool"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg></div>
+  <div class="tool bottom"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg></div>
+</nav>
+
+<section class="canvas">
+  <div class="ctb">
+    <div class="search"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>搜索部门或人员</div>
+  <div class="dd"><span class="k">着色：</span>人均人力成本<svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div>
+  <div class="costleg">低&nbsp;<i style="background:#E0E7FF"></i><i style="background:#C7D2FE"></i><i style="background:#A5B4FC"></i><i style="background:#6366F1"></i><i style="background:#4F46E5"></i>&nbsp;高</div>
+
+    <div class="right">
+      <div class="toggle"><span class="sw"></span><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="4.5" r="2.5"/><path d="m10.2 6.3-3.9 3.9"/><circle cx="4.5" cy="12" r="2.5"/><path d="M7 12h10"/><circle cx="19.5" cy="12" r="2.5"/><path d="m13.8 17.7 3.9-3.9"/><circle cx="12" cy="19.5" r="2.5"/></svg>协作视图</div>
+    </div>
+  </div>
+
+  <svg class="links" viewBox="0 0 944 756">
+    <path d="M393 226H551a8 8 0 0 1 8 8V344a6 6 0 0 0 6 6H621a8 8 0 0 1 8 8V440a8 8 0 0 1-8 8H323a8 8 0 0 1-8-8V358a8 8 0 0 1 8-8H379a6 6 0 0 0 6-6V234a8 8 0 0 1 8-8Z" fill="#EEF2FF" fill-opacity=".55" stroke="#A5B4FC" stroke-width="1.3" stroke-dasharray="6 4"/>
+    <g stroke="#CBD5E1" stroke-width="1.2" fill="none">
+      <path d="M472 165V210M110 210H834M110 210V236M291 210V236M653 210V236M834 210V236"/>
+    </g>
+    <g stroke="#818CF8" stroke-width="1.6" fill="none">
+      <path d="M472 210V236M472 312V338M392 338H552M392 338V364M552 338V364"/>
+    </g>
+  </svg>
+
+  <div class="node" style="left:363px;top:89px;width:218px;height:76px;--stripe:#4F46E5"><div class="t">研发中心</div><div class="lead">负责人 · CTO</div><div class="chips"><span class="chip">486 人</span><span class="chip">幅度 5</span></div></div>
+  <div class="node" style="left:31px;top:236px;width:158px;height:76px;--stripe:#6366F1"><div class="t">产品研发一部</div><div class="lead">负责人 · 研发总监</div><div class="chips"><span class="chip">144 人</span><span class="chip">幅度 7.0</span></div></div>
+  <div class="node" style="left:212px;top:236px;width:158px;height:76px;--stripe:#4F46E5"><div class="t">产品研发二部</div><div class="lead">负责人 · 研发总监</div><div class="chips"><span class="chip">131 人</span><span class="chip">幅度 6.8</span></div></div>
+  <div class="node sel" style="left:393px;top:236px;width:158px;height:76px;--stripe:#4F46E5"><div class="t">平台部<span class="dlbadge on">决策轨迹（3）</span></div><div class="lead"><span class="ldava"><span class="ava"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>负责人 · 平台总监</span></div><div class="chips" style="margin-top:4px"><span class="chip up">62 人</span><span class="chip warn">幅度 2.1</span></div></div>
+  <div class="selbadge" style="left:480px;top:203px"><svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>已选中</div>
+  <div class="node" style="left:574px;top:236px;width:158px;height:76px;--stripe:#A5B4FC"><div class="t">质量与交付部</div><div class="lead">负责人 · 质量总监</div><div class="chips"><span class="chip">77 人</span><span class="chip">幅度 6.5</span></div></div>
+  <div class="node" style="left:755px;top:236px;width:158px;height:76px;--stripe:#6366F1"><div class="t">数据智能部</div><div class="lead">负责人 · 数据总监</div><div class="chips"><span class="chip">71 人</span><span class="chip">幅度 5.6</span></div></div>
+  <div class="node sm" style="left:319px;top:364px;width:146px;height:74px;--stripe:#818CF8"><div class="t">基础架构组</div><div class="lead">组长</div><div class="chips"><span class="chip up">34 人</span></div></div>
+  <div class="node sm" style="left:479px;top:364px;width:146px;height:74px;--stripe:#818CF8"><div class="t">数据平台组</div><div class="lead">组长</div><div class="chips"><span class="chip up">26 人</span></div></div>
+  <div class="calloutc" style="left:330px;top:466px"><svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg> 卡片上的 <b>决策轨迹（N）</b> 只计已执行决策 · 驳回记录另列</div>
+  <svg class="cursor" style="left:536px;top:252px" viewBox="0 0 24 24"><path d="M4.037 4.688a.495.495 0 0 1 .651-.651l16 6.5a.5.5 0 0 1-.063.947l-6.124 1.58a2 2 0 0 0-1.438 1.435l-1.579 6.126a.5.5 0 0 1-.947.063z" fill="#111827" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg>
+
+  <div class="cbottom">
+    <span>提示：点击部门卡片上的「决策轨迹」标记，在部门面板中按时间线查看</span>
+    <div class="zoom"><div class="iconbtn"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg></div><span class="pct">100%</span><div class="iconbtn"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg></div><span class="fit">适应画布</span></div>
+
+  </div>
+</section>
+
+<aside class="panel">
+  <div class="lhead">
+    <div class="pa"><svg class="i s18" viewBox="0 0 24 24" aria-hidden="true"><rect x="16" y="16" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="9" y="2" width="6" height="6" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"/><path d="M12 12V8"/></svg></div>
+    <div><div class="nm">平台部<span class="tag indigo">部门面板</span></div><div class="sb">研发中心 / 平台部 · 方案 A · 部门 ID D-0203</div></div>
+    <div class="back"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>返回 Agent</div>
+    <div class="xx"><svg class="i s18" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></div>
+  </div>
+  <div class="lbody">
+    <div class="tabs"><span><svg class="i s13" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>概况与花名册</span><span class="on"><svg class="i s13" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>决策轨迹<i>3</i></span><span class="tr">字段来源<span class="pv ai"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg>AI 预填</span><span class="pv us"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>用户改写</span></span></div>
+
+    <div class="tl">
+      <!-- 1 newest -->
+      <div class="card ent">
+        <div class="eh"><span class="dt">2026-07-15</span><span class="pn">2026 Q3 平台部数据底座建设</span><span class="tag green">已执行</span><span class="who">发起人 HRBP</span></div>
+        <div class="diff"><svg class="i s13" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><path d="M18 9v2c0 .6-.4 1-1 1H7c-.6 0-1-.4-1-1V9"/><path d="M12 12v3"/></svg><span class="k">调整前后</span><b>新增 数据平台组</b><span class="ar">·</span>幅度 <span class="n">3.1</span><span class="ar">→</span><b class="n">2.1</b></div>
+        <div class="fl">
+          <div class="k">背景</div><div class="v"><span class="tx">各业务线自建数据管道，指标口径不一、重复建设</span><span class="pv ai"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg>AI 预填</span></div>
+          <div class="k">意图</div><div class="v"><span class="tx">在平台部集中建设数据底座，统一指标口径</span><span class="pv us"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>用户改写</span></div>
+          <div class="k">预期效果</div><div class="v"><span class="tx">口径覆盖 80% 业务线</span><span class="kr"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>KR 2.3 指标口径覆盖率</span><span class="pv ai"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg>AI 预填</span></div>
+          <div class="k">复盘时间</div><div class="v"><span class="tx num">2026-12-31</span><span class="tag gray" style="font-size:10px;line-height:15px">还有 90 天</span><span class="pv us"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>用户改写</span></div>
+<div class="k">审批意见</div><div class="v"><span class="tx"><b>CTO</b> · 通过：同意。与数据智能部的分工在季度会上对齐。</span></div>
+        </div>
+      </div>
+      <!-- 2 review due -->
+      <div class="card ent">
+        <div class="eh"><span class="dt">2026-03-20</span><span class="pn">2026 H1 SRE 与运维整合</span><span class="tag green">已执行</span><span class="who">发起人 HRBP</span></div>
+        <div class="diff"><svg class="i s13" viewBox="0 0 24 24" aria-hidden="true"><path d="m8 6 4-4 4 4"/><path d="M12 2v10.3a4 4 0 0 1-1.172 2.872L4 22"/><path d="m20 22-5-5"/></svg><span class="k">调整前后</span><b>合并 SRE 组 + 运维组 → 基础架构组</b><span class="ar">·</span>层级 <span class="n">4</span><span class="ar">→</span><b class="n">3</b></div>
+        <div class="fl">
+          <div class="k">背景</div><div class="v"><span class="tx">SRE 与运维职责重叠，故障处置需跨组协调</span><span class="pv ai"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg>AI 预填</span></div>
+          <div class="k">意图</div><div class="v"><span class="tx">统一值班与变更流程，缩短故障处理链路</span><span class="pv ai"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg>AI 预填</span></div>
+          <div class="k">预期效果</div><div class="v"><span class="tx">MTTR −25%，失败率 −30%</span><span class="kr"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>KR 1.1 稳定性</span><span class="pv us"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>用户改写</span></div>
+          <div class="k">复盘时间</div><div class="v"><span class="tx num">2026-09-30</span><span class="due"><svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>复盘时间已到 · AI 已生成复盘</span><span class="pv ai"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg>AI 预填</span></div>
+<div class="k">审批意见</div><div class="v"><span class="tx"><b>CTO</b> · 通过：同意。半年后看故障恢复数据再评估。</span></div>
+        </div>
+        <div class="rv">
+          <div class="rh"><svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg>AI 复盘 · 预期 vs 实际<span class="r">依据：值班与变更记录 · 仅供参考</span></div>
+          <div class="rrow"><span class="m">故障平均恢复时长</span><span class="pe">预期 <b>−25%</b></span><span class="pa">实际 <b>−18%</b></span><span class="tag yellow">部分达成</span></div>
+          <div class="rrow"><span class="m">变更失败率</span><span class="pe">预期 <b>−30%</b></span><span class="pa">实际 <b>−34%</b></span><span class="tag green">达成</span></div>
+        </div>
+      </div>
+      <!-- 3 inherited -->
+      <div class="card ent inh">
+        <div class="eh"><span class="dt">2025-12-10</span><span class="pn">基础设施部拆分方案</span><span class="tag inhtag">来自 原基础设施部</span><span class="who">发起人 HRBP</span></div>
+        <div class="diff"><svg class="i s13" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 3h5v5"/><path d="M8 3H3v5"/><path d="M12 22v-8.3a4 4 0 0 0-1.172-2.872L3 3"/><path d="m15 9 6-6"/></svg><span class="k">调整前后</span><b>拆分 原基础设施部 → 平台部 + 质量与交付部</b></div>
+        <div class="fl">
+          <div class="k">背景</div><div class="v"><span class="tx">平台建设与质量交付混在一个部门，目标不聚焦</span><span class="pv ai"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg>AI 预填</span></div>
+          <div class="k">意图</div><div class="v"><span class="tx">平台能力与交付质量分开承接，各自对齐 KR</span><span class="pv us"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>用户改写</span></div>
+          <div class="k">预期效果</div><div class="v"><span class="tx">核心服务可用性达到 99.95%</span><span class="kr"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>KR 1.2 服务可用性</span><span class="pv ai"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg>AI 预填</span></div>
+          <div class="k">复盘时间</div><div class="v"><span class="tx num">2026-06-30</span><span class="tag green" style="font-size:10px;line-height:15px">已复盘 · 达成</span><span class="pv ai"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg>AI 预填</span></div>
+<div class="k">审批意见</div><div class="v"><span class="tx"><b>CTO</b> · 通过：同意拆分，半年后复盘两个部门的边界。</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="rej">
+      <div class="rh"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>未执行方案（1）<span class="tag gray" style="font-weight:400">不计入决策轨迹数</span><span class="r">收起</span></div>
+      <div class="ri">
+        <div class="eh"><span class="dt" style="color:#6B7280">2026-08-20</span><span class="pn">拟合并 数据平台组 → 数据智能部</span><span class="tag red">已驳回</span><span class="who">发起人 HRBP</span></div>
+        <div class="opn"><span class="k">审批人 <b>CTO</b> · 驳回</span><span>定位不同，合并后 KR 2.3 承接不清，暂不调整。</span></div>
+      </div>
+    </div>
+
+    <div class="pfootn"><svg class="i s13" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/></svg><b>决策轨迹不记录人员安置信息</b> · 仅记录结构层决策</div>
+  </div>
+</aside>
+</main>
+</div></body></html>
