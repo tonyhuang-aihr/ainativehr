@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>P7 花名册</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+/* ---- P7 specific ---- */
+.page{flex:1;min-width:0;display:flex;flex-direction:column;padding:14px 24px 14px;gap:10px;background:#F6F7FB}
+.ph{display:flex;align-items:center;gap:10px;height:38px}
+.ph .back{font-size:12px;color:#4F46E5;display:flex;align-items:center;gap:2px;white-space:nowrap}
+.ph h1{font-size:20px;font-weight:700;line-height:28px;display:flex;align-items:center;gap:8px}
+.ph h1 .cnt{font-size:13px;font-weight:400;color:#6B7280}
+.ph h1 .cnt b{color:#111827;font-family:Inter,"Noto Sans CJK SC",sans-serif}
+.ph .r{margin-left:auto;display:flex;align-items:center;gap:8px}
+.scsel{height:34px;border:1px solid #E5E7EB;background:#fff;border-radius:8px;display:flex;align-items:center;gap:7px;padding:0 10px;font-size:12.5px;color:#111827;white-space:nowrap}
+.scsel .k{color:#6B7280}
+.scsel .d{width:6px;height:6px;border-radius:50%;background:#4F46E5}
+.scsel b{color:#4F46E5}
+.toggle{height:34px}
+.fbar{display:flex;align-items:center;gap:8px;height:34px}
+.fbar .search{width:260px;height:34px;font-size:12.5px}
+.fbar .dd{height:34px;font-size:12.5px;color:#374151;white-space:nowrap}
+.fbar .dd.act{border-color:#A5B4FC;background:#EEF2FF;color:#4338CA}
+.fbar .dd.act .k{color:#6366F1}
+.fbar .lbl{font-size:12px;color:#6B7280;margin-left:6px;white-space:nowrap}
+.seg{display:flex;background:#EEF0F3;border-radius:8px;padding:3px;gap:2px;height:34px}
+.seg span{height:28px;padding:0 11px;border-radius:6px;display:flex;align-items:center;gap:5px;font-size:12.5px;color:#6B7280;white-space:nowrap}
+.seg span.on{background:#fff;color:#4F46E5;font-weight:700;box-shadow:0 1px 2px rgba(16,24,40,.08)}
+.seg span i{font-style:normal;font-family:Inter,sans-serif;font-size:11px;color:#9CA3AF;font-weight:500}
+.seg span.on i{color:#6366F1}
+.fbar .rgt{margin-left:auto}
+.crow2{display:flex;align-items:center;gap:8px;height:28px;font-size:12px;color:#6B7280}
+.fchip{height:26px;display:inline-flex;align-items:center;gap:6px;padding:0 6px 0 10px;border-radius:13px;background:#EEF2FF;border:1px solid #C7D2FE;color:#4338CA;font-size:12px;white-space:nowrap}
+.fchip .x{width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#E0E7FF;color:#4F46E5}
+.crow2 .clr{color:#4F46E5}
+.crow2 .scn{margin-left:auto;display:flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:8px;background:#F5F3FF;border:1px solid #EDE9FE;color:#4C1D95;white-space:nowrap}
+.crow2 .scn b{font-family:Inter,"Noto Sans CJK SC",sans-serif}
+.tcard{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+table.rt{width:100%;border-collapse:collapse;table-layout:fixed}
+.rt th{height:38px;background:#F9FAFB;border-bottom:1px solid #E5E7EB;text-align:left;font-size:12px;font-weight:700;color:#4B5563;padding:0 12px;white-space:nowrap}
+.rt th .sub{font-weight:400;color:#9CA3AF;font-size:11px;margin-left:4px}
+.rt th .srt{display:inline-flex;align-items:center;gap:3px;color:#4F46E5;font-weight:400;font-size:11px;margin-left:6px;background:#EEF2FF;border-radius:4px;padding:0 5px;line-height:18px}
+.rt td{height:41px;border-bottom:1px solid #F1F2F4;font-size:12.5px;color:#374151;padding:0 12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rt td.mono{font-family:Inter,"Noto Sans CJK SC",sans-serif;font-size:12px;color:#4B5563}
+.rt .ds{color:#9CA3AF}
+.lvb{display:inline-block;font-family:Inter,sans-serif;font-size:10.5px;font-weight:700;line-height:16px;padding:0 5px;border-radius:4px}
+.l1{background:#4F46E5;color:#fff}.l2{background:#E0E7FF;color:#4338CA}.l3{background:#F3F4F6;color:#6B7280}
+.nmc{display:flex;align-items:center;gap:7px;position:relative}
+.nmc b{font-weight:700;color:#111827}
+.nmc .tree{width:8px;height:12px;border-left:1.5px solid #D1D5DB;border-bottom:1.5px solid #D1D5DB;border-bottom-left-radius:3px;margin-top:-6px;flex:none}
+.ava{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex:none}
+.ava.lead{background:#EEF2FF;border:1.5px solid #4F46E5;color:#4F46E5}
+.ava.lead svg{width:13px;height:13px}
+.rt .tag{font-size:11px}
+.rt .cf{font-size:11.5px;color:#6B7280;margin-left:6px}
+.rt .none{color:#C4C8CF}
+.rt tr.in td{background:#F0FDF4}
+.rt tr.out td{background:#FAFAFB;color:#9CA3AF}
+.rt tr.out td b,.rt tr.out td.mono{color:#9CA3AF}
+.rt tr.out .ava{opacity:.55}
+.rt th.lockh,.rt td.lockc{background-image:repeating-linear-gradient(135deg,#F3F4F6 0 6px,#FAFAFB 6px 12px);border-left:1px solid #E5E7EB}
+.rt th.lockh{color:#6B7280;font-weight:500}
+.rt th.lockh span{display:inline-flex;align-items:center;gap:5px}
+.rt td.lockc span{color:#D1D5DB;letter-spacing:2px;font-family:Inter,sans-serif;font-size:12px;margin-right:22px}
+.tfoot{margin-top:auto;height:48px;flex:none;display:flex;align-items:center;gap:12px;padding:0 16px;border-top:1px solid #E5E7EB;font-size:12px;color:#6B7280;background:#fff}
+.tfoot b{color:#111827;font-family:Inter,"Noto Sans CJK SC",sans-serif}
+.tfoot .note{display:flex;align-items:center;gap:5px;color:#9CA3AF}
+.tfoot .lk{display:inline-flex;align-items:center;gap:4px;color:#374151;background:#F3F4F6;border-radius:4px;padding:0 6px;line-height:20px}
+.pager{margin-left:auto;display:flex;align-items:center;gap:4px}
+.pager span{min-width:28px;height:28px;border-radius:7px;border:1px solid #E5E7EB;display:flex;align-items:center;justify-content:center;font-family:Inter,sans-serif;font-size:12px;color:#374151;background:#fff}
+.pager span.on{background:#4F46E5;border-color:#4F46E5;color:#fff;font-weight:700}
+.pager span.dis{color:#C4C8CF}
+.pager .ps{border:1px solid #E5E7EB;padding:0 8px;font-family:"Noto Sans CJK SC",sans-serif;margin-left:8px;gap:4px}
+</style></head>
+<body><div class="app">
+<header class="topnav">
+  <div class="logo">OD</div><div class="brand">AI Native OD</div>
+  <div class="vdiv"></div>
+  <div class="crumb">组织设计沙盘<span class="sep">/</span>2026 Q4 研发中心组织调整<span class="sep">/</span><b>花名册</b><span class="tag yellow">示例数据</span></div>
+  <div class="switcher"><span>基线</span><span class="on">方案 A</span><span>方案 B</span><span class="new">+ 新建方案</span></div>
+  <div class="navright">
+    <div class="iconbtn"><svg class="i s18" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/></svg></div><div class="iconbtn dis"><svg class="i s18" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5A5.5 5.5 0 0 0 9.5 20H13"/></svg></div>
+    <div style="width:6px"></div>
+    <button class="btn">方案对比</button><button class="btn primary">提交审批</button>
+    <div class="avatar">黄</div>
+  </div>
+</header>
+
+<main class="body">
+<nav class="lefttb">
+  <div class="tool"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M4.037 4.688a.495.495 0 0 1 .651-.651l16 6.5a.5.5 0 0 1-.063.947l-6.124 1.58a2 2 0 0 0-1.438 1.435l-1.579 6.126a.5.5 0 0 1-.947.063z"/></svg></div>
+  <div class="tool"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8 12h8"/><path d="M12 8v8"/></svg></div>
+  <div class="tool"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M16 3h5v5"/><path d="M8 3H3v5"/><path d="M12 22v-8.3a4 4 0 0 0-1.172-2.872L3 3"/><path d="m15 9 6-6"/></svg></div>
+  <div class="tool"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="m8 6 4-4 4 4"/><path d="M12 2v10.3a4 4 0 0 1-1.172 2.872L4 22"/><path d="m20 22-5-5"/></svg></div>
+  <div class="tool"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><rect x="16" y="16" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="9" y="2" width="6" height="6" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"/><path d="M12 12V8"/></svg></div>
+  <div class="sp"></div>
+  <div class="tool on"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+  <div class="tool"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/></svg></div>
+  <div class="tool"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg></div>
+  <div class="tool bottom"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg></div>
+</nav>
+
+<section class="page">
+  <div class="ph">
+    <div class="back"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>返回沙盘画布</div>
+    <div class="vdiv" style="margin:0 4px"></div>
+    <h1>花名册<span class="tag yellow">示例数据</span><span class="cnt">研发中心 · 当前筛选 <b>62</b> 人</span></h1>
+    <div class="r">
+      <div class="scsel"><span class="k">方案</span><span class="d"></span><b>方案 A</b><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div>
+      <div class="toggle on"><span class="sw"></span>对照基线</div>
+      <button class="btn"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M8 13h2"/><path d="M14 13h2"/><path d="M8 17h2"/><path d="M14 17h2"/></svg>导出 Excel</button>
+    </div>
+  </div>
+
+  <div class="fbar">
+    <div class="search"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>搜索姓名 / 岗位 / 工号</div>
+    <div class="dd act"><span class="k">部门</span>平台部（含下级）<svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div>
+    <div class="dd"><span class="k">岗位</span>全部<svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div>
+    <div class="dd"><span class="k">职级</span>全部<svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div>
+    <div class="dd"><span class="k">直属上级</span>全部<svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div>
+    <div class="dd"><span class="k">入职时间</span>不限<svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div>
+    <span class="lbl">变动类型</span>
+    <div class="seg"><span class="on">全部</span><span>调入<i>2</i></span><span>调出<i>2</i></span><span>无变动<i>60</i></span></div>
+  </div>
+
+  <div class="crow2">
+    <span>已应用筛选：</span>
+    <span class="fchip">部门：平台部（含下级）<span class="x"><svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span></span>
+    <span class="clr">清空筛选</span>
+    <div class="scn"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><path d="M18 9v2c0 .6-.4 1-1 1H7c-.6 0-1-.4-1-1V9"/><path d="M12 12v3"/></svg>方案 A 相对基线：调入 <b>2</b> 人 · 调出 <b>2</b> 人 · 净变化 <b>0</b>（基线 62 → 方案 A 62）</div>
+  </div>
+
+  <div class="card tcard">
+    <table class="rt">
+      <colgroup><col style="width:64px"><col style="width:176px"><col style="width:96px"><col style="width:170px"><col style="width:136px"><col style="width:64px"><col style="width:96px"><col style="width:112px"><col style="width:186px"><col></colgroup>
+      <tr><th>层级</th><th>姓名<span class="srt"><svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><rect x="16" y="16" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="9" y="2" width="6" height="6" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"/><path d="M12 12V8"/></svg>按汇报层级</span></th><th>工号</th><th>部门</th><th>岗位</th><th>职级</th><th>直属上级</th><th>入职时间</th><th>方案变动<span class="sub">基线 → 方案 A</span></th><th class="lockh"><span><svg class="i s13" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>薪酬 / 绩效 · 无权限</span></th></tr>
+      <tr><td><span class="lvb l1">L1</span></td><td><div class="nmc" style="padding-left:0px"><span class="ava lead"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span><b>赵一</b><span class="tag indigo">负责人</span></div></td><td class="mono">E10012</td><td>平台部</td><td>平台总监</td><td class="mono">M4</td><td>CTO</td><td class="mono">2017-03-06</td><td><span class="none">—</span></td><td class="lockc"><span>••••</span><span>••</span></td></tr>
+      <tr><td><span class="lvb l2">L2</span></td><td><div class="nmc" style="padding-left:14px"><span class="tree"></span><span class="ava" style="background:#F5F3FF;color:#6D28D9">钱</span><b>钱二</b></div></td><td class="mono">E10158</td><td>平台部<span class="ds"> / </span>基础架构组</td><td>基础架构组组长</td><td class="mono">M3</td><td>赵一</td><td class="mono">2018-07-02</td><td><span class="none">—</span></td><td class="lockc"><span>••••</span><span>••</span></td></tr>
+      <tr><td><span class="lvb l2">L2</span></td><td><div class="nmc" style="padding-left:14px"><span class="tree"></span><span class="ava" style="background:#ECFEFF;color:#0E7490">孙</span><b>孙三</b></div></td><td class="mono">E10233</td><td>平台部<span class="ds"> / </span>数据平台组</td><td>数据平台组组长</td><td class="mono">M3</td><td>赵一</td><td class="mono">2019-04-15</td><td><span class="none">—</span></td><td class="lockc"><span>••••</span><span>••</span></td></tr>
+      <tr><td><span class="lvb l2">L2</span></td><td><div class="nmc" style="padding-left:14px"><span class="tree"></span><span class="ava" style="background:#F0FDF4;color:#15803D">李</span><b>李四</b></div></td><td class="mono">E10671</td><td>平台部</td><td>技术项目经理</td><td class="mono">P7</td><td>赵一</td><td class="mono">2021-09-06</td><td><span class="none">—</span></td><td class="lockc"><span>••••</span><span>••</span></td></tr>
+      <tr><td><span class="lvb l3">L3</span></td><td><div class="nmc" style="padding-left:28px"><span class="tree"></span><span class="ava" style="background:#FFF7ED;color:#C2410C">郑</span><b>郑七</b></div></td><td class="mono">E10187</td><td>平台部<span class="ds"> / </span>基础架构组</td><td>SRE 专家</td><td class="mono">P7</td><td>钱二</td><td class="mono">2018-11-19</td><td><span class="none">—</span></td><td class="lockc"><span>••••</span><span>••</span></td></tr>
+      <tr><td><span class="lvb l3">L3</span></td><td><div class="nmc" style="padding-left:28px"><span class="tree"></span><span class="ava" style="background:#FDF2F8;color:#BE185D">冯</span><b>冯八</b></div></td><td class="mono">E10366</td><td>平台部<span class="ds"> / </span>基础架构组</td><td>后端工程师</td><td class="mono">P6</td><td>钱二</td><td class="mono">2020-08-03</td><td><span class="none">—</span></td><td class="lockc"><span>••••</span><span>••</span></td></tr>
+      <tr class="out"><td><span class="lvb l3">L3</span></td><td><div class="nmc" style="padding-left:28px"><span class="tree"></span><span class="ava" style="background:#EEF2FF;color:#4338CA">周</span><b>周五</b></div></td><td class="mono">E10402</td><td>平台部<span class="ds"> / </span>基础架构组</td><td>数据架构师</td><td class="mono">P7</td><td>钱二</td><td class="mono">2020-05-11</td><td><span class="tag red">调出</span><span class="cf">至 数据智能部</span></td><td class="lockc"><span>••••</span><span>••</span></td></tr>
+      <tr class="in"><td><span class="lvb l3">L3</span></td><td><div class="nmc" style="padding-left:28px"><span class="tree"></span><span class="ava" style="background:#F5F3FF;color:#6D28D9">陈</span><b>陈九</b></div></td><td class="mono">E10529</td><td>平台部<span class="ds"> / </span>基础架构组</td><td>SRE 工程师</td><td class="mono">P6</td><td>钱二</td><td class="mono">2021-06-21</td><td><span class="tag green">调入</span><span class="cf">自 产品研发一部</span></td><td class="lockc"><span>••••</span><span>••</span></td></tr>
+      <tr class="in"><td><span class="lvb l3">L3</span></td><td><div class="nmc" style="padding-left:28px"><span class="tree"></span><span class="ava" style="background:#ECFEFF;color:#0E7490">褚</span><b>褚十</b></div></td><td class="mono">E10744</td><td>平台部<span class="ds"> / </span>基础架构组</td><td>运维开发工程师</td><td class="mono">P6</td><td>钱二</td><td class="mono">2022-02-28</td><td><span class="tag green">调入</span><span class="cf">自 产品研发一部</span></td><td class="lockc"><span>••••</span><span>••</span></td></tr>
+      <tr class="out"><td><span class="lvb l3">L3</span></td><td><div class="nmc" style="padding-left:28px"><span class="tree"></span><span class="ava" style="background:#F0FDF4;color:#15803D">吴</span><b>吴六</b></div></td><td class="mono">E10815</td><td>平台部<span class="ds"> / </span>基础架构组</td><td>数据治理工程师</td><td class="mono">P6</td><td>钱二</td><td class="mono">2022-03-14</td><td><span class="tag red">调出</span><span class="cf">至 数据智能部</span></td><td class="lockc"><span>••••</span><span>••</span></td></tr>
+      <tr><td><span class="lvb l3">L3</span></td><td><div class="nmc" style="padding-left:28px"><span class="tree"></span><span class="ava" style="background:#FFF7ED;color:#C2410C">卫</span><b>卫十一</b></div></td><td class="mono">E10902</td><td>平台部<span class="ds"> / </span>基础架构组</td><td>云原生工程师</td><td class="mono">P6</td><td>钱二</td><td class="mono">2022-10-10</td><td><span class="none">—</span></td><td class="lockc"><span>••••</span><span>••</span></td></tr>
+      <tr><td><span class="lvb l3">L3</span></td><td><div class="nmc" style="padding-left:28px"><span class="tree"></span><span class="ava" style="background:#FDF2F8;color:#BE185D">蒋</span><b>蒋十二</b></div></td><td class="mono">E11076</td><td>平台部<span class="ds"> / </span>基础架构组</td><td>后端工程师</td><td class="mono">P5</td><td>钱二</td><td class="mono">2023-07-17</td><td><span class="none">—</span></td><td class="lockc"><span>••••</span><span>••</span></td></tr>
+      <tr><td><span class="lvb l3">L3</span></td><td><div class="nmc" style="padding-left:28px"><span class="tree"></span><span class="ava" style="background:#EEF2FF;color:#4338CA">沈</span><b>沈十三</b></div></td><td class="mono">E11120</td><td>平台部<span class="ds"> / </span>基础架构组</td><td>存储工程师</td><td class="mono">P6</td><td>钱二</td><td class="mono">2023-09-04</td><td><span class="none">—</span></td><td class="lockc"><span>••••</span><span>••</span></td></tr>
+      <tr><td><span class="lvb l3">L3</span></td><td><div class="nmc" style="padding-left:28px"><span class="tree"></span><span class="ava" style="background:#F5F3FF;color:#6D28D9">韩</span><b>韩十四</b></div></td><td class="mono">E12158</td><td>平台部<span class="ds"> / </span>基础架构组</td><td>网络工程师</td><td class="mono">P5</td><td>钱二</td><td class="mono">2024-04-08</td><td><span class="none">—</span></td><td class="lockc"><span>••••</span><span>••</span></td></tr>
+    </table>
+    <div class="tfoot">
+      <span>共 <b>62</b> 人 · 每页 20 条 · 第 1 / 4 页</span>
+      <span class="note"><svg class="i s13" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>对照基线时另显示 2 名调出人员（灰色行，不计入 62 人）</span>
+      <span class="note"><span class="lk"><svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>薪酬 / 绩效按权限显示</span>默认按汇报层级排序，不提供排名</span>
+      <div class="pager"><span class="dis"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></span><span class="on">1</span><span>2</span><span>3</span><span>4</span><span><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></span><span class="ps">20 条/页<svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span></div>
+    </div>
+  </div>
+</section>
+</main>
+</div></body></html>

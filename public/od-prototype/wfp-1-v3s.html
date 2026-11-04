@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>H4 负责人视图 v3 单部门 · 基础架构组</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+/* ---- 编制与成本规划 module (wfp-*) ---- */
+.yr{position:absolute;left:640px;top:12px;height:32px;background:#F3F4F6;border-radius:8px;padding:0 12px;display:flex;align-items:center;gap:8px;font-size:12.5px;color:#374151;white-space:nowrap}
+.yr b{font-family:Inter,"Noto Sans CJK SC",sans-serif;color:#111827}
+.yr .tag{background:#fff}
+.who{display:flex;align-items:center;gap:8px;font-size:12.5px;color:#374151;white-space:nowrap}
+.who .rl{font-size:11px;color:#6B7280}
+.avatar.ow{background:#EEF2FF;color:#4F46E5;border-color:#C7D2FE}
+.page{flex:1;min-width:0;display:flex;flex-direction:column;padding:12px 20px 12px;gap:10px;background:#F6F7FB;position:relative}
+.ph{display:flex;align-items:center;gap:12px;height:34px;flex:none}
+.ph h1{font-size:19px;font-weight:700;line-height:28px;white-space:nowrap;display:flex;align-items:center;gap:8px}
+.ph .meta{font-size:12px;color:#6B7280;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.ph .meta b{color:#374151;font-weight:500}
+.ph .r{margin-left:auto;display:flex;gap:8px;align-items:center}
+.seg{display:flex;background:#EEF0F3;border-radius:8px;padding:3px;gap:2px;height:32px;flex:none}
+.seg>span{height:26px;padding:0 11px;border-radius:6px;display:flex;align-items:center;gap:5px;font-size:12.5px;color:#6B7280;white-space:nowrap}
+.seg>span.on{background:#fff;color:#4F46E5;font-weight:700;box-shadow:0 1px 2px rgba(16,24,40,.08)}
+.seg>span i{font-style:normal;font-family:Inter,sans-serif;font-size:11px;color:#9CA3AF;font-weight:500}
+.seg>span.on i{color:#6366F1}
+.seg.sm{height:28px}.seg.sm>span{height:22px;font-size:12px;padding:0 9px}
+.logn{font-size:11.5px;color:#6B7280;display:flex;align-items:center;gap:5px;white-space:nowrap}
+.ro{display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 8px;border-radius:6px;background:#F3F4F6;color:#4B5563;font-size:12px;white-space:nowrap}
+.banner{display:flex;align-items:center;gap:8px;height:34px;flex:none;padding:0 12px;border-radius:9px;font-size:12.5px;white-space:nowrap}
+.banner.v{background:#F5F3FF;border:1px solid #DDD6FE;color:#5B21B6}
+.banner.y{background:#FFFBEB;border:1px solid #FDE68A;color:#92400E}
+.banner .rt{margin-left:auto;font-size:11.5px;opacity:.85}
+/* KPI cards */
+.kcards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;flex:none}
+.kc{background:#fff;border:1px solid #E5E7EB;border-radius:12px;padding:11px 14px 10px;box-shadow:0 1px 2px rgba(16,24,40,.04);height:94px;display:flex;flex-direction:column;min-width:0}
+.kc .l{font-size:12px;color:#6B7280;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.kc .l .tag{margin-left:auto}
+.kc .vv{display:flex;align-items:baseline;gap:6px;margin-top:4px;white-space:nowrap}
+.kc .v{font-size:24px;font-weight:700;font-family:Inter,"Noto Sans CJK SC",sans-serif;letter-spacing:-.3px;line-height:30px}
+.kc .v.red{color:#DC2626}
+.kc .u{font-size:12.5px;color:#6B7280}
+.kc .sep{width:1px;height:18px;background:#E5E7EB;margin:0 8px;align-self:center}
+.kc .sub{font-size:11.5px;color:#6B7280;margin-top:auto;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.kc .sub b{font-family:Inter,"Noto Sans CJK SC",sans-serif;color:#374151;font-weight:600}
+.agv{font-size:13px;color:#7C3AED;font-family:Inter,"Noto Sans CJK SC",sans-serif;display:inline-flex;align-items:center;gap:4px}
+.agv svg{color:#8B5CF6}
+.oth{font-size:11.5px;color:#6B7280;margin-top:-4px;flex:none;display:flex;align-items:center;gap:6px;white-space:nowrap;height:16px}
+.oth b{font-family:Inter,sans-serif;color:#374151}
+/* generic card + table */
+.cardx{background:#fff;border:1px solid #E5E7EB;border-radius:12px;box-shadow:0 1px 2px rgba(16,24,40,.04);display:flex;flex-direction:column;min-height:0;overflow:hidden;position:relative}
+.ctl{display:flex;align-items:center;gap:8px;height:40px;flex:none;padding:0 14px;border-bottom:1px solid #F1F2F4;white-space:nowrap}
+.ctl h3{font-size:13.5px;font-weight:700;display:flex;align-items:center;gap:6px}
+.ctl .nt{font-size:11.5px;color:#9CA3AF}
+.ctl .rr{margin-left:auto;display:flex;align-items:center;gap:8px}
+.tabs{display:flex;gap:16px;height:40px;align-items:stretch}
+.tabs>span{display:flex;align-items:center;gap:5px;font-size:13px;color:#6B7280;border-bottom:2px solid transparent;white-space:nowrap}
+.tabs>span.on{color:#111827;font-weight:700;border-bottom-color:#4F46E5}
+.tabs>span i{font-style:normal;font-family:Inter,sans-serif;font-size:11px;color:#9CA3AF}
+table.t{width:100%;border-collapse:collapse;table-layout:fixed}
+.t th{height:30px;background:#F9FAFB;border-bottom:1px solid #E5E7EB;font-size:11.5px;font-weight:700;color:#4B5563;padding:0 10px;text-align:left;white-space:nowrap;overflow:hidden}
+.t th .s{font-weight:400;color:#9CA3AF;font-size:10.5px;margin-left:3px}
+.t th.r,.t td.r{text-align:right}
+.t td{height:28px;border-bottom:1px solid #F1F2F4;font-size:12.5px;color:#374151;padding:0 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t td.n,.t th.n{font-family:Inter,"Noto Sans CJK SC",sans-serif;font-feature-settings:"tnum";text-align:right}
+.t td.n{font-size:12px}
+.t td.mut,.t .mut{color:#9CA3AF}
+.t tr.g td{background:#F8F9FF;font-weight:700;color:#111827;border-bottom:1px solid #E8EAF6}
+.t tr.g td.n{color:#1F2937}
+.t tr.tot td{background:#F9FAFB;font-weight:700;color:#111827;border-top:1px solid #E5E7EB}
+.t tr.more td{color:#6B7280;font-size:12px;background:#FCFCFD}
+.t tr.hl td{background:#EEF2FF}
+.gx{display:inline-flex;align-items:center;gap:5px}
+.gx svg{color:#6B7280}
+.ind{display:inline-block;width:14px}
+.posn{color:#6B7280;font-weight:400;font-size:11.5px;margin-left:6px}
+.rng{color:#374151}
+.est{font-size:10px;color:#7C3AED;background:#F5F3FF;border-radius:3px;padding:0 3px;margin-left:3px;font-family:"Noto Sans CJK SC",sans-serif;font-weight:500}
+.srt{display:inline-flex;align-items:center;gap:2px;color:#4F46E5;font-weight:400;font-size:10.5px;background:#EEF2FF;border-radius:4px;padding:0 4px;line-height:16px;margin-left:4px}
+.st{font-size:11px;line-height:18px;padding:0 6px;border-radius:4px;white-space:nowrap;display:inline-block}
+.st.on{color:#6B7280;padding:0}
+.st.in{background:#F0FDF4;color:#16A34A}.st.tin{background:#EFF6FF;color:#2563EB}
+.st.out{background:#F3F4F6;color:#4B5563}
+.st.ag{background:#F5F3FF;color:#7C3AED}
+.ffoot{flex:none;height:30px;display:flex;align-items:center;gap:14px;padding:0 14px;border-top:1px solid #F1F2F4;font-size:11.5px;color:#9CA3AF;white-space:nowrap}
+.ffoot a{color:#4F46E5;text-decoration:none;display:inline-flex;align-items:center;gap:4px}
+.ffoot .rt{margin-left:auto}
+.pos{color:#16A34A}.neg{color:#DC2626}
+.tip{position:absolute;z-index:40;width:352px;background:#111827;color:#E5E7EB;border-radius:10px;padding:11px 13px 11px;font-size:12px;line-height:1.6;box-shadow:0 10px 30px rgba(16,24,40,.25)}
+.tip .ptr{position:absolute;width:10px;height:10px;background:#111827;transform:rotate(45deg)}
+.tip b{color:#fff}
+.tip .k{color:#9CA3AF}
+.tip .f{margin-top:6px;padding:6px 8px;border-radius:6px;background:#1F2937;font-family:Inter,"Noto Sans CJK SC",sans-serif;color:#F9FAFB;font-size:12px}
+.tip .ft{margin-top:6px;color:#9CA3AF;font-size:11px}
+.dot{width:8px;height:8px;border-radius:2px;display:inline-block;flex:none}
+.d-l{background:#6366F1}.d-a{background:#A78BFA}.d-o{background:#F59E0B}
+
+.page{padding:18px 32px 14px;gap:16px}
+.ph h1{font-size:20px}
+.scope{height:30px;display:inline-flex;align-items:center;gap:6px;padding:0 10px;border:1px solid #E5E7EB;border-radius:8px;background:#fff;font-size:12.5px;color:#374151;white-space:nowrap}
+.scope svg{color:#9CA3AF}
+.lnk{font-size:12.5px;color:#4F46E5;display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.hero{background:#fff;border:1px solid #E5E7EB;border-radius:16px;padding:22px 26px;display:flex;gap:36px;flex:none;box-shadow:0 1px 2px rgba(16,24,40,.04)}
+.hl{flex:1;min-width:0;display:flex;flex-direction:column}
+.aitag{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:#7C3AED;align-self:flex-start;border-bottom:1px dashed #C4B5FD;padding-bottom:1px}
+.sent{font-size:17px;line-height:1.75;color:#1F2937;margin-top:10px}
+.sent b{font-weight:700;color:#111827;font-family:Inter,"Noto Sans CJK SC",sans-serif}.sent b.neg{color:#DC2626}
+.tiny{margin-top:auto;padding-top:10px;font-size:11.5px;color:#9CA3AF}
+.hr{width:400px;flex:none;border-left:1px solid #F1F2F4;padding-left:32px;display:flex;flex-direction:column}
+.hr .k{font-size:12.5px;color:#6B7280}
+.big{display:flex;align-items:baseline;gap:6px;margin-top:2px}
+.big .num{font-size:44px;font-weight:700;letter-spacing:-1px;color:#4F46E5;line-height:56px}.big .u{font-size:16px;color:#6B7280}
+.pbar{position:relative;height:12px;border-radius:6px;background:#EEF0F3;margin-top:22px}
+.pbar .fill{position:absolute;left:0;top:0;bottom:0;border-radius:5px 0 0 5px;background:#4F46E5}
+.pbar .over{position:absolute;top:0;bottom:0;background:#F87171;border-radius:0 5px 5px 0}
+.pbar .bl{position:absolute;top:-8px;bottom:-4px;width:2px;background:#111827;margin-left:-1px}
+.pbar .bl span{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);font-size:11.5px;color:#374151;white-space:nowrap;font-family:Inter,"Noto Sans CJK SC",sans-serif}
+.pbar .cm{position:absolute;top:-3px;width:2px;height:16px;background:#fff;box-shadow:0 0 0 1px #A5B4FC;margin-left:-1px}
+.plab{display:flex;align-items:center;gap:6px;margin-top:9px;font-size:11.5px;color:#6B7280;white-space:nowrap}
+.plab b{color:#374151}.cmk{display:inline-block;width:2px;height:10px;background:#A5B4FC;margin-right:4px;vertical-align:-1px}
+.nobud{margin-top:22px;font-size:12.5px;color:#6B7280}
+.steps{display:flex;align-items:stretch;gap:0;flex:none}
+.step{flex:1;min-width:0;background:#fff;border:1px solid #E5E7EB;border-radius:14px;padding:16px 20px;display:flex;flex-direction:column;gap:8px}
+.arr{width:44px;flex:none;display:flex;align-items:center;justify-content:center;color:#A5B4FC}
+.sh{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;white-space:nowrap}
+.no{width:22px;height:22px;border-radius:50%;background:#EEF2FF;color:#4F46E5;font-size:12px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;font-family:Inter,sans-serif}
+.sd{font-weight:400;font-size:12px;color:#9CA3AF;margin-left:auto}
+.sv{font-size:14px;color:#4B5563;margin-top:4px;white-space:nowrap}.sv b{font-size:26px;color:#111827;font-weight:700}
+.dot2{color:#D1D5DB;margin:0 10px}
+.sl{font-size:13px;color:#4B5563;white-space:nowrap}.sl b{font-size:15px;color:#111827}
+.eq{font-size:11.5px;color:#9CA3AF;margin-left:8px}
+.sm2{font-size:12px;color:#9CA3AF;margin-top:auto;white-space:nowrap}
+.drvs{display:flex;flex-direction:column}
+.drv{display:flex;align-items:baseline;gap:8px;height:30px;border-bottom:1px solid #F3F4F6;white-space:nowrap}
+.drv .dt{font-size:13.5px;font-weight:600;color:#111827;width:76px;flex:none}.drv .ds{font-size:12px;color:#6B7280}
+.drv .dv{margin-left:auto;font-size:14px;font-weight:600;color:#111827}
+.drv .du{font-size:11.5px;color:#9CA3AF;font-weight:400}
+.more2{font-size:12.5px;color:#4F46E5;display:flex;align-items:center;gap:4px;margin-top:auto}
+.dtl{display:flex;flex-direction:column;flex:none}
+.dth{font-size:13px;color:#6B7280;margin:0 0 8px 2px;display:flex;align-items:center;gap:8px}
+.accs{background:#fff;border:1px solid #E5E7EB;border-radius:14px;overflow:hidden}
+.acc{height:48px;display:flex;align-items:center;gap:10px;padding:0 20px;border-bottom:1px solid #F1F2F4;white-space:nowrap}
+.acc:last-child{border-bottom:0}
+.acc b{font-size:13.5px;font-weight:600;width:190px;flex:none}.ac2{color:#9CA3AF;display:flex}
+.asum{font-size:12.5px;color:#6B7280;font-family:Inter,"Noto Sans CJK SC",sans-serif}
+.aop{margin-left:auto;font-size:12.5px;color:#4F46E5}
+.acc.open{background:#FAFAFF}
+.foot2{display:flex;align-items:center;gap:16px;font-size:11.5px;color:#9CA3AF;flex:none;margin-top:auto}
+.sticky{flex:none;height:46px;background:#fff;border:1px solid #E5E7EB;border-radius:12px;display:flex;align-items:center;gap:14px;padding:0 18px;font-size:13px;color:#4B5563;white-space:nowrap;box-shadow:0 4px 12px rgba(16,24,40,.06)}
+.sticky b{color:#111827}.sticky .kb{color:#4F46E5;font-size:16px;font-family:Inter,"Noto Sans CJK SC",sans-serif}
+.t.v2 th{height:34px;background:#fff;color:#6B7280;font-weight:600;border-bottom:1px solid #EEF0F3}
+.t.v2 td{height:30px;border-bottom:1px solid #F5F6F8}
+.t.v2 tr.g td{background:#FAFAFB;border-bottom:1px solid #F1F2F4;font-weight:600}
+.stx{font-size:12px;color:#9CA3AF}.stx.chg{color:#4F46E5}
+.ptbl{border-top:1px solid #F1F2F4}
+.thi{display:inline-flex;vertical-align:-2px;color:#9CA3AF;margin-left:3px}
+.big .num{font-size:42px}
+.dsec{display:flex;flex-direction:column;flex:none}
+.dth .sub{font-size:12px;color:#9CA3AF}
+.dl{background:#fff;border:1px solid #E5E7EB;border-radius:14px;overflow:hidden}
+.t.dl2 th{height:34px;background:#fff;color:#9CA3AF;font-weight:500;font-size:12px;border-bottom:1px solid #F1F2F4}
+.t.dl2 td{height:40px;border-bottom:1px solid #F5F6F8;font-size:13px}
+.t.dl2 tr:last-child td{border-bottom:0}
+.t.dl2 tr.hot td:first-child{box-shadow:inset 3px 0 0 #F87171}
+.t.dl2 td:first-child,.t.dl2 th:first-child{padding-left:20px}
+.t.dl2 .dn{color:#111827;font-weight:500}.t.dl2 tr.hot .dn{font-weight:700}
+.t.dl2 .why{color:#9CA3AF;font-size:12.5px;white-space:nowrap}.t.dl2 tr.hot .why{color:#374151}
+.mut{color:#9CA3AF}
+.s2{font-size:11px;color:#9CA3AF;margin-left:6px;font-weight:400}
+.mb{position:relative;display:inline-block;width:150px;height:6px;border-radius:3px;background:#EEF0F3;vertical-align:middle}
+.mb i{position:absolute;top:0;bottom:0}.mb .f{left:0;background:#C7D2FE;border-radius:3px 0 0 3px}.t.dl2 tr.hot .mb .f{background:#818CF8}
+.mb .o{background:#F87171;border-radius:0 3px 3px 0}.mb .t{top:-3px;bottom:-3px;width:1.5px;background:#374151;margin-left:-.75px}
+.neg{color:#DC2626}
+.onerow{display:flex;align-items:center;gap:18px;height:52px;padding:0 20px;background:#fff;border:1px solid #E5E7EB;border-radius:14px;margin-top:10px;white-space:nowrap;font-size:13px;color:#4B5563}
+.onerow .ot{font-weight:600;color:#111827;display:flex;align-items:center;gap:8px}.onerow .ot svg{color:#9CA3AF}
+.onerow b{color:#111827;font-family:Inter,"Noto Sans CJK SC",sans-serif}
+.onerow .sep2{width:1px;height:18px;background:#EEF0F3}
+.ex{display:inline-block;font-size:10.5px;line-height:15px;padding:0 4px;border-radius:4px;background:#FEF9C3;color:#A16207;margin-left:4px;vertical-align:1px;font-weight:400}
+.sl .mu{font-size:12px;color:#9CA3AF;margin-left:8px}
+.t.v2 td{height:29px}
+.t.v2 td:first-child,.t.v2 th:first-child{padding-left:20px}
+.t.v2 td.n,.t.v2 th.n{padding-right:16px}
+.t.v2 tr.g2 td{background:#FCFCFD;border-top:1px solid #EEF0F3}
+.stx.o{color:#B45309}
+.fseg{display:flex;gap:4px;margin-left:16px}
+.fseg span{font-size:12px;color:#6B7280;padding:2px 9px;border-radius:6px}.fseg span.on{background:#EEF2FF;color:#4F46E5;font-weight:600}
+.ti{position:relative;display:inline-flex;vertical-align:-2px;color:#9CA3AF;margin-left:3px;cursor:help;font-weight:400}
+.ti:hover,.ti.open{color:#4F46E5}
+.ti:hover::after,.ti.open::after{content:attr(data-tip);position:absolute;left:-14px;top:calc(100% + 9px);z-index:60;width:max-content;max-width:320px;white-space:normal;background:#111827;color:#F9FAFB;font-size:12px;line-height:1.65;font-weight:400;padding:9px 12px;border-radius:9px;box-shadow:0 10px 28px rgba(16,24,40,.22);text-align:left;font-family:"Noto Sans CJK SC",Inter,sans-serif;letter-spacing:0}
+.ti:hover::before,.ti.open::before{content:"";position:absolute;left:1px;top:calc(100% + 1px);border:5px solid transparent;border-bottom:8px solid #111827;z-index:61}
+.ti.r:hover::after,.ti.r.open::after{left:auto;right:-14px}
+.ti.up:hover::after,.ti.up.open::after{top:auto;bottom:calc(100% + 9px)}
+.ti.up:hover::before,.ti.up.open::before{top:auto;bottom:calc(100% + 1px);border-bottom:5px solid transparent;border-top:8px solid #111827}
+.tipon .blk,.tipon .t th,.tipon .accs,.tipon .kp,.tipon .hero,.tipon .cmpc,.tipon .acc{overflow:visible}
+.tipon .ti.open{z-index:70}
+.ovt{display:inline-block;font-size:11px;line-height:17px;padding:0 6px;border-radius:5px;background:#FEF2F2;color:#DC2626;margin-left:6px;font-family:"Noto Sans CJK SC",sans-serif;font-weight:500}
+.fbar{display:flex;align-items:center;gap:8px;padding:10px 20px;border-top:1px solid #F1F2F4;white-space:nowrap}
+.fbar .flab{font-size:12px;color:#9CA3AF;margin-right:2px}
+.chip{height:26px;padding:0 10px;border:1px solid #E5E7EB;border-radius:13px;font-size:12px;color:#4B5563;display:inline-flex;align-items:center;gap:5px;background:#fff}
+.chip i{font-style:normal;font-family:Inter,sans-serif;font-size:11px;color:#9CA3AF}
+.chip.on{border-color:#A5B4FC;background:#EEF2FF;color:#4338CA;font-weight:600}.chip.on i{color:#6366F1}
+.chip.zero{color:#C0C4CC}
+.csub{display:inline-flex;gap:4px;padding-left:6px;margin-left:2px;border-left:1px solid #EEF0F3}
+.chip.sub{height:22px;font-size:11.5px;padding:0 8px;border-style:dashed}.chip.sub.on{border-style:solid}
+.fsep{width:1px;height:18px;background:#EEF0F3;margin:0 8px}
+.sortn{margin-left:auto;font-size:12px;color:#9CA3AF;display:inline-flex;align-items:center}
+.isum{display:flex;align-items:center;gap:20px;padding:9px 20px;background:#F5F7FF;border-top:1px solid #E8EAF6;font-size:12.5px;color:#4B5563;white-space:nowrap}
+.isum b{color:#111827;font-family:Inter,"Noto Sans CJK SC",sans-serif}.isum .h{color:#4338CA;font-weight:700}
+.isum .isr{margin-left:auto;font-size:12px;color:#6B7280}
+.pager{display:flex;align-items:center;gap:12px;height:40px;padding:0 20px;border-top:1px solid #F1F2F4;font-size:12px;color:#6B7280;white-space:nowrap}
+.pager b{color:#111827;font-family:Inter,sans-serif}
+.pg{display:inline-flex;gap:3px;align-items:center}.pg span{min-width:24px;height:24px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-family:Inter,sans-serif;color:#6B7280}
+.pg span.on{border:1px solid #A5B4FC;color:#4338CA;font-weight:600;background:#EEF2FF}.pg span.dis{color:#D1D5DB}
+.psz{display:inline-flex;background:#F3F4F6;border-radius:6px;padding:2px;gap:2px}.psz span{padding:0 8px;height:20px;line-height:20px;border-radius:4px;font-family:Inter,sans-serif}
+.psz span.on{background:#fff;color:#4338CA;font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.t.pt td{height:30px}.t.pt th{height:34px;background:#fff;color:#6B7280;font-weight:600;border-bottom:1px solid #EEF0F3}
+.t.pt td:first-child,.t.pt th:first-child{padding-left:20px}.t.pt td.n,.t.pt th.n{padding-right:18px}
+.t.pt .ind{display:inline-block}
+.t.pt th .si{display:inline-flex;vertical-align:-2px;color:#D1D5DB;margin-left:2px}.t.pt th.on{color:#4F46E5}.t.pt th.on .si{color:#4F46E5}
+.t.pt tr.inf td{background:#FCFCFF}
+.typ{font-size:11.5px;color:#6B7280}.typ.o{color:#7C3AED}
+.drv.go{cursor:pointer}.drv .gx2{display:inline-flex;color:#A5B4FC;margin-left:2px;align-self:center}
+.more2[data-goto]{cursor:pointer}
+.aft{display:flex;align-items:center;gap:12px;height:40px;padding:0 20px;border-top:1px solid #F1F2F4;font-size:12px;color:#6B7280;white-space:nowrap}
+.aft b{color:#111827;font-family:Inter,sans-serif}
+</style></head><body class=""><div class="app"><header class="topnav">
+  <div class="logo">OD</div><div class="brand">AI Native OD</div>
+  <div class="vdiv"></div>
+  <div class="crumb">编制与成本规划<span class="sep">/</span>研发中心 2027 年度规划<span class="sep">/</span><b>基础架构组</b><span class="tag yellow">示例数据</span></div>
+  <div class="yr"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>规划年度 <b>2027</b> · 按自然季度<span class="tag gray">默认，待确认</span></div>
+  <div class="navright"><div class="who"><span class="ro"><svg class="i s13" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>只读</span><span>钱二<span class="rl"> · 基础架构组组长</span></span></div><div class="avatar ow">钱</div></div>
+</header><div class="body"><nav class="lefttb"><div class="tool on"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg></div><div class="tool bottom"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg></div></nav>
+<main class="page"><div class="ph"><h1>基础架构组</h1><span class="meta">数据截至 2026-10-04</span>
+  <div class="r"><span class="lnk"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>口径说明</span></div></div><section class="hero">
+ <div class="hl">
+  <div class="aitag"><svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg>AI 生成 · 依据可查</div>
+  <p class="sent">2027 年基础架构组预计 <b>1,110.5 万</b>（人工 + Agent）。现有人员和 Agent 年化 1,102.0 万；已确认的 3 人变动（入职 1 · 离职 1 · 转出 1）减少 5.5 万，Agent 调整净增加 14.0 万。基础架构组未单独设置预算。</p>
+ </div>
+ <div class="hr">
+  <div class="k">2027 全年预计成本<span class="ti" data-metric="全年预计" data-tip="只含人工成本和 Agent 日常成本；不含一次性费用（经济补偿、Agent 实施和培训费），由 HR 和 OD 统一管理；招聘、办公等成本暂未计入。"><svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></span></div>
+  <div class="big"><span class="num"><span class="ap" style="color:#6B7280">≈ </span>1,110.5<span class="ti r" data-metric="≈ 合计" data-tip="各项分别取整到 0.5 万，合计按未取整金额加总后再取整，可能差 0.5 万。"><svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></span></span><span class="u">万</span></div>
+  <div class="nobud">本组未单独设置预算 · 比现在 +8.5 万</div>
+ </div>
+</section><section class="steps">
+ <div class="step"><div class="sh"><span class="no">1</span>现在<span class="sd">截至 2026-10-04</span></div>
+  <div class="sv"><b class="num">34</b> 人<span class="dot2">·</span><b class="num">4</b> 个 Agent</div>
+  <div class="sl">当前成本（年化）<b class="num">1,102.0</b> 万<span class="ti" data-metric="当前成本（年化）" data-tip="在岗人员按职级均值（外包等按类型人均）+ 在用 Agent 的席位费和算力费，按全年 12 个月计算。"><svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></span></div>
+  <div class="sm2">编制 37 人、8 个 Agent · 空缺 2 · 外包 4</div>
+ </div>
+ <div class="arr"><svg class="i s20" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+ <div class="step"><div class="sh"><span class="no">2</span>接下来会变<span class="ti" data-metric="接下来会变" data-tip="已确认、还没生效的变动，按生效日折算到当年，增加为正、减少为负。点任一行，打开对应明细并自动选中「在途」。"><svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></span><span class="sd">已确认 6 项 · 全年净 +8.5 万</span></div>
+  <div class="drvs"><div class="drv go" data-goto="Agent 明细" data-filter="在途"><span class="dt">Agent 调整</span><span class="ds">新增 2 · 扩容 2 · 下线 1</span><span class="dv num">+14.0<span class="du"> 万</span></span><span class="gx2"><svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></span></div><div class="drv go" data-goto="人员明细" data-filter="在途"><span class="dt">3 人变动</span><span class="ds">入职 1 · 离职 1 · 转出 1</span><span class="dv num">−5.5<span class="du"> 万</span></span><span class="gx2"><svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></span></div></div>
+  <div class="more2" data-goto="人员明细" data-filter="在途">查看全部 6 条 <svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+ </div>
+ <div class="arr"><svg class="i s20" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></div>
+ <div class="step"><div class="sh"><span class="no">3</span>年底预计<span class="ti" data-metric="年底预计" data-tip="年底人数 = 现在 + 加入 − 离开（正式员工）；全年成本 = 当前成本（年化）+ 在途影响，即 ① + ②。"><svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></span><span class="sd">2027-12-31</span></div>
+  <div class="sv"><b class="num">33</b> 人<span class="dot2">·</span><b class="num">7</b> 个 Agent</div>
+  <div class="sl">全年成本 <b class="num"><span class="ap" style="color:#6B7280">≈ </span>1,110.5<span class="ti r" data-metric="≈ 合计" data-tip="各项分别取整到 0.5 万，合计按未取整金额加总后再取整，可能差 0.5 万。"><svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></span></b> 万<span class="eq">= ① + ②</span></div>
+  <div class="sm2">本组未单独设置预算</div>
+ </div>
+</section><div class="dtl"><div class="dth">明细</div><div class="accs"><div class="acc"><span class="ac2"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></span><b>季度成本</b><span class="asum">Q1 <span class="ap" style="color:#6B7280">≈ </span>278.0<span class="ti r up" data-metric="≈ 合计" data-tip="各项分别取整到 0.5 万，合计按未取整金额加总后再取整，可能差 0.5 万。"><svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></span> · Q2 <span class="ap" style="color:#6B7280">≈ </span>281.0<span class="ti r up" data-metric="≈ 合计" data-tip="各项分别取整到 0.5 万，合计按未取整金额加总后再取整，可能差 0.5 万。"><svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></span> · Q3 <span class="ap" style="color:#6B7280">≈ </span>276.0<span class="ti r up" data-metric="≈ 合计" data-tip="各项分别取整到 0.5 万，合计按未取整金额加总后再取整，可能差 0.5 万。"><svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></span> · Q4 <span class="ap" style="color:#6B7280">≈ </span>276.0<span class="ti r up" data-metric="≈ 合计" data-tip="各项分别取整到 0.5 万，合计按未取整金额加总后再取整，可能差 0.5 万。"><svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></span> 万 · 人工 + Agent</span><span class="aop">展开</span></div><div class="acc"><span class="ac2"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></span><b>人员明细</b><span class="asum">36 行，计 39 · 在岗无变动 36 · 在途 3（待入职 1 · 待离职 1 · 待转出 1）· 正式 35 · 外包 4 · 成本为区间</span><span class="aop">展开</span></div><div class="acc"><span class="ac2"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></span><b>Agent 明细</b><span class="asum">3 项 · 在用无变动 0 · 在途 3（待新增 1 · 待扩容或调整 1 · 待下线 1） · 全年 28.5 万（席位 + 算力） · 人 : AI 72 : 28（按工时）</span><span class="aop">展开</span></div></div></div><div class="foot2"><span>本页只读</span><span>示例数据 · 均为虚构</span><span style="margin-left:auto" class="lnk"><svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>数据说明</span></div></main></div></div></body></html>

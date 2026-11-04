@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>H6 P1 / P2 占位</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+/* ---- 编制与成本规划 module (wfp-*) ---- */
+.yr{position:absolute;left:640px;top:12px;height:32px;background:#F3F4F6;border-radius:8px;padding:0 12px;display:flex;align-items:center;gap:8px;font-size:12.5px;color:#374151;white-space:nowrap}
+.yr b{font-family:Inter,"Noto Sans CJK SC",sans-serif;color:#111827}
+.yr .tag{background:#fff}
+.who{display:flex;align-items:center;gap:8px;font-size:12.5px;color:#374151;white-space:nowrap}
+.who .rl{font-size:11px;color:#6B7280}
+.avatar.ow{background:#EEF2FF;color:#4F46E5;border-color:#C7D2FE}
+.page{flex:1;min-width:0;display:flex;flex-direction:column;padding:12px 20px 12px;gap:10px;background:#F6F7FB;position:relative}
+.ph{display:flex;align-items:center;gap:12px;height:34px;flex:none}
+.ph h1{font-size:19px;font-weight:700;line-height:28px;white-space:nowrap;display:flex;align-items:center;gap:8px}
+.ph .meta{font-size:12px;color:#6B7280;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.ph .meta b{color:#374151;font-weight:500}
+.ph .r{margin-left:auto;display:flex;gap:8px;align-items:center}
+.seg{display:flex;background:#EEF0F3;border-radius:8px;padding:3px;gap:2px;height:32px;flex:none}
+.seg>span{height:26px;padding:0 11px;border-radius:6px;display:flex;align-items:center;gap:5px;font-size:12.5px;color:#6B7280;white-space:nowrap}
+.seg>span.on{background:#fff;color:#4F46E5;font-weight:700;box-shadow:0 1px 2px rgba(16,24,40,.08)}
+.seg>span i{font-style:normal;font-family:Inter,sans-serif;font-size:11px;color:#9CA3AF;font-weight:500}
+.seg>span.on i{color:#6366F1}
+.seg.sm{height:28px}.seg.sm>span{height:22px;font-size:12px;padding:0 9px}
+.logn{font-size:11.5px;color:#6B7280;display:flex;align-items:center;gap:5px;white-space:nowrap}
+.ro{display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 8px;border-radius:6px;background:#F3F4F6;color:#4B5563;font-size:12px;white-space:nowrap}
+.banner{display:flex;align-items:center;gap:8px;height:34px;flex:none;padding:0 12px;border-radius:9px;font-size:12.5px;white-space:nowrap}
+.banner.v{background:#F5F3FF;border:1px solid #DDD6FE;color:#5B21B6}
+.banner.y{background:#FFFBEB;border:1px solid #FDE68A;color:#92400E}
+.banner .rt{margin-left:auto;font-size:11.5px;opacity:.85}
+/* KPI cards */
+.kcards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;flex:none}
+.kc{background:#fff;border:1px solid #E5E7EB;border-radius:12px;padding:11px 14px 10px;box-shadow:0 1px 2px rgba(16,24,40,.04);height:94px;display:flex;flex-direction:column;min-width:0}
+.kc .l{font-size:12px;color:#6B7280;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.kc .l .tag{margin-left:auto}
+.kc .vv{display:flex;align-items:baseline;gap:6px;margin-top:4px;white-space:nowrap}
+.kc .v{font-size:24px;font-weight:700;font-family:Inter,"Noto Sans CJK SC",sans-serif;letter-spacing:-.3px;line-height:30px}
+.kc .v.red{color:#DC2626}
+.kc .u{font-size:12.5px;color:#6B7280}
+.kc .sep{width:1px;height:18px;background:#E5E7EB;margin:0 8px;align-self:center}
+.kc .sub{font-size:11.5px;color:#6B7280;margin-top:auto;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.kc .sub b{font-family:Inter,"Noto Sans CJK SC",sans-serif;color:#374151;font-weight:600}
+.agv{font-size:13px;color:#7C3AED;font-family:Inter,"Noto Sans CJK SC",sans-serif;display:inline-flex;align-items:center;gap:4px}
+.agv svg{color:#8B5CF6}
+.oth{font-size:11.5px;color:#6B7280;margin-top:-4px;flex:none;display:flex;align-items:center;gap:6px;white-space:nowrap;height:16px}
+.oth b{font-family:Inter,sans-serif;color:#374151}
+/* generic card + table */
+.cardx{background:#fff;border:1px solid #E5E7EB;border-radius:12px;box-shadow:0 1px 2px rgba(16,24,40,.04);display:flex;flex-direction:column;min-height:0;overflow:hidden;position:relative}
+.ctl{display:flex;align-items:center;gap:8px;height:40px;flex:none;padding:0 14px;border-bottom:1px solid #F1F2F4;white-space:nowrap}
+.ctl h3{font-size:13.5px;font-weight:700;display:flex;align-items:center;gap:6px}
+.ctl .nt{font-size:11.5px;color:#9CA3AF}
+.ctl .rr{margin-left:auto;display:flex;align-items:center;gap:8px}
+.tabs{display:flex;gap:16px;height:40px;align-items:stretch}
+.tabs>span{display:flex;align-items:center;gap:5px;font-size:13px;color:#6B7280;border-bottom:2px solid transparent;white-space:nowrap}
+.tabs>span.on{color:#111827;font-weight:700;border-bottom-color:#4F46E5}
+.tabs>span i{font-style:normal;font-family:Inter,sans-serif;font-size:11px;color:#9CA3AF}
+table.t{width:100%;border-collapse:collapse;table-layout:fixed}
+.t th{height:30px;background:#F9FAFB;border-bottom:1px solid #E5E7EB;font-size:11.5px;font-weight:700;color:#4B5563;padding:0 10px;text-align:left;white-space:nowrap;overflow:hidden}
+.t th .s{font-weight:400;color:#9CA3AF;font-size:10.5px;margin-left:3px}
+.t th.r,.t td.r{text-align:right}
+.t td{height:28px;border-bottom:1px solid #F1F2F4;font-size:12.5px;color:#374151;padding:0 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t td.n,.t th.n{font-family:Inter,"Noto Sans CJK SC",sans-serif;font-feature-settings:"tnum";text-align:right}
+.t td.n{font-size:12px}
+.t td.mut,.t .mut{color:#9CA3AF}
+.t tr.g td{background:#F8F9FF;font-weight:700;color:#111827;border-bottom:1px solid #E8EAF6}
+.t tr.g td.n{color:#1F2937}
+.t tr.tot td{background:#F9FAFB;font-weight:700;color:#111827;border-top:1px solid #E5E7EB}
+.t tr.more td{color:#6B7280;font-size:12px;background:#FCFCFD}
+.t tr.hl td{background:#EEF2FF}
+.gx{display:inline-flex;align-items:center;gap:5px}
+.gx svg{color:#6B7280}
+.ind{display:inline-block;width:14px}
+.posn{color:#6B7280;font-weight:400;font-size:11.5px;margin-left:6px}
+.rng{color:#374151}
+.est{font-size:10px;color:#7C3AED;background:#F5F3FF;border-radius:3px;padding:0 3px;margin-left:3px;font-family:"Noto Sans CJK SC",sans-serif;font-weight:500}
+.srt{display:inline-flex;align-items:center;gap:2px;color:#4F46E5;font-weight:400;font-size:10.5px;background:#EEF2FF;border-radius:4px;padding:0 4px;line-height:16px;margin-left:4px}
+.st{font-size:11px;line-height:18px;padding:0 6px;border-radius:4px;white-space:nowrap;display:inline-block}
+.st.on{color:#6B7280;padding:0}
+.st.in{background:#F0FDF4;color:#16A34A}.st.tin{background:#EFF6FF;color:#2563EB}
+.st.out{background:#F3F4F6;color:#4B5563}
+.st.ag{background:#F5F3FF;color:#7C3AED}
+.ffoot{flex:none;height:30px;display:flex;align-items:center;gap:14px;padding:0 14px;border-top:1px solid #F1F2F4;font-size:11.5px;color:#9CA3AF;white-space:nowrap}
+.ffoot a{color:#4F46E5;text-decoration:none;display:inline-flex;align-items:center;gap:4px}
+.ffoot .rt{margin-left:auto}
+.pos{color:#16A34A}.neg{color:#DC2626}
+.tip{position:absolute;z-index:40;width:352px;background:#111827;color:#E5E7EB;border-radius:10px;padding:11px 13px 11px;font-size:12px;line-height:1.6;box-shadow:0 10px 30px rgba(16,24,40,.25)}
+.tip .ptr{position:absolute;width:10px;height:10px;background:#111827;transform:rotate(45deg)}
+.tip b{color:#fff}
+.tip .k{color:#9CA3AF}
+.tip .f{margin-top:6px;padding:6px 8px;border-radius:6px;background:#1F2937;font-family:Inter,"Noto Sans CJK SC",sans-serif;color:#F9FAFB;font-size:12px}
+.tip .ft{margin-top:6px;color:#9CA3AF;font-size:11px}
+.dot{width:8px;height:8px;border-radius:2px;display:inline-block;flex:none}
+.d-l{background:#6366F1}.d-a{background:#A78BFA}.d-o{background:#F59E0B}
+
+.road{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.road.p2{grid-template-columns:repeat(4,1fr)}
+.rc{background:#fff;border:1px dashed #D1D5DB;border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;min-height:150px}
+.rh{display:flex;align-items:center;gap:8px;font-size:14px;white-space:nowrap}
+.rb{font-size:12.5px;color:#4B5563;line-height:1.65}
+.rt2{margin-top:auto;font-size:11.5px;color:#9CA3AF}
+.sec{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:#374151;margin-top:4px}
+.sec span{font-weight:400;color:#9CA3AF;font-size:12px}
+.emp{flex:1;border:1px dashed #E5E7EB;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:#9CA3AF;font-size:12.5px;background:repeating-linear-gradient(135deg,#FAFAFB 0 10px,#F6F7FB 10px 20px)}
+.emp svg{width:28px;height:28px;color:#C4C8CF}
+</style></head><body><div class="app"><header class="topnav">
+  <div class="logo">OD</div><div class="brand">AI Native OD</div>
+  <div class="vdiv"></div>
+  <div class="crumb">编制与成本规划<span class="sep">/</span>研发中心 2027 年度规划<span class="sep">/</span><b>后续规划</b><span class="tag yellow">示例数据</span></div>
+  <div class="yr"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>规划年度 <b>2027</b> · 按自然季度<span class="tag gray">默认，待确认</span></div>
+  <div class="navright"><div class="who"><span>黄<span class="rl"> · OD / HRBP · HR 管理员</span></span></div><div class="avatar">黄</div></div>
+</header><div class="body"><nav class="lefttb"><div class="tool"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg></div><div class="tool"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg></div><div class="tool"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg></div><div class="sp"></div><div class="tool"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></div><div class="tool on"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/></svg></div><div class="tool bottom"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg></div></nav>
+<main class="page" style="gap:12px">
+ <div class="ph"><h1>后续规划（P1 / P2）</h1><span class="meta">本期只占位，不开发；P0 的数据模型先给这些功能留好位置</span></div>
+ <div class="sec">P1<span>开放业务负责人提报和劳动力调整</span></div>
+ <div class="road"><div class="rc"><div class="rh"><span class="tag indigo">P1</span><b>业务负责人提报与劳动力调整</b><span class="tag gray" style="margin-left:auto">本期不开发</span></div><div class="rb">按季度增减人和 Agent、发起调动，关联 KR；目标是年底劳动力成本控制在预算内。</div><div class="rt2">P0 预留：变动记录带「来源：导入 / 提报」</div></div><div class="rc"><div class="rh"><span class="tag indigo">P1</span><b>财务预算 Excel 导入</b><span class="tag gray" style="margin-left:auto">本期不开发</span></div><div class="rb">导入财务给的部门预算，替代 P0 手工录入的预算总包。</div><div class="rt2">依赖：预算是否拆到部门（待定）</div></div><div class="rc"><div class="rh"><span class="tag indigo">P1</span><b>预算对齐视图</b><span class="tag gray" style="margin-left:auto">本期不开发</span></div><div class="rb">按部门看超支 / 结余，AI 生成说明；审批人只看部门级对比。</div><div class="rt2">AI 只用匿名汇总</div></div></div>
+ <div class="sec">P2<span>审批、执行跟踪和版本管理</span></div>
+ <div class="road p2"><div class="rc"><div class="rh"><span class="tag gray">P2</span><b>审批</b><span class="tag gray" style="margin-left:auto">本期不开发</span></div><div class="rb">场景和提报走审批，审批前保密。</div><div class="rt2">P0 预留：场景带版本号</div></div><div class="rc"><div class="rh"><span class="tag gray">P2</span><b>执行跟踪与偏差提醒</b><span class="tag gray" style="margin-left:auto">本期不开发</span></div><div class="rb">按月对比计划和实际，偏差超过阈值时提醒。</div><div class="rt2"></div></div><div class="rc"><div class="rh"><span class="tag gray">P2</span><b>版本管理与滚动预测</b><span class="tag gray" style="margin-left:auto">本期不开发</span></div><div class="rb">预算版锁定，每季度滚动预测；预算、预测、实际三个数对比。</div><div class="rt2"></div></div><div class="rc"><div class="rh"><span class="tag gray">P2</span><b>接入组织健康度监测</b><span class="tag gray" style="margin-left:auto">本期不开发</span></div><div class="rb">和组织健康度指标联动。</div><div class="rt2"></div></div></div>
+ <div class="emp"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="6" width="20" height="8" rx="1"/><path d="M17 14v7"/><path d="M7 14v7"/><path d="M17 3v3"/><path d="M7 3v3"/><path d="M10 14 2.3 6.3"/><path d="m14 6 7.7 7.7"/><path d="m8 6 8 8"/></svg><div>这些入口在 P0 中不显示给业务负责人；OD 只看到这张占位页</div></div>
+</main></div></div></body></html>

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>H2 OD 底座</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+/* ---- 编制与成本规划 module (wfp-*) ---- */
+.yr{position:absolute;left:640px;top:12px;height:32px;background:#F3F4F6;border-radius:8px;padding:0 12px;display:flex;align-items:center;gap:8px;font-size:12.5px;color:#374151;white-space:nowrap}
+.yr b{font-family:Inter,"Noto Sans CJK SC",sans-serif;color:#111827}
+.yr .tag{background:#fff}
+.who{display:flex;align-items:center;gap:8px;font-size:12.5px;color:#374151;white-space:nowrap}
+.who .rl{font-size:11px;color:#6B7280}
+.avatar.ow{background:#EEF2FF;color:#4F46E5;border-color:#C7D2FE}
+.page{flex:1;min-width:0;display:flex;flex-direction:column;padding:12px 20px 12px;gap:10px;background:#F6F7FB;position:relative}
+.ph{display:flex;align-items:center;gap:12px;height:34px;flex:none}
+.ph h1{font-size:19px;font-weight:700;line-height:28px;white-space:nowrap;display:flex;align-items:center;gap:8px}
+.ph .meta{font-size:12px;color:#6B7280;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.ph .meta b{color:#374151;font-weight:500}
+.ph .r{margin-left:auto;display:flex;gap:8px;align-items:center}
+.seg{display:flex;background:#EEF0F3;border-radius:8px;padding:3px;gap:2px;height:32px;flex:none}
+.seg>span{height:26px;padding:0 11px;border-radius:6px;display:flex;align-items:center;gap:5px;font-size:12.5px;color:#6B7280;white-space:nowrap}
+.seg>span.on{background:#fff;color:#4F46E5;font-weight:700;box-shadow:0 1px 2px rgba(16,24,40,.08)}
+.seg>span i{font-style:normal;font-family:Inter,sans-serif;font-size:11px;color:#9CA3AF;font-weight:500}
+.seg>span.on i{color:#6366F1}
+.seg.sm{height:28px}.seg.sm>span{height:22px;font-size:12px;padding:0 9px}
+.logn{font-size:11.5px;color:#6B7280;display:flex;align-items:center;gap:5px;white-space:nowrap}
+.ro{display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 8px;border-radius:6px;background:#F3F4F6;color:#4B5563;font-size:12px;white-space:nowrap}
+.banner{display:flex;align-items:center;gap:8px;height:34px;flex:none;padding:0 12px;border-radius:9px;font-size:12.5px;white-space:nowrap}
+.banner.v{background:#F5F3FF;border:1px solid #DDD6FE;color:#5B21B6}
+.banner.y{background:#FFFBEB;border:1px solid #FDE68A;color:#92400E}
+.banner .rt{margin-left:auto;font-size:11.5px;opacity:.85}
+/* KPI cards */
+.kcards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;flex:none}
+.kc{background:#fff;border:1px solid #E5E7EB;border-radius:12px;padding:11px 14px 10px;box-shadow:0 1px 2px rgba(16,24,40,.04);height:94px;display:flex;flex-direction:column;min-width:0}
+.kc .l{font-size:12px;color:#6B7280;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.kc .l .tag{margin-left:auto}
+.kc .vv{display:flex;align-items:baseline;gap:6px;margin-top:4px;white-space:nowrap}
+.kc .v{font-size:24px;font-weight:700;font-family:Inter,"Noto Sans CJK SC",sans-serif;letter-spacing:-.3px;line-height:30px}
+.kc .v.red{color:#DC2626}
+.kc .u{font-size:12.5px;color:#6B7280}
+.kc .sep{width:1px;height:18px;background:#E5E7EB;margin:0 8px;align-self:center}
+.kc .sub{font-size:11.5px;color:#6B7280;margin-top:auto;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.kc .sub b{font-family:Inter,"Noto Sans CJK SC",sans-serif;color:#374151;font-weight:600}
+.agv{font-size:13px;color:#7C3AED;font-family:Inter,"Noto Sans CJK SC",sans-serif;display:inline-flex;align-items:center;gap:4px}
+.agv svg{color:#8B5CF6}
+.oth{font-size:11.5px;color:#6B7280;margin-top:-4px;flex:none;display:flex;align-items:center;gap:6px;white-space:nowrap;height:16px}
+.oth b{font-family:Inter,sans-serif;color:#374151}
+/* generic card + table */
+.cardx{background:#fff;border:1px solid #E5E7EB;border-radius:12px;box-shadow:0 1px 2px rgba(16,24,40,.04);display:flex;flex-direction:column;min-height:0;overflow:hidden;position:relative}
+.ctl{display:flex;align-items:center;gap:8px;height:40px;flex:none;padding:0 14px;border-bottom:1px solid #F1F2F4;white-space:nowrap}
+.ctl h3{font-size:13.5px;font-weight:700;display:flex;align-items:center;gap:6px}
+.ctl .nt{font-size:11.5px;color:#9CA3AF}
+.ctl .rr{margin-left:auto;display:flex;align-items:center;gap:8px}
+.tabs{display:flex;gap:16px;height:40px;align-items:stretch}
+.tabs>span{display:flex;align-items:center;gap:5px;font-size:13px;color:#6B7280;border-bottom:2px solid transparent;white-space:nowrap}
+.tabs>span.on{color:#111827;font-weight:700;border-bottom-color:#4F46E5}
+.tabs>span i{font-style:normal;font-family:Inter,sans-serif;font-size:11px;color:#9CA3AF}
+table.t{width:100%;border-collapse:collapse;table-layout:fixed}
+.t th{height:30px;background:#F9FAFB;border-bottom:1px solid #E5E7EB;font-size:11.5px;font-weight:700;color:#4B5563;padding:0 10px;text-align:left;white-space:nowrap;overflow:hidden}
+.t th .s{font-weight:400;color:#9CA3AF;font-size:10.5px;margin-left:3px}
+.t th.r,.t td.r{text-align:right}
+.t td{height:28px;border-bottom:1px solid #F1F2F4;font-size:12.5px;color:#374151;padding:0 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t td.n,.t th.n{font-family:Inter,"Noto Sans CJK SC",sans-serif;font-feature-settings:"tnum";text-align:right}
+.t td.n{font-size:12px}
+.t td.mut,.t .mut{color:#9CA3AF}
+.t tr.g td{background:#F8F9FF;font-weight:700;color:#111827;border-bottom:1px solid #E8EAF6}
+.t tr.g td.n{color:#1F2937}
+.t tr.tot td{background:#F9FAFB;font-weight:700;color:#111827;border-top:1px solid #E5E7EB}
+.t tr.more td{color:#6B7280;font-size:12px;background:#FCFCFD}
+.t tr.hl td{background:#EEF2FF}
+.gx{display:inline-flex;align-items:center;gap:5px}
+.gx svg{color:#6B7280}
+.ind{display:inline-block;width:14px}
+.posn{color:#6B7280;font-weight:400;font-size:11.5px;margin-left:6px}
+.rng{color:#374151}
+.est{font-size:10px;color:#7C3AED;background:#F5F3FF;border-radius:3px;padding:0 3px;margin-left:3px;font-family:"Noto Sans CJK SC",sans-serif;font-weight:500}
+.srt{display:inline-flex;align-items:center;gap:2px;color:#4F46E5;font-weight:400;font-size:10.5px;background:#EEF2FF;border-radius:4px;padding:0 4px;line-height:16px;margin-left:4px}
+.st{font-size:11px;line-height:18px;padding:0 6px;border-radius:4px;white-space:nowrap;display:inline-block}
+.st.on{color:#6B7280;padding:0}
+.st.in{background:#F0FDF4;color:#16A34A}.st.tin{background:#EFF6FF;color:#2563EB}
+.st.out{background:#F3F4F6;color:#4B5563}
+.st.ag{background:#F5F3FF;color:#7C3AED}
+.ffoot{flex:none;height:30px;display:flex;align-items:center;gap:14px;padding:0 14px;border-top:1px solid #F1F2F4;font-size:11.5px;color:#9CA3AF;white-space:nowrap}
+.ffoot a{color:#4F46E5;text-decoration:none;display:inline-flex;align-items:center;gap:4px}
+.ffoot .rt{margin-left:auto}
+.pos{color:#16A34A}.neg{color:#DC2626}
+.tip{position:absolute;z-index:40;width:352px;background:#111827;color:#E5E7EB;border-radius:10px;padding:11px 13px 11px;font-size:12px;line-height:1.6;box-shadow:0 10px 30px rgba(16,24,40,.25)}
+.tip .ptr{position:absolute;width:10px;height:10px;background:#111827;transform:rotate(45deg)}
+.tip b{color:#fff}
+.tip .k{color:#9CA3AF}
+.tip .f{margin-top:6px;padding:6px 8px;border-radius:6px;background:#1F2937;font-family:Inter,"Noto Sans CJK SC",sans-serif;color:#F9FAFB;font-size:12px}
+.tip .ft{margin-top:6px;color:#9CA3AF;font-size:11px}
+.dot{width:8px;height:8px;border-radius:2px;display:inline-block;flex:none}
+.d-l{background:#6366F1}.d-a{background:#A78BFA}.d-o{background:#F59E0B}
+
+.metrics.wm{height:auto;padding:0;border:0;background:transparent;gap:10px;flex:none}
+.metrics.wm .metric{padding:9px 12px 8px;min-width:0}
+.metrics.wm .metric .v{margin-top:1px}
+.metrics.wm .metric .v b{font-size:21px;line-height:28px}
+.metrics.wm .metric.wide{flex:1.75}.metrics.wm .metric.ag{flex:1.3}
+.ms{font-size:11px;color:#6B7280;white-space:nowrap;display:flex;align-items:center;gap:5px;margin-top:1px}
+.sl{color:#D1D5DB;margin:0 2px;font-size:16px}.u2{font-size:12px;color:#6B7280;margin-left:2px}
+.t.tr td{height:28px}.t.tr tr.sub td{background:#FCFCFE;color:#4B5563}.t.tr tr.sub td.n b{font-weight:600}
+.t.sm2 th{height:28px}.t.sm2 td{height:27px}
+.ast{color:#4F46E5;margin-left:1px}
+.notes{flex:none;display:flex;gap:16px;align-items:center;font-size:11.5px;color:#6B7280;height:16px;white-space:nowrap}
+.notes span{display:inline-flex;align-items:center;gap:5px}
+</style></head><body><div class="app"><header class="topnav">
+  <div class="logo">OD</div><div class="brand">AI Native OD</div>
+  <div class="vdiv"></div>
+  <div class="crumb">编制与成本规划<span class="sep">/</span>研发中心 2027 年度规划<span class="sep">/</span><b>OD 底座</b><span class="tag yellow">示例数据</span></div>
+  <div class="yr"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>规划年度 <b>2027</b> · 按自然季度<span class="tag gray">默认，待确认</span></div>
+  <div class="navright"><div class="who"><span>黄<span class="rl"> · OD / HRBP · HR 管理员</span></span></div><div class="avatar">黄</div></div>
+</header><div class="body"><nav class="lefttb"><div class="tool on"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg></div><div class="tool"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg></div><div class="tool"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg></div><div class="sp"></div><div class="tool"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></div><div class="tool"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/></svg></div><div class="tool bottom"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg></div></nav>
+<main class="page">
+ <div class="ph"><h1>OD 底座 · 研发中心</h1><span class="meta">基线 + 已确认在途 · 数据截至 <b class="num">2026-10-04</b> · 花名册 <b class="num">486</b> 人 · 在途 <b class="num">27</b> 笔</span>
+  <div class="r"><button class="btn sm"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>导入数据</button><button class="btn sm"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>维护配置</button><button class="btn sm primary"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>进入场景</button></div></div>
+ <section class="metrics wm"><div class="metric "><div class="l">编制数</div><div class="v"><b class="num">507</b></div><div class="ms">正式员工</div></div><div class="metric "><div class="l">在岗</div><div class="v"><b class="num">486</b></div><div class="ms">截至 2026-10-04</div></div><div class="metric "><div class="l">在途</div><div class="v"><b class="num">11</b></div><div class="ms">不含内部调动 2 笔</div></div><div class="metric "><div class="l">编制占用</div><div class="v"><b class="num">497</b></div><div class="ms">在岗 + 在途</div></div><div class="metric "><div class="l">空缺</div><div class="v"><b class="num">10</b></div><div class="ms">编制 − 占用</div></div><div class="metric "><div class="l">外包 / 实习 / 顾问</div><div class="v"><b class="num">29</b><span class="sl">/</span><b class="num">14</b><span class="sl">/</span><b class="num">3</b></div><div class="ms">单列，不占编制</div></div><div class="metric ag"><div class="l">Agent</div><div class="v"><b class="num">15</b><span class="u2">在用</span><span class="sl">/</span><b class="num">25</b><span class="u2">编制</span></div><div class="ms">在途 7 个 · 下线 1 个</div></div><div class="metric wide"><div class="l">全年预计 vs 预算总包</div><div class="v"><b class="num">16,095.5</b><span class="u2">万</span></div><div class="ms">预算总包 16,000.0 万 · <span class="tag red">超支 95.5 万</span></div></div></section>
+ <div class="cardx" style="flex:none">
+ <div class="ctl"><h3>部门树</h3><span class="nt">基线 + 已确认在途 · 成本单位：万元 · 当季 = 2027 Q1（规划首季） · 部门汇总行可按成本排序（当前：全年预计从高到低）</span>
+  <span class="rr"><span class="nt">* 公司合计不重复计算内部调动（2 笔），所以与各部门相加不同</span></span></div>
+ <table class="t tr"><colgroup><col style="width:206px"><col><col><col><col><col style="width:70px"><col style="width:112px"><col style="width:116px"><col style="width:120px"><col style="width:104px"><col style="width:104px"><col style="width:120px"></colgroup><thead><tr><th>部门</th><th class="n">编制</th><th class="n">在岗</th><th class="n">在途</th><th class="n">占用</th><th class="n">空缺</th><th class="n">外包/实习/顾问</th><th class="n">Agent 在用/编制</th><th class="n">当前成本<span class="s">年化</span></th><th class="n">在途影响<span class="s">当季</span></th><th class="n">在途影响<span class="s">全年</span></th><th class="n">全年预计<span class="srt"><svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg></span></th></tr></thead><tbody><tr class="g"><td><span class="gx" style="padding-left:0px"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg><b style="font-weight:700">研发中心（合计）</b></span></td><td class="n">507</td><td class="n">486</td><td class="n">11<span class="ast">*</span></td><td class="n">497</td><td class="n">10</td><td class="n">29 / 14 / 3</td><td class="n">15 / 25</td><td class="n">15,896.5</td><td class="n">+55.5</td><td class="n">+199.0</td><td class="n"><b>16,095.5</b></td></tr><tr class=""><td><span class="gx" style="padding-left:20px"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg><b style="font-weight:500">产品研发一部</b></span></td><td class="n">156</td><td class="n">150</td><td class="n">4</td><td class="n">154</td><td class="n">2</td><td class="n">6 / 4 / 0</td><td class="n">4 / 6</td><td class="n">4,791.0</td><td class="n">+24.5</td><td class="n">+68.0</td><td class="n"><b>4,859.0</b></td></tr><tr class=""><td><span class="gx" style="padding-left:20px"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg><b style="font-weight:500">产品研发二部</b></span></td><td class="n">134</td><td class="n">131</td><td class="n">2</td><td class="n">133</td><td class="n">1</td><td class="n">5 / 3 / 1</td><td class="n">2 / 3</td><td class="n">4,169.0</td><td class="n">+5.0</td><td class="n">+27.5</td><td class="n"><b>4,196.5</b></td></tr><tr class=""><td><span class="gx" style="padding-left:20px"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg><b style="font-weight:500">质量与交付部</b></span></td><td class="n">80</td><td class="n">77</td><td class="n">3</td><td class="n">80</td><td class="n">0</td><td class="n">12 / 2 / 0</td><td class="n">2 / 4</td><td class="n">2,547.0</td><td class="n">+4.0</td><td class="n">+40.5</td><td class="n"><b>2,587.0</b></td></tr><tr class=""><td><span class="gx" style="padding-left:20px"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg><b style="font-weight:500">数据智能部</b></span></td><td class="n">70</td><td class="n">65</td><td class="n">1</td><td class="n">66</td><td class="n">4</td><td class="n">2 / 3 / 1</td><td class="n">1 / 2</td><td class="n">2,213.0</td><td class="n">+4.5</td><td class="n">+15.5</td><td class="n"><b>2,228.5</b></td></tr><tr class=""><td><span class="gx" style="padding-left:20px"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg><b style="font-weight:500">平台部</b></span></td><td class="n">66</td><td class="n">62</td><td class="n">3</td><td class="n">65</td><td class="n">1</td><td class="n">4 / 2 / 1</td><td class="n">6 / 10</td><td class="n">2,037.0</td><td class="n">+17.5</td><td class="n">+47.5</td><td class="n"><b>2,084.5</b></td></tr><tr class="sub"><td><span class="gx" style="padding-left:40px"><span style="display:inline-block;width:14px"></span><b style="font-weight:500">平台部直属</b></span></td><td class="n">2</td><td class="n">2</td><td class="n">0</td><td class="n">2</td><td class="n">0</td><td class="n">0 / 0 / 1</td><td class="n">2 / 2</td><td class="n">159.0</td><td class="n">—</td><td class="n">—</td><td class="n"><b>159.0</b></td></tr><tr class="sub"><td><span class="gx" style="padding-left:40px"><span style="display:inline-block;width:14px"></span><b style="font-weight:500">基础架构组</b></span></td><td class="n">37</td><td class="n">34</td><td class="n">1</td><td class="n">35</td><td class="n">2</td><td class="n">4 / 0 / 0</td><td class="n">4 / 8</td><td class="n">1,102.0</td><td class="n">+9.0</td><td class="n">+11.5</td><td class="n"><b>1,113.5</b></td></tr><tr class="sub"><td><span class="gx" style="padding-left:40px"><span style="display:inline-block;width:14px"></span><b style="font-weight:500">数据平台组</b></span></td><td class="n">27</td><td class="n">26</td><td class="n">2</td><td class="n">28</td><td class="n"><span class="tag red">超编 1</span></td><td class="n">0 / 2 / 0</td><td class="n">0 / 0</td><td class="n">776.0</td><td class="n">+8.5</td><td class="n">+36.0</td><td class="n"><b>812.0</b></td></tr><tr class=""><td><span class="gx" style="padding-left:20px"><span style="display:inline-block;width:14px"></span><b style="font-weight:500">研发中心直属</b></span></td><td class="n">1</td><td class="n">1</td><td class="n">0</td><td class="n">1</td><td class="n">0</td><td class="n">0 / 0 / 0</td><td class="n">0 / 0</td><td class="n">140.0</td><td class="n">—</td><td class="n">—</td><td class="n"><b>140.0</b></td></tr></tbody></table>
+</div>
+ <div style="flex:1;min-height:0;display:flex;gap:10px"><div class="cardx" style="flex:1">
+ <div class="ctl"><h3>成本拆分</h3><span class="nt">2027 · 万元 · 精确估算，取整到 0.5 万</span></div>
+ <table class="t sm2"><colgroup><col style="width:200px"><col><col><col><col><col style="width:88px"></colgroup>
+ <thead><tr><th></th><th class="n">Q1</th><th class="n">Q2</th><th class="n">Q3</th><th class="n">Q4</th><th class="n">全年</th></tr></thead><tbody>
+ <tr class=""><td><span class="gx"><i class="dot d-l"></i>人工 · 正式员工</span></td><td class="n">3,729.5</td><td class="n">3,784.5</td><td class="n">3,822.5</td><td class="n">3,822.5</td><td class="n"><b>15,159.5</b></td></tr>
+ <tr class=""><td><span class="gx"><i class="dot d-l" style="opacity:.55"></i>人工 · 外包/实习/顾问</span></td><td class="n">206.0</td><td class="n">208.0</td><td class="n">210.5</td><td class="n">210.5</td><td class="n"><b>835.0</b></td></tr>
+ <tr class=""><td><span class="gx"><i class="dot d-a"></i>Agent · 席位费</span></td><td class="n">6.5</td><td class="n">8.0</td><td class="n">8.5</td><td class="n">8.5</td><td class="n"><b>31.0</b></td></tr>
+ <tr class=""><td><span class="gx"><i class="dot d-a" style="opacity:.6"></i>Agent · 算力费</span></td><td class="n">9.0</td><td class="n">12.0</td><td class="n">12.0</td><td class="n">12.0</td><td class="n"><b>45.5</b></td></tr>
+ <tr class=""><td><span class="gx"><i class="dot d-o"></i>一次性 · Agent 实施/培训</span></td><td class="n">5.0</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n"><b>5.0</b></td></tr>
+ <tr class=""><td><span class="gx"><i class="dot d-o" style="opacity:.6"></i>一次性 · 经济补偿</span></td><td class="n">19.5</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n"><b>19.5</b></td></tr>
+ <tr class="tot"><td>合计</td><td class="n">3,975.0</td><td class="n">4,013.0</td><td class="n">4,053.5</td><td class="n">4,053.5</td><td class="n"><b>16,095.5</b></td></tr>
+ </tbody></table>
+ <div class="ffoot" style="margin-top:auto"><span>经济补偿只存部门、季度汇总，个人补偿估算不存储、不展示</span><span class="rt">合计按未取整金额加总后取整</span></div>
+</div><div class="cardx" style="width:676px;flex:none">
+ <div class="ctl"><h3>在途变动</h3><div class="seg sm"><span>全部<i>27</i></span><span>人员<i>22</i></span><span>Agent<i>5</i></span><span class="on">离职<i>7</i></span></div>
+  <span class="rr"><span class="tag violet"><svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>补偿标记仅 OD / HR 可见</span></span></div>
+ <table class="t sm2"><colgroup><col style="width:100px"><col style="width:58px"><col style="width:72px"><col><col style="width:44px"><col style="width:76px"><col style="width:64px"><col style="width:70px"></colgroup>
+ <thead><tr><th>生效日</th><th>类型</th><th>姓名</th><th>部门</th><th>职级</th><th>补偿标记</th><th class="n">当季</th><th class="n">全年</th></tr></thead><tbody><tr><td class="num" style="font-size:12px">2027-01-31</td><td><span class="st out">离职</span></td><td><b style="font-weight:500;color:#111827">吕二十三</b></td><td>产品研发一部</td><td class="num">P5</td><td><span class="tag gray">不计</span></td><td class="n">−4.0</td><td class="n">−21.5</td></tr><tr><td class="num" style="font-size:12px">2027-01-31</td><td><span class="st out">离职</span></td><td><b style="font-weight:500;color:#111827">戚三十三</b></td><td>质量与交付部</td><td class="num">P5</td><td><span class="tag gray">不计</span></td><td class="n">−4.0</td><td class="n">−21.5</td></tr><tr><td class="num" style="font-size:12px">2027-02-28</td><td><span class="st out">离职</span></td><td><b style="font-weight:500;color:#111827">蒋十二</b></td><td>平台部 / 基础架构组</td><td class="num">P5</td><td><span class="tag gray">不计</span></td><td class="n">−2.0</td><td class="n">−19.5</td></tr><tr><td class="num" style="font-size:12px">2027-02-28</td><td><span class="st out">离职</span></td><td><b style="font-weight:500;color:#111827">魏三十</b></td><td>产品研发二部</td><td class="num">P6</td><td><span class="tag gray">不计</span></td><td class="n">−2.5</td><td class="n">−25.0</td></tr><tr><td class="num" style="font-size:12px">2027-03-31</td><td><span class="st out">离职</span></td><td><b style="font-weight:500;color:#111827">何二十一</b></td><td>平台部 / 数据平台组</td><td class="num">P5</td><td><span class="tag yellow">N</span></td><td class="n"><span class=mut>≈0</span></td><td class="n">−17.5</td></tr><tr><td class="num" style="font-size:12px">2027-03-31</td><td><span class="st out">离职</span></td><td><b style="font-weight:500;color:#111827">曹二十六</b></td><td>产品研发一部</td><td class="num">P6</td><td><span class="tag yellow">N</span></td><td class="n"><span class=mut>≈0</span></td><td class="n">−22.5</td></tr><tr><td class="num" style="font-size:12px">2027-05-31</td><td><span class="st out">离职</span></td><td><b style="font-weight:500;color:#111827">华二十八</b></td><td>产品研发一部</td><td class="num">P5</td><td><span class="tag gray">不计</span></td><td class="n"><span class=mut>≈0</span></td><td class="n">−14.0</td></tr></tbody></table>
+ <div class="ffoot" style="margin-top:auto"><span>离职类型不上传，只存补偿标记；补偿只计入部门一次性成本</span><span class="rt">成本影响为精确估算 · 万元</span></div>
+</div></div>
+ <div class="notes"><span><svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>编制数只算正式员工；外包、实习、顾问单列人数和成本</span><span><svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>成本按职级均值估算，非个人实际薪资</span><span>OD 看到的人员行为精确估算</span><span style="margin-left:auto;color:#9CA3AF">示例数据 · 均为虚构</span></div>
+</main></div></div></body></html>

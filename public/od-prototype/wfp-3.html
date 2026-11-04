@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>H3 场景与时间轴</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+/* ---- 编制与成本规划 module (wfp-*) ---- */
+.yr{position:absolute;left:640px;top:12px;height:32px;background:#F3F4F6;border-radius:8px;padding:0 12px;display:flex;align-items:center;gap:8px;font-size:12.5px;color:#374151;white-space:nowrap}
+.yr b{font-family:Inter,"Noto Sans CJK SC",sans-serif;color:#111827}
+.yr .tag{background:#fff}
+.who{display:flex;align-items:center;gap:8px;font-size:12.5px;color:#374151;white-space:nowrap}
+.who .rl{font-size:11px;color:#6B7280}
+.avatar.ow{background:#EEF2FF;color:#4F46E5;border-color:#C7D2FE}
+.page{flex:1;min-width:0;display:flex;flex-direction:column;padding:12px 20px 12px;gap:10px;background:#F6F7FB;position:relative}
+.ph{display:flex;align-items:center;gap:12px;height:34px;flex:none}
+.ph h1{font-size:19px;font-weight:700;line-height:28px;white-space:nowrap;display:flex;align-items:center;gap:8px}
+.ph .meta{font-size:12px;color:#6B7280;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.ph .meta b{color:#374151;font-weight:500}
+.ph .r{margin-left:auto;display:flex;gap:8px;align-items:center}
+.seg{display:flex;background:#EEF0F3;border-radius:8px;padding:3px;gap:2px;height:32px;flex:none}
+.seg>span{height:26px;padding:0 11px;border-radius:6px;display:flex;align-items:center;gap:5px;font-size:12.5px;color:#6B7280;white-space:nowrap}
+.seg>span.on{background:#fff;color:#4F46E5;font-weight:700;box-shadow:0 1px 2px rgba(16,24,40,.08)}
+.seg>span i{font-style:normal;font-family:Inter,sans-serif;font-size:11px;color:#9CA3AF;font-weight:500}
+.seg>span.on i{color:#6366F1}
+.seg.sm{height:28px}.seg.sm>span{height:22px;font-size:12px;padding:0 9px}
+.logn{font-size:11.5px;color:#6B7280;display:flex;align-items:center;gap:5px;white-space:nowrap}
+.ro{display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 8px;border-radius:6px;background:#F3F4F6;color:#4B5563;font-size:12px;white-space:nowrap}
+.banner{display:flex;align-items:center;gap:8px;height:34px;flex:none;padding:0 12px;border-radius:9px;font-size:12.5px;white-space:nowrap}
+.banner.v{background:#F5F3FF;border:1px solid #DDD6FE;color:#5B21B6}
+.banner.y{background:#FFFBEB;border:1px solid #FDE68A;color:#92400E}
+.banner .rt{margin-left:auto;font-size:11.5px;opacity:.85}
+/* KPI cards */
+.kcards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;flex:none}
+.kc{background:#fff;border:1px solid #E5E7EB;border-radius:12px;padding:11px 14px 10px;box-shadow:0 1px 2px rgba(16,24,40,.04);height:94px;display:flex;flex-direction:column;min-width:0}
+.kc .l{font-size:12px;color:#6B7280;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.kc .l .tag{margin-left:auto}
+.kc .vv{display:flex;align-items:baseline;gap:6px;margin-top:4px;white-space:nowrap}
+.kc .v{font-size:24px;font-weight:700;font-family:Inter,"Noto Sans CJK SC",sans-serif;letter-spacing:-.3px;line-height:30px}
+.kc .v.red{color:#DC2626}
+.kc .u{font-size:12.5px;color:#6B7280}
+.kc .sep{width:1px;height:18px;background:#E5E7EB;margin:0 8px;align-self:center}
+.kc .sub{font-size:11.5px;color:#6B7280;margin-top:auto;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.kc .sub b{font-family:Inter,"Noto Sans CJK SC",sans-serif;color:#374151;font-weight:600}
+.agv{font-size:13px;color:#7C3AED;font-family:Inter,"Noto Sans CJK SC",sans-serif;display:inline-flex;align-items:center;gap:4px}
+.agv svg{color:#8B5CF6}
+.oth{font-size:11.5px;color:#6B7280;margin-top:-4px;flex:none;display:flex;align-items:center;gap:6px;white-space:nowrap;height:16px}
+.oth b{font-family:Inter,sans-serif;color:#374151}
+/* generic card + table */
+.cardx{background:#fff;border:1px solid #E5E7EB;border-radius:12px;box-shadow:0 1px 2px rgba(16,24,40,.04);display:flex;flex-direction:column;min-height:0;overflow:hidden;position:relative}
+.ctl{display:flex;align-items:center;gap:8px;height:40px;flex:none;padding:0 14px;border-bottom:1px solid #F1F2F4;white-space:nowrap}
+.ctl h3{font-size:13.5px;font-weight:700;display:flex;align-items:center;gap:6px}
+.ctl .nt{font-size:11.5px;color:#9CA3AF}
+.ctl .rr{margin-left:auto;display:flex;align-items:center;gap:8px}
+.tabs{display:flex;gap:16px;height:40px;align-items:stretch}
+.tabs>span{display:flex;align-items:center;gap:5px;font-size:13px;color:#6B7280;border-bottom:2px solid transparent;white-space:nowrap}
+.tabs>span.on{color:#111827;font-weight:700;border-bottom-color:#4F46E5}
+.tabs>span i{font-style:normal;font-family:Inter,sans-serif;font-size:11px;color:#9CA3AF}
+table.t{width:100%;border-collapse:collapse;table-layout:fixed}
+.t th{height:30px;background:#F9FAFB;border-bottom:1px solid #E5E7EB;font-size:11.5px;font-weight:700;color:#4B5563;padding:0 10px;text-align:left;white-space:nowrap;overflow:hidden}
+.t th .s{font-weight:400;color:#9CA3AF;font-size:10.5px;margin-left:3px}
+.t th.r,.t td.r{text-align:right}
+.t td{height:28px;border-bottom:1px solid #F1F2F4;font-size:12.5px;color:#374151;padding:0 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t td.n,.t th.n{font-family:Inter,"Noto Sans CJK SC",sans-serif;font-feature-settings:"tnum";text-align:right}
+.t td.n{font-size:12px}
+.t td.mut,.t .mut{color:#9CA3AF}
+.t tr.g td{background:#F8F9FF;font-weight:700;color:#111827;border-bottom:1px solid #E8EAF6}
+.t tr.g td.n{color:#1F2937}
+.t tr.tot td{background:#F9FAFB;font-weight:700;color:#111827;border-top:1px solid #E5E7EB}
+.t tr.more td{color:#6B7280;font-size:12px;background:#FCFCFD}
+.t tr.hl td{background:#EEF2FF}
+.gx{display:inline-flex;align-items:center;gap:5px}
+.gx svg{color:#6B7280}
+.ind{display:inline-block;width:14px}
+.posn{color:#6B7280;font-weight:400;font-size:11.5px;margin-left:6px}
+.rng{color:#374151}
+.est{font-size:10px;color:#7C3AED;background:#F5F3FF;border-radius:3px;padding:0 3px;margin-left:3px;font-family:"Noto Sans CJK SC",sans-serif;font-weight:500}
+.srt{display:inline-flex;align-items:center;gap:2px;color:#4F46E5;font-weight:400;font-size:10.5px;background:#EEF2FF;border-radius:4px;padding:0 4px;line-height:16px;margin-left:4px}
+.st{font-size:11px;line-height:18px;padding:0 6px;border-radius:4px;white-space:nowrap;display:inline-block}
+.st.on{color:#6B7280;padding:0}
+.st.in{background:#F0FDF4;color:#16A34A}.st.tin{background:#EFF6FF;color:#2563EB}
+.st.out{background:#F3F4F6;color:#4B5563}
+.st.ag{background:#F5F3FF;color:#7C3AED}
+.ffoot{flex:none;height:30px;display:flex;align-items:center;gap:14px;padding:0 14px;border-top:1px solid #F1F2F4;font-size:11.5px;color:#9CA3AF;white-space:nowrap}
+.ffoot a{color:#4F46E5;text-decoration:none;display:inline-flex;align-items:center;gap:4px}
+.ffoot .rt{margin-left:auto}
+.pos{color:#16A34A}.neg{color:#DC2626}
+.tip{position:absolute;z-index:40;width:352px;background:#111827;color:#E5E7EB;border-radius:10px;padding:11px 13px 11px;font-size:12px;line-height:1.6;box-shadow:0 10px 30px rgba(16,24,40,.25)}
+.tip .ptr{position:absolute;width:10px;height:10px;background:#111827;transform:rotate(45deg)}
+.tip b{color:#fff}
+.tip .k{color:#9CA3AF}
+.tip .f{margin-top:6px;padding:6px 8px;border-radius:6px;background:#1F2937;font-family:Inter,"Noto Sans CJK SC",sans-serif;color:#F9FAFB;font-size:12px}
+.tip .ft{margin-top:6px;color:#9CA3AF;font-size:11px}
+.dot{width:8px;height:8px;border-radius:2px;display:inline-block;flex:none}
+.d-l{background:#6366F1}.d-a{background:#A78BFA}.d-o{background:#F59E0B}
+
+.sl2{padding:6px 8px;display:flex;flex-direction:column;gap:2px}
+.si{display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:8px}
+.si.on{background:#EEF2FF;box-shadow:inset 0 0 0 1px #C7D2FE}
+.si .ck{width:16px;height:16px;border-radius:4px;border:1.5px solid #D1D5DB;display:flex;align-items:center;justify-content:center;flex:none;color:#fff}
+.si .ck.on{background:#4F46E5;border-color:#4F46E5}.si .ck.lk{border:0;color:#9CA3AF}
+.si .sm{min-width:0;flex:1}.si .sn{font-size:13px;font-weight:600;white-space:nowrap}.si.on .sn{color:#4338CA}
+.si .ss{font-size:11px;color:#6B7280;white-space:nowrap;display:flex;align-items:center;gap:4px}
+.si .ac{display:flex;gap:6px;color:#9CA3AF}
+.sfoot{display:flex;gap:6px;padding:6px 12px 10px}
+.al{padding:4px 12px;display:flex;flex-direction:column}
+.ar{display:flex;align-items:center;gap:8px;height:33px;border-bottom:1px dashed #F1F2F4;font-size:12.5px;white-space:nowrap}
+.ar .ak{color:#4B5563;width:92px;flex:none}.ar .av{color:#111827;display:flex;align-items:center;gap:5px}.ar .as{margin-left:auto;display:flex;gap:4px}
+.ar.dis .ak,.ar.dis .av{color:#C4C8CF}
+.t.tl td{height:25px}.t.tl tr.mkr td{height:auto;padding:6px 6px 6px 10px;vertical-align:top;white-space:normal;background:#FCFCFD;border-bottom:1px solid #EEF0F3}
+.mk{display:inline-flex;align-items:center;gap:3px;font-size:10.5px;line-height:17px;padding:0 5px;border-radius:4px;background:#F3F4F6;color:#4B5563;margin:0 3px 3px 0;white-space:nowrap}
+.mk.ag{background:#F5F3FF;color:#7C3AED}.mk.o{background:#FFFBEB;color:#B45309}.mk.r{background:#FEF2F2;color:#DC2626}.mk.add{background:#fff;color:#4F46E5;box-shadow:inset 0 0 0 1px #C7D2FE}
+.s2{font-size:10.5px;color:#9CA3AF;margin-left:4px;font-weight:400}
+.lay{display:flex;gap:10px;padding:10px 14px 6px;align-items:flex-end}
+.lc{flex:1;display:flex;flex-direction:column;gap:4px;min-width:0}
+.lc .k{font-size:11px;color:#6B7280}.lc b{height:28px;border:1px solid #E5E7EB;border-radius:7px;display:flex;align-items:center;padding:0 9px;font-size:12.5px;font-weight:500;white-space:nowrap}
+.lay2{font-size:11.5px;color:#6B7280;padding:2px 14px 8px;display:flex;align-items:center;gap:5px;white-space:nowrap}
+.lay2 b{color:#111827}
+.t.cp td{height:25px}.t.cp th.on{color:#4338CA;background:#EEF2FF}
+.ck2{border:1px solid #EEF0F3;border-radius:10px;padding:8px 10px}
+.ck2 .ct{display:flex;align-items:center;gap:7px;font-size:12.5px}
+.ck2 .cb{font-size:11.5px;color:#4B5563;line-height:1.6;margin-top:3px}
+.ck2 .cb b{color:#111827;font-family:Inter,"Noto Sans CJK SC",sans-serif}
+.ck2.dis{opacity:.6}
+.mut2{color:#9CA3AF}
+</style></head><body><div class="app"><header class="topnav">
+  <div class="logo">OD</div><div class="brand">AI Native OD</div>
+  <div class="vdiv"></div>
+  <div class="crumb">编制与成本规划<span class="sep">/</span>研发中心 2027 年度规划<span class="sep">/</span><b>场景与时间轴</b><span class="tag yellow">示例数据</span></div>
+  <div class="yr"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>规划年度 <b>2027</b> · 按自然季度<span class="tag gray">默认，待确认</span></div>
+  <div class="navright"><div class="who"><span>黄<span class="rl"> · OD / HRBP · HR 管理员</span></span></div><div class="avatar">黄</div></div>
+</header><div class="body"><nav class="lefttb"><div class="tool"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg></div><div class="tool on"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg></div><div class="tool"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg></div><div class="sp"></div><div class="tool"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></div><div class="tool"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/></svg></div><div class="tool bottom"><svg class="i " viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg></div></nav>
+<main class="page" style="padding-right:12px">
+ <div class="ph"><h1>场景与时间轴</h1><span class="meta">基于基线（含已确认在途）· 场景只有 OD / HRBP 能看，业务负责人看不到</span>
+  <div class="r"><button class="btn sm"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M8 5H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-4"/></svg>从沙盘方案导入</button><button class="btn sm"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>复制场景</button></div></div>
+ <div style="flex:1;min-height:0;display:flex;gap:10px">
+  <div style="width:300px;flex:none;display:flex;flex-direction:column;gap:10px"><div class="cardx" style="flex:none">
+ <div class="ctl"><h3>场景</h3><span class="tag gray"><svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>仅 OD / HRBP</span><span class="rr"><span class="nt">对比 3 / 3</span></span></div>
+ <div class="sl2">
+  <div class="si"><span class="ck lk"><svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><div class="sm"><div class="sn">基线（含已确认在途）</div><div class="ss">和底座一致 · 不可编辑</div></div></div>
+  <div class="si"><span class="ck on"><svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span><div class="sm"><div class="sn">基准</div><div class="ss">预设 · 2026-10-03 修改</div></div><span class="ac"><svg class="i s13" viewBox="0 0 24 24" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg><svg class="i s13" viewBox="0 0 24 24" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></span></div>
+  <div class="si on"><span class="ck on"><svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span><div class="sm"><div class="sn">激进 · AI 加速</div><div class="ss">预设 · 复制自「基准」并改名</div></div><span class="ac"><svg class="i s13" viewBox="0 0 24 24" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg><svg class="i s13" viewBox="0 0 24 24" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></span></div>
+  <div class="si"><span class="ck"></span><div class="sm"><div class="sn">保守</div><div class="ss">预设 · 未加入对比</div></div><span class="ac"><svg class="i s13" viewBox="0 0 24 24" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg><svg class="i s13" viewBox="0 0 24 24" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></span></div>
+  <div class="si"><span class="ck on"><svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span><div class="sm"><div class="sn">沙盘方案 A（导入）</div><div class="ss"><span class="tag violet" style="font-size:10.5px">来自沙盘</span> 2026-10-03 导入</div></div><span class="ac"><svg class="i s13" viewBox="0 0 24 24" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg><svg class="i s13" viewBox="0 0 24 24" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></span></div>
+ </div>
+ <div class="sfoot"><button class="btn xs"><svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>新建</button><button class="btn xs"><svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M8 5H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-4"/></svg>从沙盘方案导入</button></div>
+</div><div class="cardx" style="flex:1">
+ <div class="ctl"><h3>基础假设</h3><span class="nt">激进 · AI 加速</span></div>
+ <div class="al">
+  <div class="ar"><span class="ak">离职率（年）</span><span class="av"><b class="num">8%</b></span><span class="as"><span class="tag violet"><svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg>AI 预填</span></span></div>
+  <div class="ar"><span class="ak">招聘周期</span><span class="av"><b class="num">60</b> 天</span><span class="as"><span class="tag indigo">OD 已调整</span></span></div>
+  <div class="ar"><span class="ak">自然减员</span><span class="av">按周期补位</span><span class="as"><span class="tag gray">不计补偿</span></span></div>
+  <div class="ar"><span class="ak">算力单价</span><span class="av">按 Agent 计价</span><span class="as"><span class="tag gray">配置表</span></span></div>
+  <div class="ar"><span class="ak">N+1 代通知金</span><span class="av"><span class="sw"></span> 不计入</span><span class="as"><span class="tag gray">场景级</span></span></div>
+  <div class="ar dis"><span class="ak">调薪率</span><span class="av">—</span><span class="as"><span class="tag gray">待定</span></span></div>
+  <div class="ar dis"><span class="ak">AI 替代/增强</span><span class="av">沿用沙盘拆解</span><span class="as"><span class="tag gray">待定</span></span></div>
+  <div class="ar dis"><span class="ak">新人上手期</span><span class="av">不影响成本</span><span class="as"><span class="tag gray">待定</span></span></div>
+ </div>
+ <div class="ffoot" style="margin-top:auto;white-space:normal;height:auto;padding:7px 12px;line-height:1.5">P0 做哪几项假设待确认（待定项 2）；灰色项暂不参与计算。AI 只收到匿名汇总。</div>
+</div></div>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:10px"><div class="cardx" style="flex:none">
+ <div class="ctl"><h3>时间轴</h3><span class="tag indigo">激进 · AI 加速</span><span class="nt">2027 · 成本单位：万元 · 人数、Agent 为期末数</span><span class="rr"><div class="seg sm"><span class="on">表格</span><span>图表</span></div></span></div>
+ <table class="t tl"><colgroup><col style="width:128px"><col><col><col><col><col style="width:92px"></colgroup>
+ <thead><tr><th></th><th class="n">Q1</th><th class="n">Q2</th><th class="n">Q3</th><th class="n">Q4</th><th class="n">全年</th></tr>
+ <tr class="mkr"><td class="mut" style="font-size:11px">场景调整</td><td><span class="mk">在途 27 笔</span><span class="mk">同基线</span></td><td><span class="mk ag">+12 Agent · 04-01</span><span class="mk">+2 人 · 数据智能部</span><span class="mk o">实施/培训 18.0 万</span></td><td><span class="mk r">减员 8 人</span><span class="mk o">补偿 55.0 万</span></td><td><span class="mk add"><svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>添加调整</span></td><td></td></tr></thead><tbody>
+ <tr class=""><td>正式人数</td><td class="n">479</td><td class="n">482</td><td class="n">474</td><td class="n">474</td><td class="n"><b>474</b></td></tr>
+ <tr class=""><td>Agent 数</td><td class="n">19</td><td class="n">34</td><td class="n">33</td><td class="n">33</td><td class="n"><b>33</b></td></tr>
+ <tr class=""><td><span class="gx"><i class="dot d-l"></i>人工成本</span></td><td class="n">3,897.0</td><td class="n">3,961.0</td><td class="n">3,955.5</td><td class="n">3,955.0</td><td class="n"><b>15,768.5</b></td></tr>
+ <tr class=""><td><span class="gx"><i class="dot d-a"></i>Agent 成本</span></td><td class="n">15.5</td><td class="n">30.0</td><td class="n">30.5</td><td class="n">30.5</td><td class="n"><b>106.0</b></td></tr>
+ <tr class=""><td><span class="gx"><i class="dot d-o"></i>一次性成本</span></td><td class="n">24.5</td><td class="n">18.0</td><td class="n">55.0</td><td class="n"><span class="mut">—</span></td><td class="n"><b>97.5</b></td></tr>
+ <tr class="tot"><td>总成本</td><td class="n">3,937.0</td><td class="n">4,009.0</td><td class="n">4,040.5</td><td class="n">3,985.5</td><td class="n"><b>15,972.0</b></td></tr>
+ <tr class=""><td>人 : AI<span class="s2">按工时</span></td><td class="n">78 : 22</td><td class="n"><span class="tag gray">未拆解</span></td><td class="n"><span class="tag gray">未拆解</span></td><td class="n"><span class="tag gray">未拆解</span></td><td class="n"><span class="tag gray">未拆解</span></td></tr>
+ </tbody></table>
+</div><div class="cardx" style="flex:none">
+ <div class="ctl"><h3>场景减员</h3><span class="nt">只录人数，不写具体人名；工作年限用「部门 × 职级」平均司龄</span><span class="rr"><button class="btn xs"><svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>添加减员</button></span></div>
+ <div class="lay">
+  <div class="lc"><span class="k">部门 / 职级</span><b>质量与交付部 · P5</b></div>
+  <div class="lc"><span class="k">人数</span><b class="num">8 人</b></div>
+  <div class="lc"><span class="k">生效日</span><b class="num">2027-07-01</b></div>
+  <div class="lc" style="flex:1.5"><span class="k">减员类型</span><b style="justify-content:space-between">公司提出协商解除 · 计 N<svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></b></div>
+  <div class="lc" style="flex:none;width:44px"><span class="k">&nbsp;</span><b style="justify-content:center;color:#9CA3AF;padding:0"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></b></div>
+ </div>
+ <div class="lay2"><svg class="i s12" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>平均司龄 <b class="num">3.4</b> 年（质量与交付部 × P5，28 人；不足 5 人用上一级部门）→ 补偿 <b class="num">3.5</b> 个月 · 部门汇总 <b class="num">55.0</b> 万，记在 Q3</div>
+ <div class="lay2" style="padding-top:0;color:#9CA3AF">四种类型：自然减员（不计）· 公司提出协商解除（N）· 无过失性辞退（N，可选 +1）· 经济性裁员（N）</div>
+</div><div class="cardx" style="flex:1">
+ <div class="ctl"><h3>场景对比</h3><span class="nt">最多 3 个场景 + 基线 · 万元</span><span class="rr"><div class="seg sm"><span class="on">全年</span><span>Q1</span><span>Q2</span><span>Q3</span><span>Q4</span></div></span></div>
+ <table class="t cp"><colgroup><col style="width:150px"><col><col><col><col></colgroup>
+ <thead><tr><th></th><th class="n">基线</th><th class="n">基准</th><th class="n on">激进 · AI 加速</th><th class="n">沙盘方案 A</th></tr></thead><tbody>
+ <tr class=""><td>期末正式人数</td><td class="n">490</td><td class="n">490</td><td class="n">474</td><td class="n">480</td></tr>
+ <tr class=""><td>期末 Agent 数</td><td class="n">21</td><td class="n">25</td><td class="n">33</td><td class="n">27</td></tr>
+ <tr class=""><td>人工成本</td><td class="n">15,994.5</td><td class="n">15,986.5</td><td class="n">15,768.5</td><td class="n">15,803.5</td></tr>
+ <tr class=""><td>Agent 成本</td><td class="n">76.5</td><td class="n">83.5</td><td class="n">106.0</td><td class="n">105.0</td></tr>
+ <tr class=""><td>一次性成本</td><td class="n">24.5</td><td class="n">28.5</td><td class="n">97.5</td><td class="n">36.5</td></tr>
+ <tr class="tot"><td>总成本</td><td class="n"><b>16,095.5</b></td><td class="n"><b>16,098.5</b></td><td class="n"><b>15,972.0</b></td><td class="n"><b>15,945.0</b></td></tr>
+ <tr class=""><td>对比预算总包 16,000.0</td><td class="n"><span class="tag red">超支 95.5</span></td><td class="n"><span class="tag red">超支 98.5</span></td><td class="n"><span class="tag green">结余 28.0</span></td><td class="n"><span class="tag green">结余 55.0</span></td></tr>
+ <tr class=""><td>人 : AI<span class="s2">按工时</span></td><td class="n">78 : 22</td><td class="n">78 : 22</td><td class="n"><span class="tag gray">未拆解</span></td><td class="n">69 : 31</td></tr>
+ </tbody></table>
+</div></div>
+ </div>
+</main><aside class="panel" style="width:330px">
+ <div class="phead"><div class="agentic"><svg class="i s18" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg></div><div><div class="tt">场景体检</div><div class="st">激进 · AI 加速 · 4 条提示</div></div><div class="acts"><div class="iconbtn"><svg class="i s14" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg></div></div></div>
+ <div class="pbody" style="gap:8px">
+  <div class="ck2"><div class="ct"><span class="sevdot sev-y"></span><b>《劳动合同法》第 41 条提醒</b></div><div class="cb">本场景 Q3 减员 <b>8</b> 人，约占职工总数 <b>1.6%</b>。第 41 条：裁员 20 人以上，或不足 20 人但占职工总数 10% 以上的，需提前 30 天向工会或全体职工说明情况，并向劳动行政部门报告。<span class="mut2">仅作提醒，不构成法律结论，请与法务确认。</span></div></div>
+  <div class="ck2"><div class="ct"><span class="sevdot sev-y"></span><b>人 : AI 未拆解</b></div><div class="cb">Q2 起新增 12 个 Agent，对应岗位没有沙盘拆解，人 : AI 显示「未拆解」，不按 Agent 个数推算。可在沙盘 P4 拆解后重新导入。</div></div>
+  <div class="ck2"><div class="ct"><span class="sevdot sev-b"></span><b>预算</b></div><div class="cb">全年总成本 <b>15,972.0</b> 万，对比预算总包 16,000.0 万结余 <b>28.0</b> 万；基准场景超支 98.5 万。</div></div>
+  <div class="ck2"><div class="ct"><span class="sevdot sev-b"></span><b>一次性成本的季度</b></div><div class="cb">Agent 实施/培训 18.0 万记在上线当季 Q2（暂按此，待确认）；经济补偿 55.0 万记在减员生效当季 Q3。</div></div>
+  <div class="ck2 dis"><div class="ct"><span class="sevdot" style="background:#D1D5DB"></span><b>管理幅度 · 招聘可行性</b><span class="tag gray" style="margin-left:auto">待定</span></div><div class="cb">P0 做哪几条体检待确认，暂不提示。</div></div>
+ </div>
+ <div class="pfoot"><div class="footnote" style="margin:0">体检只用匿名汇总数据，不含姓名、工号</div></div>
+</aside></div></div></body></html>
